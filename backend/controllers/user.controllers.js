@@ -35,7 +35,7 @@ const createUser = async (req, res) => {
         message: "User created successfully",
         token: token, 
         // TODO: check refresh token is neccessary or not
-      });
+      })
     } else {
       response({
         res,
