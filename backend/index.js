@@ -29,6 +29,10 @@ app.use(express.urlencoded({ extended: false }));
 const v1Router = express.Router();
 app.use("/v1", v1Router);
 
+v1Router.get("/", (req, res) => {
+res.send("test api working")
+});
+
 // *** user routes ***
 v1Router.post("/", userController.createUser);
 v1Router.get("/login", userController.userLogin);
