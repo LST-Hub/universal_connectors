@@ -64,6 +64,10 @@ const EventSchedule = ({ eventId }) => {
   const [savedSearchOptions, setSavedSearchOptions] = useState([]);
   const [data, setData] = useState([]);
 
+  const [addValue, setAddValue] = useState(false);
+  const [updateValue, setUpdateValue] = useState(false);
+  const [deleteValue, setDeleteValue] = useState(false);
+
   const queryClient = useQueryClient();
   const apiResults = useQueries({
     queries: [
@@ -159,6 +163,7 @@ const EventSchedule = ({ eventId }) => {
         integrationId: scheduleEventData[0].integrationId,
         mappedRecordId: scheduleEventData[0].mappedRecordId,
         perform: scheduleEventData[0].performType,
+        operationType: scheduleEventData[0].operationType,
         // savedSearchType: scheduleEventData[0].savedSearchType,
       }));
 
@@ -173,6 +178,14 @@ const EventSchedule = ({ eventId }) => {
           savedSearchValue: scheduleEventData[0].savedSearchValue,
         }));
       }
+
+      setAddValue(scheduleEventData[0].operationType === "add" ? true : false);
+      setUpdateValue(
+        scheduleEventData[0].operationType === "update" ? true : false
+      );
+      setDeleteValue(
+        scheduleEventData[0].operationType === "delete" ? true : false
+      );
     }
   }, [scheduleEventData, setValue]);
 
@@ -214,7 +227,7 @@ const EventSchedule = ({ eventId }) => {
   // Mapped record options
   useEffect(() => {
     if (mappedRecordData) {
-      console.log("mappedRecordData==>",mappedRecordData)
+      console.log("mappedRecordData==>", mappedRecordData);
       if (mappedRecordData.length === 1) {
         setValue("mappedRecords", {
           label: mappedRecordData[0].name,
@@ -346,6 +359,16 @@ const EventSchedule = ({ eventId }) => {
     }
   };
 
+  const toggleComponet = (value) => {
+    setAddValue(value === "add" ? true : false);
+    setUpdateValue(value === "update" ? true : false);
+    setDeleteValue(value === "delete" ? true : false);
+    setData((prev) => ({
+      ...prev,
+      operationType: value,
+    }));
+  };
+
   return (
     <>
       {/* <TkForm onSubmit={handleSubmit(onSubmit)}> */}
@@ -398,7 +421,7 @@ const EventSchedule = ({ eventId }) => {
           ) : null}
         </TkCol>
 
-        {/* <TkCol lg={4}>
+        <TkCol lg={4}>
           <TkLabel htmlFor="filter" requiredStarOnLabel={true}>
             How can we find existing records
           </TkLabel>
@@ -418,7 +441,7 @@ const EventSchedule = ({ eventId }) => {
               <i className="ri-filter-2-fill" />
             </TkButton>
           </div>
-        </TkCol> */}
+        </TkCol>
       </TkRow>
 
       <TkRow className="mt-4">
@@ -507,6 +530,8 @@ const EventSchedule = ({ eventId }) => {
             value="addOperation"
             className="me-2"
             disabled={operationsValue}
+            checked={addValue}
+            onChange={() => toggleComponet("add")}
           >
             Add
           </TkRadioButton>
@@ -518,6 +543,8 @@ const EventSchedule = ({ eventId }) => {
             value="updateOperation"
             className="mx-1"
             disabled={operationsValue}
+            checked={updateValue}
+            onChange={() => toggleComponet("update")}
           >
             Update
           </TkRadioButton>
@@ -529,6 +556,8 @@ const EventSchedule = ({ eventId }) => {
             value="deleteOperation"
             className="mx-1"
             disabled={operationsValue}
+            checked={deleteValue}
+            onChange={() => toggleComponet("delete")}
           >
             Delete
           </TkRadioButton>
@@ -536,7 +565,7 @@ const EventSchedule = ({ eventId }) => {
       </TkRow>
       <hr />
 
-      <Event eventId={eventId} searchData={data} />
+      <Event eventId={eventId} syncData={data} />
     </>
   );
 };

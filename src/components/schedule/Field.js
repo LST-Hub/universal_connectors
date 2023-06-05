@@ -11,9 +11,11 @@ import TkRadioButton from "@/globalComponents/TkRadioButton";
 import TkRow, { TkCol } from "@/globalComponents/TkRow";
 import TkSelect from "@/globalComponents/TkSelect";
 import { API_BASE_URL } from "@/utils/Constants";
+import ToggleButton from "@/utils/ToggleButton";
 import tkFetch from "@/utils/fetch";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useMutation, useQueries } from "@tanstack/react-query";
+import { set } from "date-fns";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as Yup from "yup";
@@ -36,14 +38,13 @@ const Field = ({ mappedRecordId }) => {
   });
 
   const [userId, setUserId] = useState(null);
-  const [integrationId, setIntegrationId] = useState(null);
-  const [credentials, setCredentials] = useState(null);
   const [netsuiteOptions, setNetsuiteOptions] = useState([]);
-  const [sheetsParameters, setSheetsParameters] = useState(null);
-  const [googleSheetOptions, setGoogleSheetOptions] = useState([]);
   const [dropdownFieldValue, setDropdownFieldValue] = useState(true);
   const [inputBoxFieldValue, setInputBoxFieldValue] = useState(false);
   const [checkedValue, setCheckedValue] = useState("dropdownField");
+  const [credentials, setCredentials] = useState(null);
+  const [filterIds, setFilterIds] = useState(null);
+  const [filterData, setFillterData] = useState([]);
 
   const operators = [
     { label: "is", value: 1 },
@@ -59,127 +60,96 @@ const Field = ({ mappedRecordId }) => {
 
   const addCustomFilterFields = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/addCustomFilterFields`),
-  })
+  });
 
   const apiResults = useQueries({
     queries: [
       {
-        queryKey: ["mappedRecord", mappedRecordId],
-        queryFn: tkFetch.get(
-          `${API_BASE_URL}/getMappedRecordById/${mappedRecordId}`
-        ),
-        enabled: !!mappedRecordId,
+        queryKey: ["getNetsuiteFiledsByRecordId", mappedRecordId],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getNetsuiteFiledsByRecordId`, {
+          params: { recordId: mappedRecordId, userId: userId },
+        }),
+        enabled: !!mappedRecordId && !!userId,
       },
       {
-        queryKey: ["config", integrationId],
-        queryFn: tkFetch.get(
-          `${API_BASE_URL}/getConfigurationByIntegrationId/${integrationId}`
-        ),
-        enabled: !!integrationId,
-      },
-      {
-        queryKey: ["configDetails", credentials],
+        queryKey: ["configData"],
         queryFn: tkFetch.get(`${API_BASE_URL}/getRecordTypes`, {
           params: credentials,
         }),
         enabled: !!credentials,
       },
       {
-        queryKey: ["getAccessToken", userId],
-        queryFn: tkFetch.get(`${API_BASE_URL}/getAccessToken/${userId}`),
-        enabled: !!userId,
-      },
-      {
-        queryKey: ["getSheetsData", sheetsParameters],
-        queryFn: tkFetch.get(`${API_BASE_URL}/getSheetsData`, {
-          params: sheetsParameters,
+        queryKey: ["customFilterFields"],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getCustomFilterFields`, {
+          params: filterIds,
         }),
-        enabled: !!sheetsParameters,
+        enabled: !!filterIds,
       },
     ],
   });
 
-  const [
-    mappedRecord,
-    config,
-    restletData,
-    asscessToken,
-    googleSheetApi,
-  ] = apiResults;
-  const { data: mappedRecordData, isLoading: mappedRecordLoading } =
-    mappedRecord;
+  const [configuration, recodTypeFields, customFilterFields] = apiResults;
+
   const {
-    data: configData,
-    isLoading: configLoading,
-    isError: configError,
-    error: configErrorData,
-  } = config;
+    isLoading: configurationLoading,
+    isError: configurationError,
+    error: configurationErrorData,
+    data: configurationData,
+  } = configuration;
   const {
-    data: restletOptions,
-    isLoading: restletLoading,
-    isError: restletError,
-    error: restletErrorData,
-  } = restletData;
+    isLoading: recodTypeFieldsLoading,
+    isError: recodTypeFieldsError,
+    error: recodTypeFieldsErrorData,
+    data: recodTypeFieldsData,
+  } = recodTypeFields;
   const {
-    isLoading: isAccessTokenLoading,
-    isError: isAccessTokenError,
-    error: accessTokenError,
-    data: accessTokenData,
-  } = asscessToken;
-  const {
-    isLoading: excelSheetLoading,
-    isError: excelSheetError,
-    error: excelSheetErrorData,
-    data: excelSheetData,
-  } = googleSheetApi;
+    isLoading: customFilterFieldsLoading,
+    isError: customFilterFieldsError,
+    error: customFilterFieldsErrorData,
+    data: customFilterFieldsData,
+  } = customFilterFields;
 
   useEffect(() => {
     const userId = sessionStorage.getItem("userId");
     setUserId(JSON.parse(userId));
-    if (mappedRecordData) {
-      setIntegrationId(mappedRecordData[0]?.integrationId);
-    }
-    if (accessTokenData && mappedRecordData) {
-      setSheetsParameters({
-        sheetsId: mappedRecordData[0].destination,
-        accessToken: accessTokenData[0].access_token,
-      });
-    }
-  }, [accessTokenData, mappedRecordData, mappedRecordId]);
+  }, []);
 
   useEffect(() => {
-    if (configData) {
-      configData.map((item) => {
-        if (item.systemName === "NetSuite™") {
-          setCredentials({
-            accountId: item.accountId,
-            consumerKey: item.consumerKey,
-            consumerSecretKey: item.consumerSecretKey,
-            accessToken: item.accessToken,
-            accessSecretToken: item.accessSecretToken,
-            resttype: "ListOfRecordField",
-            recordtype: mappedRecordData[0]?.source,
-          });
-        }
+    if (configurationData && userId) {
+      setCredentials({
+        accountId: configurationData[0].credentials.accountId,
+        consumerKey: configurationData[0].credentials.consumerKey,
+        consumerSecretKey: configurationData[0].credentials.consumerSecretKey,
+        accessToken: configurationData[0].credentials.accessToken,
+        accessSecretToken: configurationData[0].credentials.accessSecretToken,
+        resttype: "ListOfRecordField",
+        recordtype: configurationData[0].recordType,
+      });
+
+      setFilterIds({
+        userId: userId,
+        integrationId: configurationData[0].integrationId,
+        mappedRecordId: mappedRecordId,
       });
     }
-  }, [configData, mappedRecordData]);
+  }, [configurationData, mappedRecordId, userId]);
 
   useEffect(() => {
-    if (restletOptions) {
+    if (recodTypeFieldsData) {
+      // console.log("recodTypeFields", recodTypeFieldsData);
       setNetsuiteOptions([]);
       if (
-        restletOptions[0].body.length > 0 ||
-        restletOptions[0].lines.length > 0
+        recodTypeFieldsData[0].body.length > 0 ||
+        recodTypeFieldsData[0].lines.length > 0
       ) {
-        const entries = Object.entries(restletOptions[0]?.body[0]);
+        const entries = Object.entries(recodTypeFieldsData[0]?.body[0]);
         entries.map(([key, value], index) => {
           setNetsuiteOptions((netsuiteValues) => [
             ...netsuiteValues,
             { label: value + " (field Id: " + key + ")", value: key },
           ]);
         });
-        restletOptions[0]?.lines.map((item) => {
+        recodTypeFieldsData[0]?.lines.map((item) => {
           const lineEntries = Object.entries(item);
           lineEntries.map(([key, value], index) => {
             const valueEntries = Object.entries(value);
@@ -199,19 +169,44 @@ const Field = ({ mappedRecordId }) => {
         });
       }
     }
-  }, [restletOptions]);
+  }, [recodTypeFieldsData]);
 
   useEffect(() => {
-    if (excelSheetData) {
-      setGoogleSheetOptions([]);
-      excelSheetData[0]?.values[0].map((item, index) => {
-        setGoogleSheetOptions((googleSheetValues) => [
-          ...googleSheetValues,
-          { label: item, value: index },
-        ]);
+    console.log("customFilterFieldsData", customFilterFieldsData);
+    if (customFilterFieldsData?.length) {
+      setValue("netsuiteFields", {
+        label: customFilterFieldsData[0].sourceFieldLabel,
+        value: customFilterFieldsData[0].sourceFieldValue,
       });
+
+      setValue("operator", {
+        label: customFilterFieldsData[0].operator,
+        value: customFilterFieldsData[0].operator,
+      });
+
+      customFilterFieldsData[0].condition === "AND"
+        ? setAndConditionState(true)
+        : setAndConditionState(false);
+      customFilterFieldsData[0].condition === "OR"
+        ? setOrConditionState(true)
+        : setOrConditionState(false);
+
+      setCheckedValue(customFilterFieldsData[0].fieldType);
+      if (customFilterFieldsData[0].fieldType === "dropdownField") {
+        // console.log(customFilterFieldsData[0].destinationFieldLabel, "and", customFilterFieldsData[0].destinationFieldValue)
+        setValue("googleSheetFields", {
+          label: customFilterFieldsData[0].destinationFieldLabel,
+          value: customFilterFieldsData[0].destinationFieldValue,
+        });
+      } else {
+        // console.log(customFilterFieldsData[0].destinationFieldValue)
+        setValue(
+          "googleSheetFields",
+          customFilterFieldsData[0].destinationFieldValue
+        );
+      }
     }
-  }, [excelSheetData]);
+  }, [customFilterFieldsData, setValue]);
 
   const [modal, setModal] = useState(false);
 
@@ -231,22 +226,68 @@ const Field = ({ mappedRecordId }) => {
   };
 
   const onSubmit = (data) => {
-    const mappedField = {
+    console.log(data);
+    const fiterItem = {
       userId: userId,
-      integrationId: integrationId,
       mappedRecordId: JSON.parse(mappedRecordId),
+      integrationId: configurationData[0].integrationId,
       sourceFieldValue: data.netsuiteFields.value,
       sourceFieldLabel: data.netsuiteFields.label,
-      destinationFieldValue: data.googleSheetFields.label
-        ? data.googleSheetFields.label
+      destinationFieldValue: data.googleSheetFields.value
+        ? data.googleSheetFields.value
         : data.googleSheetFields,
+      destinationFieldLabel: data.googleSheetFields.label
+        ? data.googleSheetFields.label
+        : undefined,
       operator: data.operator.label,
       fieldType: checkedValue,
+      condition: andConditionState ? "AND" : orConditionState ? "OR" : null,
     };
+
+    console.log("filter data", fiterItem);
+    // addCustomFilterFields.mutate(fiterItem, {
+    //   onSuccess: (data) => {
+    //     console.log(data);
+    //   },
+    //   onError: (error) => {
+    //     console.log(error);
+    //   },
+    // });
+    // history.back();
   };
+
+  const [andConditionState, setAndConditionState] = useState(false);
+  const [orConditionState, setOrConditionState] = useState(false);
+
+  const handelAndCondition = (e) => {
+    // console.log(e.target.innerText)
+    setAndConditionState(!andConditionState);
+    if (e.target.innerText === "AND") {
+      setOrConditionState(false);
+    }
+  };
+  const handelOrCondition = (e) => {
+    setOrConditionState(!orConditionState);
+    if (e.target.innerText === "OR") {
+      setAndConditionState(false);
+    }
+  };
+  console.log("andConditionState", andConditionState);
+  console.log("orConditionState", orConditionState);
+
+  const addConditionClass = andConditionState ? "active" : null;
+  const orConditionClass = orConditionState ? "active" : null;
 
   return (
     <>
+      <TkButton onClick={handelAndCondition} className={addConditionClass}>
+        AND
+      </TkButton>
+      &nbsp;&nbsp;
+      <TkButton onClick={handelOrCondition} className={orConditionClass}>
+        OR
+      </TkButton>
+      
       <TkForm onSubmit={handleSubmit(onSubmit)}>
         <TkRow className="mt-1 mb-5">
           <TkCol lg={4}>
@@ -301,8 +342,11 @@ const Field = ({ mappedRecordId }) => {
                       <TkSelect
                         {...field}
                         id="googleSheetFields"
-                        options={googleSheetOptions}
                         maxMenuHeight="100px"
+                        options={[
+                          { label: "Name", value: "name" },
+                          { label: "Email", value: "email" },
+                        ]}
                       />
                     )}
                   />
@@ -348,7 +392,6 @@ const Field = ({ mappedRecordId }) => {
           </TkCol>
         </TkRow>
       </TkForm>
-
       <TkModal isOpen={modal} centered={true}>
         <TkModalHeader toggle={toggle}></TkModalHeader>
         <TkModalBody className="modal-body">

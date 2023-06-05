@@ -27,7 +27,7 @@ const WeeklyEvent = ({
   checkBoxValue,
   toggleComponet,
   eventId,
-  searchData,
+  syncData,
 }) => {
   let userId = useRef(null);
 
@@ -129,21 +129,22 @@ const WeeklyEvent = ({
       const eventData = {
         id: eventId,
         userId: JSON.parse(userId.current),
-        integrationId: searchData.integrationId,
-        mappedRecordId: searchData.mappedRecordId,
+        integrationId: syncData.integrationId,
+        mappedRecordId: syncData.mappedRecordId,
         eventType: "Weekly",
         startDate: data.startDate,
         startTime: data.startTime.label,
         day: data.days.label,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
-        performType: searchData.perform,
-        // savedSearchType: searchData.savedSearchType,
+        performType: syncData.perform,
+        // savedSearchType: syncData.savedSearchType,
+        operationType: syncData.operationType
       };
 
-      if (searchData.savedSearchLabel) {
-        eventData.savedSearchLabel = searchData.savedSearchLabel;
-        eventData.savedSearchValue = searchData.savedSearchValue;
+      if (syncData.savedSearchLabel) {
+        eventData.savedSearchLabel = syncData.savedSearchLabel;
+        eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
       updateWeeklyEvent.mutate(eventData, {
@@ -157,20 +158,21 @@ const WeeklyEvent = ({
 
       const eventData = {
         userId: JSON.parse(userId.current),
-        integrationId: searchData.integrationId,
-        mappedRecordId: searchData.mappedRecordId,
+        integrationId: syncData.integrationId,
+        mappedRecordId: syncData.mappedRecordId,
         eventType: "Weekly",
         startDate: data.startDate,
         startTime: data.startTime.label,
         day: data.days.label,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
-        performType: searchData.perform,
-        // savedSearchType: searchData.savedSearchType,
+        performType: syncData.perform,
+        // savedSearchType: syncData.savedSearchType,
+        operationType: syncData.operationType
       };
-      if (searchData.savedSearchLabel) {
-        eventData.savedSearchLabel = searchData.savedSearchLabel;
-        eventData.savedSearchValue = searchData.savedSearchValue;
+      if (syncData.savedSearchLabel) {
+        eventData.savedSearchLabel = syncData.savedSearchLabel;
+        eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
       addEvent.mutate(eventData, {

@@ -3,7 +3,8 @@ import ReactSwitch from 'react-switch'
 
 const ToggleButton = ({
     checked,
-    handleChange
+    handleChange,
+    ...other
 }) => {
   return (
     <>
@@ -17,6 +18,7 @@ const ToggleButton = ({
         uncheckedIcon={false}
         height={20}
         width={40}
+        {...other}
         />
     </>
   )

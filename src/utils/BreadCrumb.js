@@ -46,6 +46,7 @@ const BreadCrumb = ({
                     <TkButton
                       color="primary"
                       className="btn add-btn me-1"
+                      disabled={true}
                       onClick={onSyncClick}
                     >
                       {syncButton}

@@ -19,7 +19,7 @@ const schema = Yup.object({
   startDate: Yup.date().nullable().required("Start date is required"),
 }).required();
 
-const RealtimeEvent = ({ checkBoxValue, eventId, searchData }) => {
+const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
   let userId = useRef(null);
   const {
     control,
@@ -42,6 +42,14 @@ const RealtimeEvent = ({ checkBoxValue, eventId, searchData }) => {
 
   const updateRealTimeEvent = useMutation({
     mutationFn: tkFetch.putWithIdInUrl(`${API_BASE_URL}/updateRealTimeEvent`),
+  });
+
+  const scheduleRealtimeEvent = useMutation({
+    mutationFn: tkFetch.post(`${API_BASE_URL}/scheduleRealtimeEvent`),
+  });
+
+  const addNetsuiteFields = useMutation({
+    mutationFn: tkFetch.post(`${API_BASE_URL}/addNetsuiteFields`),
   });
 
   const {
@@ -110,20 +118,40 @@ const RealtimeEvent = ({ checkBoxValue, eventId, searchData }) => {
       const realtimeEventData = {
         id: eventId,
         userId: JSON.parse(userId.current),
-        integrationId: searchData.integrationId,
-        mappedRecordId: searchData.mappedRecordId,
+        integrationId: syncData.integrationId,
+        mappedRecordId: syncData.mappedRecordId,
         eventType: "Realtime",
         startDate: data.startDate,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
-        performType: searchData.perform,
-        // savedSearchType: searchData.savedSearchType,
+        performType: syncData.perform,
+        // savedSearchType: syncData.savedSearchType,
+        operationType: syncData.operationType
       };
 
-      if (searchData.savedSearchLabel) {
-        realtimeEventData.savedSearchLabel = searchData.savedSearchLabel;
-        realtimeEventData.savedSearchValue = searchData.savedSearchValue;
+      if (syncData.savedSearchLabel) {
+        realtimeEventData.savedSearchLabel = syncData.savedSearchLabel;
+        realtimeEventData.savedSearchValue = syncData.savedSearchValue;
       }
+      console.log("realtimeEventData", realtimeEventData)
+
+      addNetsuiteFields.mutate(realtimeEventData, {
+        onSuccess: (res) => {
+          console.log("*************res", res);
+        },
+        onError: (err) => {
+          console.log("err", err);
+        },
+      });
+
+      // scheduleRealtimeEvent.mutate(realtimeEventData, {
+      //   onSuccess: (res) => {
+      //     console.log("res", res);
+      //   },
+      //   onError: (err) => {
+      //     console.log("err", err);
+      //   },
+      // });
 
       updateRealTimeEvent.mutate(realtimeEventData, {
         onSuccess: (res) => {},
@@ -135,20 +163,41 @@ const RealtimeEvent = ({ checkBoxValue, eventId, searchData }) => {
       console.log("add realtime Event**********");
       const eventData = {
         userId: JSON.parse(userId.current),
-        integrationId: searchData.integrationId,
-        mappedRecordId: searchData.mappedRecordId,
+        integrationId: syncData.integrationId,
+        mappedRecordId: syncData.mappedRecordId,
         eventType: "Realtime",
         startDate: data.startDate,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
-        performType: searchData.perform,
-        // savedSearchType: searchData.savedSearchType,
+        performType: syncData.perform,
+        // savedSearchType: syncData.savedSearchType,
+        operationType: syncData.operationType
       };
 
-      if (searchData.savedSearchLabel) {
-        eventData.savedSearchLabel = searchData.savedSearchLabel;
-        eventData.savedSearchValue = searchData.savedSearchValue;
+      if (syncData.savedSearchLabel) {
+        eventData.savedSearchLabel = syncData.savedSearchLabel;
+        eventData.savedSearchValue = syncData.savedSearchValue;
       }
+
+      console.log("eventData", eventData)
+
+      addNetsuiteFields.mutate(eventData, {
+        onSuccess: (res) => {
+          console.log("****************res=>", res);
+        },
+        onError: (err) => {
+          console.log("err", err);
+        },
+      });
+
+      // scheduleRealtimeEvent.mutate(eventData, {
+      //   onSuccess: (res) => {
+      //     console.log("res", res);
+      //   },
+      //   onError: (err) => {
+      //     console.log("err", err);
+      //   },
+      // });
 
       addEvent.mutate(eventData, {
         onSuccess: (res) => {},
@@ -158,9 +207,9 @@ const RealtimeEvent = ({ checkBoxValue, eventId, searchData }) => {
       });
     }
 
-    queryClient.invalidateQueries({
-      queryKey: ["schedule", userId],
-    });
+    // queryClient.invalidateQueries({
+    //   queryKey: ["schedule", userId],
+    // });
     router.push("/schedule");
   };
   const onCancel = () => {

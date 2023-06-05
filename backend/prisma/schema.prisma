@@ -27,28 +27,29 @@ model Users {
   NotificationSettings NotificationSettings[]
   Configurations       Configurations[]
   Credentials          Credentials[]
-  CustomFields         CustomFields[]
+  CustomFilterFields   CustomFilterFields[]
 
   @@unique(fields: [email, password], name: "loginUser")
 }
 
 model Integrations {
-  id               Int              @id @default(autoincrement())
-  userId           Int
-  user             Users            @relation(fields: [userId], references: [id])
-  integrationName  String
-  sourceName       String
-  destinationName  String
-  schedule         Boolean
-  fieldMapping     Boolean
-  status           String
-  syncWay          String
-  creationDate     DateTime         @default(now())
-  modificationDate DateTime         @updatedAt
-  Configurations   Configurations[]
-  MappedRecords    MappedRecords[]
-  Schedule         Schedule[]
-  Logs             Logs[]
+  id                 Int                  @id @default(autoincrement())
+  userId             Int
+  user               Users                @relation(fields: [userId], references: [id])
+  integrationName    String
+  sourceName         String
+  destinationName    String
+  schedule           Boolean
+  fieldMapping       Boolean
+  status             String
+  syncWay            String
+  creationDate       DateTime             @default(now())
+  modificationDate   DateTime             @updatedAt
+  Configurations     Configurations[]
+  MappedRecords      MappedRecords[]
+  Schedule           Schedule[]
+  Logs               Logs[]
+  CustomFilterFields CustomFilterFields[]
 }
 
 model Configurations {
@@ -70,25 +71,25 @@ model Configurations {
 }
 
 model MappedRecords {
-  id               Int            @id @default(autoincrement())
-  userId           Int
-  user             Users          @relation(fields: [userId], references: [id])
-  integrationId    Int
-  integration      Integrations   @relation(fields: [integrationId], references: [id])
-  MappedRecordName String
-  source           String
-  destination      String
-  recordTypeLabel  String
-  recordTypeValue  String
-  UrlLabel         String
-  UrlValue         String
-  status           Boolean
-  creationDate     DateTime       @default(now())
-  modificationDate DateTime       @updatedAt
-  Fields           Fields[]
-  Schedule         Schedule[]
-  CustomFields     CustomFields[]
-  Logs             Logs[]
+  id                 Int                  @id @default(autoincrement())
+  userId             Int
+  user               Users                @relation(fields: [userId], references: [id])
+  integrationId      Int
+  integration        Integrations         @relation(fields: [integrationId], references: [id])
+  MappedRecordName   String
+  source             String
+  destination        String
+  recordTypeLabel    String
+  recordTypeValue    String
+  UrlLabel           String
+  UrlValue           String
+  status             Boolean
+  creationDate       DateTime             @default(now())
+  modificationDate   DateTime             @updatedAt
+  Fields             Fields[]
+  Schedule           Schedule[]
+  Logs               Logs[]
+  CustomFilterFields CustomFilterFields[]
 }
 
 model Fields {
@@ -123,21 +124,26 @@ model Schedule {
   performType      String
   savedSearchLabel String?
   savedSearchValue String?
+  operationType    String?
   creationDate     DateTime      @default(now())
   modificationDate DateTime      @updatedAt
 }
 
-model CustomFields {
+model CustomFilterFields {
   id                    Int           @id @default(autoincrement())
   userId                Int
   user                  Users         @relation(fields: [userId], references: [id])
   mappedRecordId        Int
   mappedRecord          MappedRecords @relation(fields: [mappedRecordId], references: [id])
+  integrationId         Int
+  integration           Integrations  @relation(fields: [integrationId], references: [id])
   sourceFieldValue      String
   sourceFieldLabel      String
   destinationFieldValue String
-  destinationFieldLabel String
+  destinationFieldLabel String?
   operator              String
+  fieldType             String
+  condition             String?
   creationDate          DateTime      @default(now())
   modificationDate      DateTime      @updatedAt
 }

@@ -51,7 +51,7 @@ const FieldMap = () => {
   const [googleSheetUrl, setGoogleSheetUrl] = useState([]);
   const [integrationId, setIntegrationId] = useState(null);
   const [configurationData, setConfigurationData] = useState(null);
-  const [userId, setUserId] = useState(null);
+  const [userId, setUserId] = useState();
   const [accessToken, setAccessToken] = useState(null);
 
   const addMappedRecord = useMutation({

@@ -106,7 +106,6 @@ const FieldMappingTable = () => {
       Header: "Creation Date",
       accessor: "creationDate",
       Cell: (props) => {
-        console.log(props.row.original)
         const date = formatDate(props.row.original?.creationDate);
         const time = formatTime(props.row.original?.creationDate);
         return (

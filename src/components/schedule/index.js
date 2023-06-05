@@ -38,7 +38,7 @@ const queryClient = useQueryClient();
       setUserId(JSON.parse(id));
     }
   }, []);
-console.log("scheduleData", scheduleData)
+  
   useEffect(() => {
     if (scheduleData?.length > 0) {
       setData(scheduleData);

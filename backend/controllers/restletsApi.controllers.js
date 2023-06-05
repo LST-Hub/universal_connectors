@@ -313,7 +313,7 @@ const getRedirectPage = async (req, res) => {
       client_id:
         "350110252536-v0id00m9oaathq39hv7o8i1nmj584et1.apps.googleusercontent.com",
       scope:
-        "https%3A//www.googleapis.com/auth/drive.readonly%20https%3A//www.googleapis.com/auth/spreadsheets",
+        "https%3A//www.googleapis.com/auth/drive%20https%3A//www.googleapis.com/auth/drive.readonly%20https%3A//www.googleapis.com/auth/spreadsheets",
       access_type: "offline",
       prompt: "consent",
       include_granted_scopes: "true",
@@ -433,7 +433,7 @@ const addCredentials = async (user_id, refresh_token) => {
       },
     });
     if (credentials) {
-      console.log("credentials added")
+      console.log("credentials added");
     } else {
       console.log("credentials not added");
     }
@@ -474,6 +474,7 @@ const getAccessToken = async (req, res) => {
         userId: Number(id),
       },
     });
+
     if (token) {
       const data = {
         refreshToken: token[0].refreshToken,
@@ -494,6 +495,7 @@ const getAccessToken = async (req, res) => {
         headers: headers,
       })
         .then((values) => {
+          // console.log(values.data);
           response({
             res,
             success: true,
@@ -535,7 +537,6 @@ const getAccessToken = async (req, res) => {
 };
 
 const getFiles = async (req, res) => {
-  // console.log("req.query", req.query)
   const { accessToken } = req.query;
 
   const url = "https://www.googleapis.com/drive/v3/files";
@@ -581,6 +582,7 @@ const getFiles = async (req, res) => {
 
 const getSheetsData = async (req, res) => {
   const { sheetsId, accessToken } = req.query;
+  // console.log("oo", req.query);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/A1:ZZ100000`;
   const headers = {
     Authorization: `Bearer ${accessToken}`,
@@ -662,9 +664,455 @@ const getcredentialDetailsById = async (req, res) => {
   }
 };
 
-// const getSavedSearch = async (req, res) => {
+// const getSheetValuesById = async (sheetId, accessToken) => {
+//   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:ZZ100000`;
+//   const headers = {
+//     Authorization: `Bearer ${accessToken}`,
+//   };
 //   try {
+//     await axios({
+//       method: "GET",
+//       url: url,
+//       headers: headers,
+//     })
+//       .then((values) => {
+//         return values.data;
+//       })
+//       .catch((error) => {
+//         console.log("getSheetValuesById error==>", error);
+//       });
+//   } catch(error) {
+//     console.log("getSheetValuesById Error ==>", error);
+//   }
+// };
 
+const getAccessTokenByUserId = async (userId) => {
+  try {
+    const token = await prisma.credentials.findMany({
+      where: {
+        userId: Number(userId),
+      },
+    });
+
+    if (token && token.length > 0) {
+      const data = {
+        refreshToken: token[0].refreshToken,
+        grantType: "refresh_token",
+        clientId:
+          "350110252536-v0id00m9oaathq39hv7o8i1nmj584et1.apps.googleusercontent.com",
+        clientSecret: "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",
+      };
+
+      const url = `https://oauth2.googleapis.com/token?refresh_token=${data.refreshToken}&grant_type=${data.grantType}&client_id=${data.clientId}&client_secret=${data.clientSecret}`;
+      const headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+      };
+
+      const response = await axios({
+        method: "POST",
+        url: url,
+        headers: headers,
+      });
+
+      return response.data.access_token;
+    } else {
+      console.log("getAccessTokenByUserId Error: Token not found");
+      return null; // Return null or handle the case where the token is not found
+    }
+  } catch (error) {
+    console.log("getAccessTokenByUserId Error:", error);
+    return null; // Return null or handle the error accordingly
+  }
+};
+
+const updateSheetValues = async (req, res) => {
+  const { sheetsId, sheetsLabel, values } = req.body;
+
+  const accessToken = await getAccessTokenByUserId(req.body.userId);
+  // console.log("accessToken", accessToken);
+
+  const sheetValues = [];
+  let columnID;
+  const allData = [];
+
+  if (accessToken) {
+    // *** get current sheet values
+    const sheetValuesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/A2:ZZ100000`;
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    };
+    try {
+      await axios({
+        method: "GET",
+        url: sheetValuesUrl,
+        headers: headers,
+      })
+        .then((values) => {
+          const range = values.data.range;
+          const rangeArray = range.split("!");
+          columnID = rangeArray[1].split(":")[0].split("");
+          // response({
+          //   res,
+          //   success: true,
+          //   status_code: 200,
+          //   data: [values.data],
+          //   message: "Sheets data fetched successfully",
+          // });
+          sheetValues.push(values.data.values);
+        })
+        .catch((error) => {
+          // console.log("getSheetValues error==>", error);
+          response({
+            res,
+            success: false,
+            status_code: 400,
+            data: [],
+            message: "Sheets data not fetched",
+          });
+        });
+    } catch (error) {
+      // console.log("getSheetValues Error ==>", error);
+      response({
+        res,
+        success: false,
+        status_code: 400,
+        data: [],
+        message: "Error while fetching sheets data",
+      });
+    }
+
+    const urlParams = {
+      includeValuesInResponse: true,
+      responseDateTimeRenderOption: "SERIAL_NUMBER",
+      responseValueRenderOption: "FORMATTED_VALUE",
+      valueInputOption: "USER_ENTERED",
+    };
+
+    // *** to update values
+
+    // * "sheetValues" from google sheets
+    for (const element of sheetValues[0]) {
+      ++columnID[1];
+      // * "values" from frontend
+      for (const value of values) {
+        if (element[0] === value[0]) {
+          // console.log("updated value==>",columnID[0],columnID[1]-1, "=", value);
+          const data = {
+            majorDimension: "ROWS",
+            range: `${sheetsLabel}!${columnID[0]}${columnID[1] - 1}`,
+            values: [value],
+          };
+          const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${sheetsLabel}!${
+            columnID[0]
+          }${columnID[1] - 1}?includeValuesInResponse=${
+            urlParams.includeValuesInResponse
+          }&responseDateTimeRenderOption=${
+            urlParams.responseDateTimeRenderOption
+          }&responseValueRenderOption=${
+            urlParams.responseValueRenderOption
+          }&valueInputOption=${urlParams.valueInputOption}`;
+          allData.push({
+            url: url,
+            data: data,
+          });
+        }
+      }
+    }
+
+    // *** to add values
+    for (const value of values) {
+      const uniqueValue = sheetValues[0].find(
+        (sheetValue) => sheetValue[0] === value[0]
+      );
+      if (!uniqueValue) {
+        // console.log("updated value==>",columnID[0],columnID[1], "=", value);
+
+        const data = {
+          majorDimension: "ROWS",
+          range: `${sheetsLabel}!${columnID[0]}${columnID[1]}`,
+          values: [value],
+        };
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${sheetsLabel}!${columnID[0]}${columnID[1]}?includeValuesInResponse=${urlParams.includeValuesInResponse}&responseDateTimeRenderOption=${urlParams.responseDateTimeRenderOption}&responseValueRenderOption=${urlParams.responseValueRenderOption}&valueInputOption=${urlParams.valueInputOption}`;
+        allData.push({
+          url: url,
+          data: data,
+        });
+
+        ++columnID[1];
+      }
+    }
+
+    // console.log("allData", allData);
+
+    // *** added and updated data in google sheet using v4 api
+    try {
+      const promises = allData.map(async (data) => {
+        try {
+          const response = await axios({
+            method: "PUT",
+            url: data.url,
+            headers: headers,
+            data: data.data,
+          });
+          return response.data;
+        } catch (error) {
+          console.log("error =>", error);
+          throw error;
+        }
+      });
+
+      const results = await Promise.all(promises);
+
+      response({
+        res,
+        success: true,
+        status_code: 200,
+        data: results,
+        message: "Values added successfully",
+      });
+    } catch (error) {
+      console.log("Error ==>", error);
+      response({
+        res,
+        success: false,
+        status_code: 400,
+        data: [],
+        message: "Error while adding values",
+      });
+    }
+  } else {
+    response({
+      res,
+      success: false,
+      status_code: 400,
+      data: [],
+      message: "Access token not found",
+    });
+  }
+};
+
+const deleteSheetValue = async (req, res) => {
+  const { sheetsId, sheetsLabel, value, userId } = req.body;
+
+  const accessToken = await getAccessTokenByUserId(userId);
+  let startId;
+  let endId;
+
+  if (accessToken) {
+    try {
+      // *** get current sheet values
+      const sheetValuesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/A1:ZZ100000`;
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      };
+
+      await axios({
+        method: "GET",
+        url: sheetValuesUrl,
+        headers: headers,
+      })
+        .then((values) => {
+          const range = values.data.range;
+          const rangeArray = range.split("!");
+          startId = rangeArray[1].split(":")[0].split("");
+
+          const data = values.data.values;
+          const deleteRowRange = [];
+          for (const element of data) {
+            startId[1]++;
+            if (element[0] === value) {
+              // console.log(element, "match at", startId[0], startId[1] - 1);
+              const length = element.length;
+              endId = String.fromCharCode(64 + length);
+              deleteRowRange.push({
+                range: `${startId[0]}${startId[1] - 1}:${endId}${
+                  startId[1] - 1
+                }`,
+                value: element,
+              });
+            }
+          }
+
+          // *** delete row from google sheet
+          const deleteRowResult = deleteGoggleSheetRow(
+            sheetsId,
+            sheetsLabel,
+            deleteRowRange,
+            accessToken,
+            startId
+          );
+
+          deleteRowResult
+            .then((result) => {
+              // console.log("result", result);
+              response({
+                res,
+                success: true,
+                status_code: 200,
+                data: [result],
+                message: "Row deleted successfully",
+              });
+            })
+            .catch((error) => {
+              // console.log("error", error);
+              response({
+                res,
+                success: false,
+                status_code: 400,
+                data: [],
+                message: "Error while deleting row",
+              });
+            });
+        })
+        .catch((error) => {
+          // console.log("getSheetValues error==>", error);
+          response({
+            res,
+            success: false,
+            status_code: 400,
+            data: [],
+            message: "Sheets data not fetched",
+          });
+        });
+    } catch (error) {
+      // console.log("getSheetValues Error ==>", error);
+      response({
+        res,
+        success: false,
+        status_code: 400,
+        data: [],
+        message: "Error while fetching sheets data",
+      });
+    }
+  }
+};
+
+const deleteGoggleSheetRow = async (
+  sheetsId,
+  sheetsLabel,
+  deleteRowRange,
+  accessToken
+) => {
+  // if (deleteRowRange.length > 0){
+  // console.log("deleteRowRange", deleteRowRange[0].range);
+  // }
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${deleteRowRange[0].range}:clear`;
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    const data = {
+      range: `${sheetsLabel}!${deleteRowRange[0].range}`,
+      // shiftDimension: "ROWS"
+    };
+
+    try {
+      const promises = await axios({
+        method: "POST",
+        url: url,
+        headers: headers,
+        data: data,
+      });
+      console.log("promises.data", promises.data);
+      // getData(sheetsId, accessToken, sheetsLabel);
+      return promises.data;
+    } catch (error) {
+      // console.log("deleteGoggleSheetRow error==>", error);
+      throw error;
+    }
+  } catch (error) {
+    // console.log("deleteGoggleSheetRow Error ==>", error);
+    throw error;
+  }
+};
+
+const getData = async (sheetsId, accessToken, sheetsLabel) => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/A1:ZZ100000`;
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  };
+
+  const urlParams = {
+    includeValuesInResponse: true,
+    responseDateTimeRenderOption: "SERIAL_NUMBER",
+    responseValueRenderOption: "FORMATTED_VALUE",
+    valueInputOption: "USER_ENTERED",
+  };
+
+  try {
+    await axios({
+      method: "GET",
+      url: url,
+      headers: headers,
+    })
+      .then((values) => {
+        // console.log(values.data.range)
+        const range = values.data.range;
+        const rangeArray = range.split("!");
+        const columnId = rangeArray[1].split(":")[0].split("");
+
+        const sheetData = [];
+        const rows = values.data.values;
+        rows.map((row) => {
+          if (row.length > 0) {
+            // sheetData.push(row)
+            const data = {
+              majorDimension: "ROWS",
+              range: `${sheetsLabel}!${columnId[0]}${columnId[1]}`,
+              values: [row],
+            };
+
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${sheetsLabel}!${columnId[0]}${columnId[1]}?includeValuesInResponse=${urlParams.includeValuesInResponse}&responseDateTimeRenderOption=${urlParams.responseDateTimeRenderOption}&responseValueRenderOption=${urlParams.responseValueRenderOption}&valueInputOption=${urlParams.valueInputOption}`;
+            sheetData.push({
+              url: url,
+              data: data,
+            });
+            ++columnId[1];
+          }
+        });
+
+        console.log("sheetData", sheetData);
+        addData(sheetData, headers);
+
+        // // console.log(sheetData)
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const addData = async (sheetData, headers) => {
+  try {
+    const promises = sheetData.map(async (data) => {
+      try {
+        const response = await axios({
+          method: "PUT",
+          url: data.url,
+          headers: headers,
+          data: data.data,
+        });
+        return response.data;
+      } catch (error) {
+        console.log("error =>", error);
+        throw error;
+      }
+    });
+
+    const results = await Promise.all(promises);
+
+    console.log("results", results);
+  } catch (error) {
+    console.log("Error ==>", error);
+  }
+};
 
 module.exports = {
   getRecordTypes,
@@ -676,4 +1124,31 @@ module.exports = {
   getFiles,
   getSheetsData,
   getcredentialDetailsById,
+  updateSheetValues,
+  deleteSheetValue,
 };
+
+//  // const sheetColumnData = values.find((value) => value[0] === element[0]);
+//  const sheetColumnData = sheetValues[0].find((element) => element[0] === value[0]);
+
+//  if (sheetColumnData) {
+//    console.log("updated value==>",columnID[1]-1, "=", sheetColumnData);
+//    // allData.push({
+//    //   url: `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${sheetsLabel}!${columnID[0]}${columnID[1] - 1}?includeValuesInResponse=${urlParams.includeValuesInResponse}&responseDateTimeRenderOption=${urlParams.responseDateTimeRenderOption}&responseValueRenderOption=${urlParams.responseValueRenderOption}&valueInputOption=${urlParams.valueInputOption}`,
+//    //   data: {
+//    //     majorDimension: "ROWS",
+//    //     range: `${sheetsLabel}!${columnID[0]}${columnID[1] - 1}`,
+//    //     values: [sheetColumnData],
+//    //   },
+//    // });
+//  } else {
+//    // console.log("added value==>", element);
+//    // allData.push({
+//    //   url: `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${sheetsLabel}!${columnID[0]}${columnID[1]}?includeValuesInResponse=${urlParams.includeValuesInResponse}&responseDateTimeRenderOption=${urlParams.responseDateTimeRenderOption}&responseValueRenderOption=${urlParams.responseValueRenderOption}&valueInputOption=${urlParams.valueInputOption}`,
+//    //   data: {
+//    //     majorDimension: "ROWS",
+//    //     range: `${sheetsLabel}!${columnID[0]}${columnID[1]}`,
+//    //     values: [element],
+//    //   },
+//    // });
+//  }

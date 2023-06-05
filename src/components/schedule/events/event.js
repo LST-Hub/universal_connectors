@@ -13,7 +13,7 @@ import { API_BASE_URL } from "@/utils/Constants";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 
-const Event = ({ eventId, searchData }) => {
+const Event = ({ eventId, syncData }) => {
   const {
     control,
     register,
@@ -158,20 +158,20 @@ const Event = ({ eventId, searchData }) => {
               <RealtimeEvent
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
-                searchData={searchData}
+                syncData={syncData}
               />
             ) : showComponent === "singleEvent" ? (
               <SingleEvent
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
-                searchData={searchData}
+                syncData={syncData}
               />
             ) : showComponent === "weeklyEvent" ? (
               <WeeklyEvent
                 toggleComponet={toggleComponet}
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
-                searchData={searchData}
+                syncData={syncData}
               />
             ) : (
               <SingleEvent />

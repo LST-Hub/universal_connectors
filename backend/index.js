@@ -7,11 +7,12 @@ const integrationController = require("./controllers/integration.controllers");
 const resletController = require("./controllers/restletsApi.controllers");
 const fieldMappingController = require("./controllers/fieldMapping.controllers");
 const scheduleController = require("./controllers/schedule.controllers");
+const crypto = require("crypto");
+const axios = require("axios");
 
 const app = express();
 dotenv.config();
 const port = process.env.PORT || 4000;
-
 
 var allowCrossDomain = function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -54,6 +55,7 @@ v1Router.put(
   "/updateConfiguration/:id",
   integrationController.updateConfiguration
 );
+
 v1Router.get(
   "/getConfigurationByIntegrationId/:id",
   integrationController.getConfigurationByIntegrationId
@@ -72,10 +74,15 @@ v1Router.get(
   "/getcredentialDetailsById/:id",
   resletController.getcredentialDetailsById
 );
+v1Router.post("/updateSheetValues", resletController.updateSheetValues);
+v1Router.post("/deleteSheetValue", resletController.deleteSheetValue);
 
 // *** field mapping routes ***
 v1Router.post("/addMappedRecord", fieldMappingController.addMappedRecord);
-v1Router.put("/updateFieldMappingState/:id", fieldMappingController.updateFieldMappingState);
+v1Router.put(
+  "/updateFieldMappingState/:id",
+  fieldMappingController.updateFieldMappingState
+);
 v1Router.get(
   "/getMappedRecordById/:id",
   fieldMappingController.getMappedRecordById
@@ -99,16 +106,37 @@ v1Router.post("/addSingleEvent", scheduleController.addSingleEvent);
 v1Router.post("/addWeeklyEvent", scheduleController.addWeeklyEvent);
 v1Router.get("/getSchedules/:id", scheduleController.getSchedules);
 v1Router.get("/getScheduleEventById", scheduleController.getScheduleEventById);
-v1Router.put("/updateRealTimeEvent/:id", scheduleController.updateRealTimeEvent);
+v1Router.put(
+  "/updateRealTimeEvent/:id",
+  scheduleController.updateRealTimeEvent
+);
 v1Router.put("/updateSingleEvent/:id", scheduleController.updateSingleEvent);
 v1Router.put("/updateWeeklyEvent/:id", scheduleController.updateWeeklyEvent);
-v1Router.delete("/deleteScheduleEvent/:id/:integrationId", scheduleController.deleteScheduleEvent);
-v1Router.post("/addCustomFilterFields", scheduleController.addCustomFilterFields);
+v1Router.delete(
+  "/deleteScheduleEvent/:id/:integrationId",
+  scheduleController.deleteScheduleEvent
+);
+v1Router.post(
+  "/addCustomFilterFields",
+  scheduleController.addCustomFilterFields
+);
+v1Router.get(
+  "/getCustomFilterFields",
+  scheduleController.getCustomFilterFields
+);
 // v1Router.post("/addMappedFields", scheduleController.addMappedFields);
 // v1Router.get("/getMappedField", scheduleController.getMappedField);
+v1Router.post("/addNetsuiteFields", scheduleController.addNetsuiteFields);
+// v1Router.post("/scheduleRealtimeEvent", scheduleController.scheduleRealtimeEvent);
+v1Router.get("/getNetsuiteFiledsByRecordId", scheduleController.getNetsuiteFiledsByRecordId);
+v1Router.get("/getFields", scheduleController.getFields);
 
 v1Router.post("/scheduleTask", scheduleController.scheduleTask);
-v1Router.get("/getMappedRecordByIntegrationId", scheduleController.getMappedRecordByIntegrationId);
+v1Router.get(
+  "/getMappedRecordByIntegrationId",
+  scheduleController.getMappedRecordByIntegrationId
+);
+
 
 // console.log(new Date())
 

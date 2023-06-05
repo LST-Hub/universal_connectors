@@ -50,7 +50,7 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
         enabled: !!integrationId,
       },
       {
-        queryKey: ["configDetails", configurationData],
+        queryKey: ["configDetails"],
         queryFn: tkFetch.get(`${API_BASE_URL}/getRecordTypes`, {
           params: configurationData,
         }),
@@ -124,7 +124,6 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
     isFetching: excelSheetFetching,
   } = googleSheetApi;
 
-  console.log("excelSheetData", excelSheetData)
 
   const addFields = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/addFields`),
@@ -143,7 +142,6 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
     }
   }, []);
 
-  console.log(mappedRecordData)
 
   useEffect(() => {
     if (accessTokenData && mappedRecordData) {
@@ -164,13 +162,14 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
             accessToken: item.accessToken,
             accessSecretToken: item.accessSecretToken,
             resttype: "ListOfRecordField",
-            recordtype: mappedRecordDetails.source,
+            recordtype: mappedRecordDetails.recordTypeValue,
           });
         }
       });
     }
 
     if (restletOptions) {
+      // console.log("*********restletOptions", restletOptions)
       setNetsuiteValues([]);
       if (
         restletOptions[0].body.length > 0 ||
@@ -217,7 +216,7 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
         setValue(`sourceFieldValue[${index}]`,
          {
           value: field.sourceFieldValue,
-          label: field.sourceFieldValue,
+          label: field.sourceFieldLabel,
         }
         );
       });

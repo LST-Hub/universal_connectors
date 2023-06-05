@@ -21,7 +21,7 @@ const schema = Yup.object({
   startTime: Yup.object().required("Start time is required"),
 }).required();
 
-const SingleEvent = ({ checkBoxValue, eventId, searchData }) => {
+const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
   const userId = useRef(null);
   const {
     control,
@@ -119,21 +119,22 @@ const SingleEvent = ({ checkBoxValue, eventId, searchData }) => {
       const eventData = {
         id: eventId,
         userId: JSON.parse(userId.current),
-        integrationId: searchData.integrationId,
-        mappedRecordId: searchData.mappedRecordId,
+        integrationId: syncData.integrationId,
+        mappedRecordId: syncData.mappedRecordId,
         eventType: "Single",
         startDate: data.startDate,
         startTime: data.startTime.value,
         repeatEveryDay: data.repeatEveryDay,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
-        performType: searchData.perform,
-        // savedSearchType: searchData.savedSearchType,
+        performType: syncData.perform,
+        // savedSearchType: syncData.savedSearchType,
+        operationType: syncData.operationType
       };
 
-      if (searchData.savedSearchLabel) {
-        eventData.savedSearchLabel = searchData.savedSearchLabel;
-        eventData.savedSearchValue = searchData.savedSearchValue;
+      if (syncData.savedSearchLabel) {
+        eventData.savedSearchLabel = syncData.savedSearchLabel;
+        eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
       updateSingleEvent.mutate(eventData, {
@@ -147,21 +148,22 @@ const SingleEvent = ({ checkBoxValue, eventId, searchData }) => {
 
       const eventData = {
         userId: JSON.parse(userId.current),
-        integrationId: searchData.integrationId,
-        mappedRecordId: searchData.mappedRecordId,
+        integrationId: syncData.integrationId,
+        mappedRecordId: syncData.mappedRecordId,
         eventType: "Single",
         startDate: data.startDate,
         startTime: data.startTime.value,
         repeatEveryDay: data.repeatEveryDay,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
-        performType: searchData.perform,
-        // savedSearchType: searchData.savedSearchType,
+        performType: syncData.perform,
+        // savedSearchType: syncData.savedSearchType,
+        operationType: syncData.operationType
       };
 
-      if (searchData.savedSearchLabel) {
-        eventData.savedSearchLabel = searchData.savedSearchLabel;
-        eventData.savedSearchValue = searchData.savedSearchValue;
+      if (syncData.savedSearchLabel) {
+        eventData.savedSearchLabel = syncData.savedSearchLabel;
+        eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
       addEvent.mutate(eventData, {
