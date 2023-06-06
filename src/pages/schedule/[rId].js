@@ -17,8 +17,8 @@ const MapField = () => {
 
       <div className="page-content">
         <BreadCrumb
-          parentTitle="Event"
-          parentLink="/schedule/event"
+          parentTitle="Schedule"
+          parentLink="/schedule"
           pageTitle="Map Fields"
         />
 

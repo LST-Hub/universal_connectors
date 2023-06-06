@@ -133,7 +133,6 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         realtimeEventData.savedSearchLabel = syncData.savedSearchLabel;
         realtimeEventData.savedSearchValue = syncData.savedSearchValue;
       }
-      console.log("realtimeEventData", realtimeEventData)
 
       addNetsuiteFields.mutate(realtimeEventData, {
         onSuccess: (res) => {

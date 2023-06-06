@@ -124,7 +124,6 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
     isFetching: excelSheetFetching,
   } = googleSheetApi;
 
-
   const addFields = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/addFields`),
   });
@@ -141,7 +140,6 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
       //TODO: use let for user id
     }
   }, []);
-
 
   useEffect(() => {
     if (accessTokenData && mappedRecordData) {
@@ -177,7 +175,7 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
       ) {
         const entries = Object.entries(restletOptions[0]?.body[0]);
         entries.map(([key, value], index) => {
-           // TODO: map inside state fun
+          // TODO: map inside state fun
           setNetsuiteValues((netsuiteValues) => [
             ...netsuiteValues,
             { label: value + " (field Id: " + key + ")", value: key },
@@ -213,12 +211,10 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
           `destinationFieldValue[${index}]`,
           field.destinationFieldValue || field.googleSheets
         );
-        setValue(`sourceFieldValue[${index}]`,
-         {
+        setValue(`sourceFieldValue[${index}]`, {
           value: field.sourceFieldValue,
           label: field.sourceFieldLabel,
-        }
-        );
+        });
       });
       setRows(fieldsData);
       return;
@@ -393,7 +389,6 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
             sourceFieldValue: row.sourceFieldValue,
           });
         } else {
-
           sheetsRecord.push({
             id: index,
             destinationFieldValue: item,
@@ -419,7 +414,6 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
     }
     hideLoader();
   };
-
 
   return (
     <>

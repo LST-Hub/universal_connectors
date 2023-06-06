@@ -10,6 +10,7 @@ import TkModal, {
 import TkRadioButton from "@/globalComponents/TkRadioButton";
 import TkRow, { TkCol } from "@/globalComponents/TkRow";
 import TkSelect from "@/globalComponents/TkSelect";
+import TkTableContainer from "@/globalComponents/TkTableContainer";
 import { API_BASE_URL } from "@/utils/Constants";
 import ToggleButton from "@/utils/ToggleButton";
 import tkFetch from "@/utils/fetch";
@@ -21,8 +22,8 @@ import { Controller, useForm } from "react-hook-form";
 import * as Yup from "yup";
 
 const schema = Yup.object({
-  netsuiteFields: Yup.object().required("Field name is required."),
-  operator: Yup.object().required("Operator is required."),
+  // netsuiteFields: Yup.object().required("Field name is required."),
+  // operator: Yup.object().required("Operator is required."),
   // googleSheetFields: Yup.object().required("Field name is required."),
 }).required();
 
@@ -44,7 +45,7 @@ const Field = ({ mappedRecordId }) => {
   const [checkedValue, setCheckedValue] = useState("dropdownField");
   const [credentials, setCredentials] = useState(null);
   const [filterIds, setFilterIds] = useState(null);
-  const [filterData, setFillterData] = useState([]);
+  const [rows, setRows] = useState([]);
 
   const operators = [
     { label: "is", value: 1 },
@@ -109,6 +110,106 @@ const Field = ({ mappedRecordId }) => {
     data: customFilterFieldsData,
   } = customFilterFields;
 
+  const columns = [
+    {
+      Header: "NetSuite™ fields",
+      accessor: "netsuiteFields",
+      Cell: ({ row }) => {
+        return (
+          // <TkInput
+          //   type="text"
+          //   {...register(`destinationFieldValue[${row.index}]`)}
+          //   disabled={row.original.destinationFieldValue ? true : false}
+          // />
+          <Controller
+            name={`netsuiteFields[${row.index}]`}
+            control={control}
+            render={({ field }) => (
+              <TkSelect
+                {...field}
+                options={netsuiteOptions}
+                maxMenuHeight="100px"
+                isSerchable={true}
+                // labelName="Netsuite fields"
+                // id="netsuiteFields"
+                // requiredStarOnLabel={true}
+              />
+            )}
+          />
+        );
+      },
+    },
+    {
+      Header: "Operator",
+      accessor: "operator",
+      Cell: ({ row }) => {
+        return (
+          <Controller
+            name={`operator[${row.index}]`}
+            control={control}
+            render={({ field }) => (
+              <TkSelect
+                {...field}
+                options={operators}
+                maxMenuHeight="100px"
+                isSerchable={true}
+              />
+            )}
+          />
+        );
+      },
+    },
+    {
+      Header: "Google sheet fields",
+      accessor: "googleSheetFields",
+      Cell: ({ row }) => {
+        return (
+          <div className="d-flex">
+            {checkedValue === "dropdownField" ? (
+              <>
+                <Controller
+                  name={`googleSheetFields[${row.index}]`}
+                  control={control}
+                  render={({ field }) => (
+                    <TkSelect
+                      {...field}
+                      maxMenuHeight="100px"
+                      options={[
+                        { label: "Name", value: "name" },
+                        { label: "Email", value: "email" },
+                      ]}
+                    />
+                  )}
+                />
+              </>
+            ) : (
+              <>
+                <TkInput
+                  type="text"
+                  {...register(`googleSheetFields[${row.index}]`)}
+                  placeholder="Enter Google sheet field"
+                />
+              </>
+            )}
+            <i className="ri-settings-3-line fs-2" onClick={onClickModal} />
+          </div>
+        );
+      },
+    },
+    {
+      Header: "Action",
+      accessor: "action",
+      Cell: (props) => {
+        return (
+          <i
+            className="ri-delete-bin-5-line pe-auto px-3"
+            // onClick={() => toggleDeleteModel(props.row.original?.id)}
+          />
+        );
+      },
+    },
+  ];
+
   useEffect(() => {
     const userId = sessionStorage.getItem("userId");
     setUserId(JSON.parse(userId));
@@ -136,7 +237,6 @@ const Field = ({ mappedRecordId }) => {
 
   useEffect(() => {
     if (recodTypeFieldsData) {
-      // console.log("recodTypeFields", recodTypeFieldsData);
       setNetsuiteOptions([]);
       if (
         recodTypeFieldsData[0].body.length > 0 ||
@@ -172,39 +272,61 @@ const Field = ({ mappedRecordId }) => {
   }, [recodTypeFieldsData]);
 
   useEffect(() => {
-    console.log("customFilterFieldsData", customFilterFieldsData);
     if (customFilterFieldsData?.length) {
-      setValue("netsuiteFields", {
-        label: customFilterFieldsData[0].sourceFieldLabel,
-        value: customFilterFieldsData[0].sourceFieldValue,
-      });
-
-      setValue("operator", {
-        label: customFilterFieldsData[0].operator,
-        value: customFilterFieldsData[0].operator,
-      });
-
-      customFilterFieldsData[0].condition === "AND"
-        ? setAndConditionState(true)
-        : setAndConditionState(false);
-      customFilterFieldsData[0].condition === "OR"
-        ? setOrConditionState(true)
-        : setOrConditionState(false);
-
-      setCheckedValue(customFilterFieldsData[0].fieldType);
-      if (customFilterFieldsData[0].fieldType === "dropdownField") {
-        // console.log(customFilterFieldsData[0].destinationFieldLabel, "and", customFilterFieldsData[0].destinationFieldValue)
-        setValue("googleSheetFields", {
-          label: customFilterFieldsData[0].destinationFieldLabel,
-          value: customFilterFieldsData[0].destinationFieldValue,
+      customFilterFieldsData.map((item, index) => {
+        setValue(`netsuiteFields[${index}]`, {
+          label: item.sourceFieldLabel,
+          value: item.sourceFieldValue,
         });
-      } else {
-        // console.log(customFilterFieldsData[0].destinationFieldValue)
-        setValue(
-          "googleSheetFields",
-          customFilterFieldsData[0].destinationFieldValue
-        );
-      }
+        setValue(`operator[${index}]`, {
+          label: item.operator,
+          value: item.operator,
+        });
+        setCheckedValue(item.fieldType);
+        if (item.fieldType === "dropdownField") {
+          setValue(`googleSheetFields[${index}]`, {
+            label: item.destinationFieldLabel,
+            value: item.destinationFieldValue,
+          });
+        } else {
+          setValue(`googleSheetFields[${index}]`, item.destinationFieldValue);
+        }
+      });
+
+      setRows(customFilterFieldsData);
+      return;
+
+      // setValue("netsuiteFields", {
+      //   label: customFilterFieldsData[0].sourceFieldLabel,
+      //   value: customFilterFieldsData[0].sourceFieldValue,
+      // });
+
+      // setValue("operator", {
+      //   label: customFilterFieldsData[0].operator,
+      //   value: customFilterFieldsData[0].operator,
+      // });
+
+      // customFilterFieldsData[0].condition === "AND"
+      //   ? setAndConditionState(true)
+      //   : setAndConditionState(false);
+      // customFilterFieldsData[0].condition === "OR"
+      //   ? setOrConditionState(true)
+      //   : setOrConditionState(false);
+
+      // setCheckedValue(customFilterFieldsData[0].fieldType);
+      // if (customFilterFieldsData[0].fieldType === "dropdownField") {
+      //   // console.log(customFilterFieldsData[0].destinationFieldLabel, "and", customFilterFieldsData[0].destinationFieldValue)
+      //   setValue("googleSheetFields", {
+      //     label: customFilterFieldsData[0].destinationFieldLabel,
+      //     value: customFilterFieldsData[0].destinationFieldValue,
+      //   });
+      // } else {
+      //   // console.log(customFilterFieldsData[0].destinationFieldValue)
+      //   setValue(
+      //     "googleSheetFields",
+      //     customFilterFieldsData[0].destinationFieldValue
+      //   );
+      // }
     }
   }, [customFilterFieldsData, setValue]);
 
@@ -225,58 +347,119 @@ const Field = ({ mappedRecordId }) => {
     toggle();
   };
 
-  const onSubmit = (data) => {
-    console.log(data);
-    const fiterItem = {
-      userId: userId,
-      mappedRecordId: JSON.parse(mappedRecordId),
-      integrationId: configurationData[0].integrationId,
-      sourceFieldValue: data.netsuiteFields.value,
-      sourceFieldLabel: data.netsuiteFields.label,
-      destinationFieldValue: data.googleSheetFields.value
-        ? data.googleSheetFields.value
-        : data.googleSheetFields,
-      destinationFieldLabel: data.googleSheetFields.label
-        ? data.googleSheetFields.label
-        : undefined,
-      operator: data.operator.label,
-      fieldType: checkedValue,
-      condition: andConditionState ? "AND" : orConditionState ? "OR" : null,
-    };
-
-    console.log("filter data", fiterItem);
-    // addCustomFilterFields.mutate(fiterItem, {
-    //   onSuccess: (data) => {
-    //     console.log(data);
-    //   },
-    //   onError: (error) => {
-    //     console.log(error);
-    //   },
-    // });
-    // history.back();
-  };
+  const [conditions, setConditions] = useState([]);
 
   const [andConditionState, setAndConditionState] = useState(false);
   const [orConditionState, setOrConditionState] = useState(false);
 
   const handelAndCondition = (e) => {
-    // console.log(e.target.innerText)
     setAndConditionState(!andConditionState);
     if (e.target.innerText === "AND") {
       setOrConditionState(false);
+      setConditions((conditions) => [
+        ...conditions,
+        {
+          condition: "AND",
+        },
+      ]);
     }
+    console.log(conditions);
+    handleAddRow();
   };
+
   const handelOrCondition = (e) => {
     setOrConditionState(!orConditionState);
     if (e.target.innerText === "OR") {
       setAndConditionState(false);
+      setConditions((conditions) => [
+        ...conditions,
+        {
+          condition: "OR",
+        },
+      ]);
     }
+    handleAddRow();
   };
-  console.log("andConditionState", andConditionState);
-  console.log("orConditionState", orConditionState);
 
   const addConditionClass = andConditionState ? "active" : null;
   const orConditionClass = orConditionState ? "active" : null;
+
+  const handleAddRow = () => {
+    setRows([
+      ...rows,
+      {
+        netsuiteFields: "",
+        operator: "",
+        googleSheetFields: "",
+      },
+    ]);
+  };
+
+  const onClickCancel = () => {
+    history.back();
+  };
+
+  const onSubmit = (data) => {
+    console.log("data", data);
+    const fiterItem = data.googleSheetFields.map((item, index) => {
+      return {
+        userId: userId,
+        mappedRecordId: JSON.parse(mappedRecordId),
+        integrationId: configurationData[0].integrationId,
+        sourceFieldValue: data.netsuiteFields[index].value,
+        sourceFieldLabel: data.netsuiteFields[index].label,
+        destinationFieldValue: item.value ? item.value : item,
+        destinationFieldLabel: item.label ? item.label : undefined,
+        operator: data.operator[index].label,
+        fieldType: checkedValue,
+        // condition: andConditionState ? "AND" : orConditionState ? "OR" : null,
+      };
+    });
+    console.log("fiterItem", fiterItem);
+    // console.log("conditions", conditions);
+
+    const result = [];
+    for (let i = 0; i < fiterItem.length; i++) {
+      const item = fiterItem[i];
+      result.push([
+        item.sourceFieldValue,
+        item.operator,
+        item.destinationFieldValue,
+      ]);
+      if (i < conditions.length) {
+        result.push(conditions[i].condition);
+      }
+    }
+    console.log(result);
+
+    // const fiterItem = {
+    //   userId: userId,
+    //   mappedRecordId: JSON.parse(mappedRecordId),
+    //   integrationId: configurationData[0].integrationId,
+    //   sourceFieldValue: data.netsuiteFields.value,
+    //   sourceFieldLabel: data.netsuiteFields.label,
+    //   destinationFieldValue: data.googleSheetFields.value
+    //     ? data.googleSheetFields.value
+    //     : data.googleSheetFields,
+    //   destinationFieldLabel: data.googleSheetFields.label
+    //     ? data.googleSheetFields.label
+    //     : undefined,
+    //   operator: data.operator.label,
+    //   fieldType: checkedValue,
+    //   condition: andConditionState ? "AND" : orConditionState ? "OR" : null,
+    // };
+
+    // console.log("filter data", fiterItem);
+    addCustomFilterFields.mutate(result, {
+      onSuccess: (data) => {
+        console.log(data);
+      },
+      onError: (error) => {
+        console.log(error);
+      },
+    });
+    // history.back();
+  };
 
   return (
     <>
@@ -287,8 +470,29 @@ const Field = ({ mappedRecordId }) => {
       <TkButton onClick={handelOrCondition} className={orConditionClass}>
         OR
       </TkButton>
-      
       <TkForm onSubmit={handleSubmit(onSubmit)}>
+        <TkTableContainer
+          columns={columns}
+          data={rows || []}
+          thClass="text-dark"
+        />
+        <TkButton
+          className="btn-success my-2 me-2"
+          onClick={handleAddRow}
+          type="button"
+        >
+          Add Row
+        </TkButton>
+        <TkButton className="btn-success m-2">Save</TkButton>
+        <TkButton
+          className="btn-success m-2"
+          type="button"
+          onClick={onClickCancel}
+        >
+          Cancel
+        </TkButton>
+      </TkForm>
+      {/* <TkForm onSubmit={handleSubmit(onSubmit)}>
         <TkRow className="mt-1 mb-5">
           <TkCol lg={4}>
             <Controller
@@ -350,11 +554,6 @@ const Field = ({ mappedRecordId }) => {
                       />
                     )}
                   />
-                  {/* {errors.googleSheetFields?.message ? (
-                    <FormErrorText>
-                      {errors.googleSheetFields?.message}
-                    </FormErrorText>
-                  ) : null} */}
                 </>
               ) : (
                 <>
@@ -364,11 +563,6 @@ const Field = ({ mappedRecordId }) => {
                     type="text"
                     placeholder="Enter Google sheet field"
                   />
-                  {/* {errors.googleSheetFields?.message ? (
-                    <FormErrorText>
-                      {errors.googleSheetFields?.message}
-                    </FormErrorText>
-                  ) : null} */}
                 </>
               )}
               <i className="ri-settings-3-line fs-2" onClick={onClickModal} />
@@ -379,9 +573,7 @@ const Field = ({ mappedRecordId }) => {
             <TkButton type="submit" className="btn-success my-5 me-3">
               Save
             </TkButton>
-            {/* </TkCol>
 
-        <TkCol lg={3}> */}
             <TkButton
               className="btn-success my-5"
               type="button"
@@ -391,7 +583,7 @@ const Field = ({ mappedRecordId }) => {
             </TkButton>
           </TkCol>
         </TkRow>
-      </TkForm>
+      </TkForm> */}
       <TkModal isOpen={modal} centered={true}>
         <TkModalHeader toggle={toggle}></TkModalHeader>
         <TkModalBody className="modal-body">

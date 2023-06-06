@@ -1056,7 +1056,10 @@ const getMappedFields = async (
             credentials,
             values,
             recordType,
-            mappedFields
+            mappedFields,
+            userId,
+            integrationId,
+            mappedRecordId
           );
           return updateResult;
           break;
@@ -1072,6 +1075,11 @@ const getMappedFields = async (
             mappedRecordId
           );
           return deleteResult;
+          break;
+
+        default:
+          console.log("operationType not matched");
+          throw error;
           break;
       }
     } else {
@@ -1110,7 +1118,9 @@ const addNetsuiteV1Api = async (
       internalid: null,
     };
 
-    const result = dataRows.map((row) => {
+    const resultArray = [];
+
+    dataRows.forEach((row) => {
       const obj = {};
       mappedFields.forEach((field) => {
         const columnIndex = headerRow.indexOf(field.destinationFieldValue);
@@ -1118,82 +1128,75 @@ const addNetsuiteV1Api = async (
           obj[field.sourceFieldValue] = row[columnIndex];
         }
       });
-
-      return { ...data, bodyfields: { ...obj } };
+    
+      const result = { ...data, bodyfields: { ...obj } };
+      resultArray.push(result);
     });
 
-    console.log(result);
-    // return result;
-    const authentication = {
-      account: credentials[0].accountId,
-      consumerKey: credentials[0].consumerKey,
-      consumerSecret: credentials[0].consumerSecretKey,
-      tokenId: credentials[0].accessToken,
-      tokenSecret: credentials[0].accessSecretToken,
-      timestamp: Math.floor(Date.now() / 1000).toString(),
-      nonce: getNonce(10),
-      http_method: "POST",
-      version: "1.0",
-      scriptDeploymentId: "1",
-      scriptId: "1529",
-      signatureMethod: "HMAC-SHA256",
-    };
-
-    const base_url =
-      "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
-    const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
-    const baseString = `${authentication.http_method}&${encodeURIComponent(
-      base_url
-    )}&${encodeURIComponent(concatenatedString)}`;
-    const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
-    const signature = crypto
-      .createHmac("sha256", keys)
-      .update(baseString)
-      .digest("base64");
-    const oAuth_String = `OAuth realm="${
-      authentication.account
-    }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
-      authentication.tokenId
-    }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
-      authentication.timestamp
-    }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
-      signature
-    )}"`;
-
-    const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
-
-    //   async function executeRequests() {
-    //     const responses = [];
-    //     for (const item of result) {
-    //       try {
-    //         const response = await axios({
-    //           method: "POST",
-    //           url: url,
-    //           headers: {
-    //             Authorization: oAuth_String,
-    //             "Content-Type": "application/json",
-    //           },
-    //           data: item,
-    //         });
-    //         responses.push(response.data);
-    //       } catch (error) {
-    //         console.log("************Error:", error.response.data);
-    //       }
-    //     }
-    //     return responses;
-    //   }
-
-    //   executeRequests()
-    // .then((responses) => {
-    //   console.log("All Responses:", responses);
-    // })
-    // .catch((error) => {
-    //   console.log("Error:", error);
-    // });
-
-    // ***
+    // console.log(result);
     const requests = [];
-    for (const item of result) {
+    const results = [];
+    for (const item of resultArray) {
+      // return result;
+      const authentication = {
+        account: credentials[0].accountId,
+        consumerKey: credentials[0].consumerKey,
+        consumerSecret: credentials[0].consumerSecretKey,
+        tokenId: credentials[0].accessToken,
+        tokenSecret: credentials[0].accessSecretToken,
+        timestamp: Math.floor(Date.now() / 1000).toString(),
+        nonce: getNonce(10),
+        http_method: "POST",
+        version: "1.0",
+        scriptDeploymentId: "1",
+        scriptId: "1529",
+        signatureMethod: "HMAC-SHA256",
+      };
+
+      const base_url =
+        "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+      const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+      const baseString = `${authentication.http_method}&${encodeURIComponent(
+        base_url
+      )}&${encodeURIComponent(concatenatedString)}`;
+      const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+      const signature = crypto
+        .createHmac("sha256", keys)
+        .update(baseString)
+        .digest("base64");
+      const oAuth_String = `OAuth realm="${
+        authentication.account
+      }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+        authentication.tokenId
+      }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+        authentication.timestamp
+      }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+        signature
+      )}"`;
+
+      const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+
+      // const request = axios({
+      //   method: "POST",
+      //   url: url,
+      //   headers: {
+      //     Authorization: oAuth_String,
+      //     "Content-Type": "application/json",
+      //   },
+      //   data: item,
+      // })
+      //   .then((res) => {
+      //     // console.log("res=>", res.data);
+      //     return res.data;
+      //   })
+      //   .catch((error) => {
+      //     // console.log("*******error", error.response.data);
+      //     return error.response.data;
+      //   });
+      // console.log("request", request);
+      // requests.push(request);
+
+      // ***
       const request = axios({
         method: "POST",
         url: url,
@@ -1204,33 +1207,51 @@ const addNetsuiteV1Api = async (
         data: item,
       })
         .then((res) => {
-          console.log("res=>", res.data);
+          results.push(res.data);
         })
         .catch((error) => {
-          console.log("*******error", error.response.data);
+          results.push(error.response.data);
         });
-      // requests.push(request);
+
+      requests.push(request);
     }
 
     // Promise.all(requests)
     //   .then((responses) => {
-    //     const res = responses.map((response) => response.data);
+    //     const res = responses.map((response) => response);
     //     console.log("res =>", res);
     //     return res;
     //   })
     //   .catch((error) => {
-    //     console.log("addNetsuiteV1Api error =>");
-    //     // throw error; // propagate the error further if needed
+    //     throw error;
     //   });
+
+    // ***
+    Promise.all(requests)
+      .then(() => {
+        console.log("All Results:", results);
+        return results;
+      })
+      .catch((error) => {
+        console.log("Error:", error);
+      });
   } catch (error) {
-    console.log("addNetsuiteV1Api error");
-    // throw error;
+    throw error;
   }
 };
 
 // update data in netsuite
-const updateNetsuiteV1Api = async (credentials, values, recordType) => {
+const updateNetsuiteV1Api = async (credentials, values, recordType, userId,
+  integrationId,
+  mappedRecordId) => {
   console.log("update record in ns");
+  // try {
+  //   const filterFields = filterData(userId, integrationId, mappedRecordId);
+  //   filterFields
+  //   .then((res) => {
+  //     console.log(res)
+  //   })
+  // }
 };
 
 // delete data from netsuite
@@ -1263,6 +1284,45 @@ const deleteNetsuiteV1Api = async (
           },
         };
         // console.log(deleteRecord);
+        const authentication = {
+          account: credentials[0].accountId,
+          consumerKey: credentials[0].consumerKey,
+          consumerSecret: credentials[0].consumerSecretKey,
+          tokenId: credentials[0].accessToken,
+          tokenSecret: credentials[0].accessSecretToken,
+          timestamp: Math.floor(Date.now() / 1000).toString(),
+          nonce: getNonce(10),
+          http_method: "POST",
+          version: "1.0",
+          scriptDeploymentId: "1",
+          scriptId: "1529",
+          signatureMethod: "HMAC-SHA256",
+        };
+
+        const base_url =
+        "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+      const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+      const baseString = `${authentication.http_method}&${encodeURIComponent(
+        base_url
+      )}&${encodeURIComponent(concatenatedString)}`;
+      const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+      const signature = crypto
+        .createHmac("sha256", keys)
+        .update(baseString)
+        .digest("base64");
+      const oAuth_String = `OAuth realm="${
+        authentication.account
+      }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+        authentication.tokenId
+      }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+        authentication.timestamp
+      }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+        signature
+      )}"`;
+  
+      const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+  
+        deleteV1Api(url, oAuth_String, deleteRecord)
       })
       .catch((error) => {
         console.log(error);
@@ -1271,101 +1331,55 @@ const deleteNetsuiteV1Api = async (
     console.log("error==>", error);
   }
 
-  // try {
-  // //   const data = {
-  // //     resttype: "Delete",
-  // //     recordtype: recordType,
-  // //     filters: {
-  // //       bodyfilters: [
-  // //         ["internalid", "is", "1513"],
-  // //         // "AND",
-  // //         // ["name", "noneOf", "test position"]
-  // //       ],
-  // //     },
-  // //   };
-
-  //   const authentication = {
-  //     account: credentials[0].accountId,
-  //     consumerKey: credentials[0].consumerKey,
-  //     consumerSecret: credentials[0].consumerSecretKey,
-  //     tokenId: credentials[0].accessToken,
-  //     tokenSecret: credentials[0].accessSecretToken,
-  //     timestamp: Math.floor(Date.now() / 1000).toString(),
-  //     nonce: getNonce(10),
-  //     http_method: "POST",
-  //     version: "1.0",
-  //     scriptDeploymentId: "1",
-  //     scriptId: "1529",
-  //     signatureMethod: "HMAC-SHA256",
-  //   };
-
-  //   const base_url =
-  //     "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
-  //   const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
-  //   const baseString = `${authentication.http_method}&${encodeURIComponent(
-  //     base_url
-  //   )}&${encodeURIComponent(concatenatedString)}`;
-  //   const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
-  //   const signature = crypto
-  //     .createHmac("sha256", keys)
-  //     .update(baseString)
-  //     .digest("base64");
-  //   const oAuth_String = `OAuth realm="${
-  //     authentication.account
-  //   }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
-  //     authentication.tokenId
-  //   }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
-  //     authentication.timestamp
-  //   }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
-  //     signature
-  //   )}"`;
-
-  //   const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
-
-  //   // ***
-  //   const requests = [];
-  //   const request = axios({
-  //     method: "POST",
-  //     url: url,
-  //     headers: {
-  //       Authorization: oAuth_String,
-  //       "Content-Type": "application/json",
-  //     },
-  //     data: deleteRecord,
-  //   })
-  //     .then((res) => {
-  //       console.log("res=>", res.data);
-  //       if (res.data[0].delete_error) {
-  //         const resData = {
-  //           success: false,
-  //           status_code: 400,
-  //           message: res.data[0].delete_error,
-  //         };
-  //         return resData;
-  //         // throw error
-  //       } else {
-  //         const resData = {
-  //           success: true,
-  //           status_code: 200,
-  //           data: res.data,
-  //           message: "Record deleted successfully",
-  //         };
-  //         return resData;
-  //       }
-  //       // return res.data;
-  //     })
-  //     .catch((error) => {
-  //       console.log("*******error", error.response.data);
-  //       // return error.response.data;
-  //       throw error;
-  //     });
-  //   // requests.push(request);
-  //   return request;
-  // } catch (error) {
-  //   console.log("addNetsuiteV1Api error", error);
-  //   // throw error;
-  // }
+ 
 };
+
+const deleteV1Api = async (url, oAuth_String, deleteRecord) => {
+  try {
+      const requests = [];
+      const request = axios({
+        method: "POST",
+        url: url,
+        headers: {
+          Authorization: oAuth_String,
+          "Content-Type": "application/json",
+        },
+        data: deleteRecord,
+      })
+        .then((res) => {
+          console.log("res=>", res.data);
+          if (res.data[0].delete_error) {
+            const resData = {
+              success: false,
+              status_code: 400,
+              message: res.data[0].delete_error,
+            };
+            return resData;
+            // throw error
+          } else {
+            const resData = {
+              success: true,
+              status_code: 200,
+              data: res.data,
+              message: "Record deleted successfully",
+            };
+            return resData;
+          }
+          // return res.data;
+        })
+        .catch((error) => {
+          console.log("*******error", error.response.data);
+          // return error.response.data;
+          throw error;
+        });
+      // requests.push(request);
+      return request;
+    } catch (error) {
+      console.log("addNetsuiteV1Api error", error);
+      // throw error;
+    }
+  }
+
 
 const filterData = async (userId, integrationId, mappedRecordId) => {
   try {
