@@ -1572,7 +1572,7 @@ const deleteNetsuiteV1Api = async (
       
       const deleteRecord = {
         resttype: 'Delete',
-        recordtype: 'customrecordhiringprocess',
+        recordtype: recordType,
         filters: {
           bodyfilters: [filter]
         }
