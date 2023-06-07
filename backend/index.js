@@ -130,7 +130,8 @@ v1Router.get(
 );
 // v1Router.post("/addMappedFields", scheduleController.addMappedFields);
 // v1Router.get("/getMappedField", scheduleController.getMappedField);
-v1Router.post("/addNetsuiteFields", scheduleController.addNetsuiteFields);
+v1Router.post("/syncData", scheduleController.syncData);
+// v1Router.post("/addNetsuiteFields", scheduleController.addNetsuiteFields);
 // v1Router.post("/scheduleRealtimeEvent", scheduleController.scheduleRealtimeEvent);
 v1Router.get("/getNetsuiteFiledsByRecordId", scheduleController.getNetsuiteFiledsByRecordId);
 v1Router.get("/getFields", scheduleController.getFields);

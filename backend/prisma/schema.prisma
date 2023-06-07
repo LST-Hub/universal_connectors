@@ -125,6 +125,8 @@ model Schedule {
   savedSearchLabel String?
   savedSearchValue String?
   operationType    String?
+  source           String
+  range            String?
   creationDate     DateTime      @default(now())
   modificationDate DateTime      @updatedAt
 }
@@ -140,10 +142,8 @@ model CustomFilterFields {
   sourceFieldValue      String
   sourceFieldLabel      String
   destinationFieldValue String
-  destinationFieldLabel String?
+  destinationFieldLabel String
   operator              String
-  fieldType             String
-  condition             String?
   creationDate          DateTime      @default(now())
   modificationDate      DateTime      @updatedAt
 }

@@ -28,6 +28,8 @@ const schema = Yup.object({
 
 const EventSchedule = ({ eventId }) => {
   let id = useRef(null);
+  let source = useRef(null);
+  let destination = useRef(null);
   // let searchType = useRef(null);
   let recordId = useRef(null);
   const {
@@ -63,10 +65,21 @@ const EventSchedule = ({ eventId }) => {
   const [configurationData, setConfigurationData] = useState(null);
   const [savedSearchOptions, setSavedSearchOptions] = useState([]);
   const [data, setData] = useState([]);
+  const [inputValue, setInputValue] = useState('');
 
   const [addValue, setAddValue] = useState(false);
   const [updateValue, setUpdateValue] = useState(false);
   const [deleteValue, setDeleteValue] = useState(false);
+  const sourceOptions = [
+    {
+      label: "NetSuite",
+      value: "NetSuite",
+    },
+    {
+      label: "Google Sheet",
+      value: "GoogleSheet",
+    },
+  ]
 
   const queryClient = useQueryClient();
   const apiResults = useQueries({
@@ -143,6 +156,7 @@ const EventSchedule = ({ eventId }) => {
   // backend data
   useEffect(() => {
     if (scheduleEventData) {
+      console.log("scheduleEventData", scheduleEventData)
       setValue("integrationName", {
         label: scheduleEventData[0].integration.integrationName,
         value: scheduleEventData[0].integrationId,
@@ -155,6 +169,11 @@ const EventSchedule = ({ eventId }) => {
         label: scheduleEventData[0].performType,
         value: scheduleEventData[0].performType,
       });
+      setValue("source", {
+        label: scheduleEventData[0].source,
+        value: scheduleEventData[0].source,
+      })
+      setInputValue(scheduleEventData[0].range)
       // searchType.current = scheduleEventData[0].savedSearchType;
 
       setMappedRecordId(scheduleEventData[0].mappedRecordId);
@@ -164,6 +183,8 @@ const EventSchedule = ({ eventId }) => {
         mappedRecordId: scheduleEventData[0].mappedRecordId,
         perform: scheduleEventData[0].performType,
         operationType: scheduleEventData[0].operationType,
+        source: scheduleEventData[0].source,
+        range: scheduleEventData[0].range,
         // savedSearchType: scheduleEventData[0].savedSearchType,
       }));
 
@@ -197,6 +218,8 @@ const EventSchedule = ({ eventId }) => {
       setData((prev) => ({ ...prev, userId: JSON.parse(userID) }));
       setUserId(JSON.parse(userID));
       if (integrationsData) {
+        source.current = integrationsData[0].sourceName;
+        destination.current = integrationsData[0].destinationName;
         if (integrationsData.length === 1) {
           setValue("integrationName", {
             label: integrationsData[0].integrationName,
@@ -294,9 +317,17 @@ const EventSchedule = ({ eventId }) => {
     }
   }, [savedSearchData]);
 
-  const onClickFilter = () => {
-    router.push(`/schedule/${mappedRecordId}`);
+  const onClickSourceFilter = (value) => {
+    // router.push(`/schedule/NetSuite/${mappedRecordId}`);
+    if(value === "NetSuite™"){
+      router.push(`/schedule/NetSuite/${mappedRecordId}`);
+    } else{
+      router.push(`/schedule/GoogleSheet/${mappedRecordId}`);
+    }
   };
+
+  const onClickDestinationFilter = () => {
+  }
 
   // integrations dropdown
   const onChangeIntegration = (e) => {
@@ -333,6 +364,16 @@ const EventSchedule = ({ eventId }) => {
     if (e) {
       setOperationsValue(e.value === "export" ? true : false);
       setData((prev) => ({ ...prev, perform: e.label }));
+
+      if(e.value === "export"){
+        setAddValue(false);
+        setUpdateValue(false);
+        setDeleteValue(false);
+        setData((prev) => ({
+          ...prev,
+          operationType: null,
+        }));
+      }
     }
   };
 
@@ -344,7 +385,9 @@ const EventSchedule = ({ eventId }) => {
 
   // saved searches dropdown
   const onChangeSavedSearch = (e) => {
+   
     if (e) {
+      console.log("e", e)
       setData((prev) => ({
         ...prev,
         savedSearchLabel: e.label,
@@ -357,6 +400,17 @@ const EventSchedule = ({ eventId }) => {
         savedSearchValue: null,
       }));
     }
+  };
+
+  const onChangeOption = (e) => {
+    if (e) {
+      setData((prev) => ({ ...prev, source: e.value }));
+    }
+  };
+
+  const handleInputChange = (event) => {
+    setInputValue(event.target.value);
+    setData((prev) => ({ ...prev, range: event.target.value }));
   };
 
   const toggleComponet = (value) => {
@@ -422,21 +476,21 @@ const EventSchedule = ({ eventId }) => {
         </TkCol>
 
         <TkCol lg={4}>
-          <TkLabel htmlFor="filter" requiredStarOnLabel={true}>
-            How can we find existing records
+          <TkLabel htmlFor="sourceFilter" requiredStarOnLabel={true}>
+            How can we find existing records ({source.current})
           </TkLabel>
 
           <div className="d-flex">
             <TkInput
-              {...register("filter")}
-              id="filter"
+              {...register("sourceFilter")}
+              id="sourceFilter"
               type="text"
               disabled={true}
             />
             <TkButton
               className="btn btn-light"
               type="button"
-              onClick={handleSubmit(onClickFilter)}
+              onClick={handleSubmit(() => onClickSourceFilter(source.current))}
             >
               <i className="ri-filter-2-fill" />
             </TkButton>
@@ -511,6 +565,29 @@ const EventSchedule = ({ eventId }) => {
           />
         </TkCol>
 
+        <TkCol lg={4}>
+          <TkLabel htmlFor="destinationFilter" requiredStarOnLabel={true}>
+            How can we find existing records ({destination.current})
+          </TkLabel>
+
+          <div className="d-flex">
+            <TkInput
+              {...register("destinationFilter")}
+              id="destinationFilter"
+              type="text"
+              disabled={true}
+            />
+            <TkButton
+              className="btn btn-light"
+              type="button"
+              onClick={handleSubmit(() => onClickSourceFilter(destination.current))}
+            >
+              <i className="ri-filter-2-fill" />
+            </TkButton>
+          </div>
+        </TkCol>
+        
+
         {/* <TkButton className="btn btn-primary mt-3" type="submit">
             Perform
           </TkButton> */}
@@ -520,6 +597,26 @@ const EventSchedule = ({ eventId }) => {
       <TkRow className="mt-3">
         <TkCol lg={1}>
           <TkLabel className="my-2">Operations :</TkLabel>
+        </TkCol>
+
+        <TkCol lg={4}>
+          <Controller
+            name="source"
+            control={control}
+            render={({ field }) => (
+              <TkSelect
+                {...field}
+                // labelName="Source"
+                id="source"
+                maxMenuHeight="120px"
+                options={sourceOptions}
+                onChange={(e) => {
+                  field.onChange(e);
+                  onChangeOption(e);
+                }}
+              />
+            )}
+          />
         </TkCol>
 
         <TkCol lg={3} className="d-flex align-self-center">
@@ -561,6 +658,18 @@ const EventSchedule = ({ eventId }) => {
           >
             Delete
           </TkRadioButton>
+        </TkCol>
+
+        <TkCol lg={4}>
+          <TkInput
+            {...register("range")}
+            id="range"
+            type="text"
+            labelName="Range"
+            placeholder="Range"
+            value={inputValue}
+            onChange={handleInputChange}
+          />
         </TkCol>
       </TkRow>
       <hr />

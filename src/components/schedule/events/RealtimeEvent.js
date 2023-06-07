@@ -40,12 +40,12 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
     mutationFn: tkFetch.post(`${API_BASE_URL}/addRealTimeEvent`),
   });
 
-  const updateRealTimeEvent = useMutation({
-    mutationFn: tkFetch.putWithIdInUrl(`${API_BASE_URL}/updateRealTimeEvent`),
+  const syncDataMutation = useMutation({
+    mutationFn: tkFetch.post(`${API_BASE_URL}/syncData`),
   });
 
-  const scheduleRealtimeEvent = useMutation({
-    mutationFn: tkFetch.post(`${API_BASE_URL}/scheduleRealtimeEvent`),
+  const updateRealTimeEvent = useMutation({
+    mutationFn: tkFetch.putWithIdInUrl(`${API_BASE_URL}/updateRealTimeEvent`),
   });
 
   const addNetsuiteFields = useMutation({
@@ -126,7 +126,9 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         noEndDate: data.noEndDate,
         performType: syncData.perform,
         // savedSearchType: syncData.savedSearchType,
-        operationType: syncData.operationType
+        operationType: syncData.operationType,
+        source: syncData.source,
+        range: syncData.range,
       };
 
       if (syncData.savedSearchLabel) {
@@ -134,14 +136,14 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         realtimeEventData.savedSearchValue = syncData.savedSearchValue;
       }
 
-      addNetsuiteFields.mutate(realtimeEventData, {
-        onSuccess: (res) => {
-          console.log("*************res", res);
-        },
-        onError: (err) => {
-          console.log("err", err);
-        },
-      });
+      // addNetsuiteFields.mutate(realtimeEventData, {
+      //   onSuccess: (res) => {
+      //     console.log("*************res", res);
+      //   },
+      //   onError: (err) => {
+      //     console.log("err", err);
+      //   },
+      // });
 
       // scheduleRealtimeEvent.mutate(realtimeEventData, {
       //   onSuccess: (res) => {
@@ -158,6 +160,13 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
           console.log("err", err);
         },
       });
+
+      syncDataMutation.mutate(realtimeEventData, {
+        onSuccess: (res) => {},
+        onError: (err) => {
+          console.log("err", err);
+        }
+      })
     } else {
       console.log("add realtime Event**********");
       const eventData = {
@@ -170,7 +179,9 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         noEndDate: data.noEndDate,
         performType: syncData.perform,
         // savedSearchType: syncData.savedSearchType,
-        operationType: syncData.operationType
+        operationType: syncData.operationType,
+        source: syncData.source,
+        range: syncData.range,
       };
 
       if (syncData.savedSearchLabel) {
@@ -180,18 +191,9 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
 
       console.log("eventData", eventData)
 
-      addNetsuiteFields.mutate(eventData, {
-        onSuccess: (res) => {
-          console.log("****************res=>", res);
-        },
-        onError: (err) => {
-          console.log("err", err);
-        },
-      });
-
-      // scheduleRealtimeEvent.mutate(eventData, {
+      // addNetsuiteFields.mutate(eventData, {
       //   onSuccess: (res) => {
-      //     console.log("res", res);
+      //     console.log("****************res=>", res);
       //   },
       //   onError: (err) => {
       //     console.log("err", err);
@@ -204,6 +206,13 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
           console.log("err", err);
         },
       });
+
+      syncDataMutation.mutate(eventData, {
+        onSuccess: (res) => {},
+        onError: (err) => {
+          console.log("err", err);
+        }
+      })
     }
 
     // queryClient.invalidateQueries({
