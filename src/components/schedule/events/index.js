@@ -317,13 +317,8 @@ const EventSchedule = ({ eventId }) => {
     }
   }, [savedSearchData]);
 
-  const onClickSourceFilter = (value) => {
-    // router.push(`/schedule/NetSuite/${mappedRecordId}`);
-    if(value === "NetSuite™"){
-      router.push(`/schedule/NetSuite/${mappedRecordId}`);
-    } else{
-      router.push(`/schedule/GoogleSheet/${mappedRecordId}`);
-    }
+  const onClickSourceFilter = () => {
+    router.push(`/schedule/NetSuite/${mappedRecordId}`);
   };
 
   const onClickDestinationFilter = () => {
@@ -477,7 +472,7 @@ const EventSchedule = ({ eventId }) => {
 
         <TkCol lg={4}>
           <TkLabel htmlFor="sourceFilter" requiredStarOnLabel={true}>
-            How can we find existing records ({source.current})
+            How can we find existing records
           </TkLabel>
 
           <div className="d-flex">
@@ -490,7 +485,7 @@ const EventSchedule = ({ eventId }) => {
             <TkButton
               className="btn btn-light"
               type="button"
-              onClick={handleSubmit(() => onClickSourceFilter(source.current))}
+              onClick={handleSubmit(onClickSourceFilter)}
             >
               <i className="ri-filter-2-fill" />
             </TkButton>
@@ -565,7 +560,7 @@ const EventSchedule = ({ eventId }) => {
           />
         </TkCol>
 
-        <TkCol lg={4}>
+        {/* <TkCol lg={4}>
           <TkLabel htmlFor="destinationFilter" requiredStarOnLabel={true}>
             How can we find existing records ({destination.current})
           </TkLabel>
@@ -585,7 +580,7 @@ const EventSchedule = ({ eventId }) => {
               <i className="ri-filter-2-fill" />
             </TkButton>
           </div>
-        </TkCol>
+        </TkCol> */}
         
 
         {/* <TkButton className="btn btn-primary mt-3" type="submit">

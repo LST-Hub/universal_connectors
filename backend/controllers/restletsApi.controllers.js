@@ -857,8 +857,8 @@ const updateSheetValues = async (req, res) => {
           });
           return response.data;
         } catch (error) {
-          console.log("error =>", error);
-          throw error;
+          console.log("error =>", error.response.data);
+          // throw error;
         }
       });
 
@@ -872,7 +872,7 @@ const updateSheetValues = async (req, res) => {
         message: "Values added successfully",
       });
     } catch (error) {
-      console.log("Error ==>", error);
+      console.log("Error ==>", error.response.data);
       response({
         res,
         success: false,

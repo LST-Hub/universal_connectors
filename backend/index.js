@@ -7,8 +7,6 @@ const integrationController = require("./controllers/integration.controllers");
 const resletController = require("./controllers/restletsApi.controllers");
 const fieldMappingController = require("./controllers/fieldMapping.controllers");
 const scheduleController = require("./controllers/schedule.controllers");
-const crypto = require("crypto");
-const axios = require("axios");
 
 const app = express();
 dotenv.config();
@@ -31,7 +29,7 @@ const v1Router = express.Router();
 app.use("/v1", v1Router);
 
 v1Router.get("/", (req, res) => {
-res.send("test api working")
+  res.send("test api working");
 });
 
 // *** user routes ***
@@ -59,13 +57,12 @@ v1Router.put(
   "/updateConfiguration/:id",
   integrationController.updateConfiguration
 );
-
 v1Router.get(
   "/getConfigurationByIntegrationId/:id",
   integrationController.getConfigurationByIntegrationId
 );
 
-// *** reslet routes ***
+// *** restlet routes ***
 v1Router.get("/getRecordTypes", resletController.getRecordTypes);
 v1Router.post("/restletAuthentication", resletController.authentication);
 v1Router.post("/getOptions", resletController.getOptions);
@@ -99,6 +96,7 @@ v1Router.get(
   "/getMappedFieldsDetails/:id",
   fieldMappingController.getMappedFieldsDetails
 );
+
 // *** fields routes
 v1Router.post("/addFields", fieldMappingController.addFields);
 v1Router.get("/getFields/:id", fieldMappingController.getFields);
@@ -128,22 +126,17 @@ v1Router.get(
   "/getCustomFilterFields",
   scheduleController.getCustomFilterFields
 );
-// v1Router.post("/addMappedFields", scheduleController.addMappedFields);
-// v1Router.get("/getMappedField", scheduleController.getMappedField);
 v1Router.post("/syncData", scheduleController.syncData);
-// v1Router.post("/addNetsuiteFields", scheduleController.addNetsuiteFields);
-// v1Router.post("/scheduleRealtimeEvent", scheduleController.scheduleRealtimeEvent);
-v1Router.get("/getNetsuiteFiledsByRecordId", scheduleController.getNetsuiteFiledsByRecordId);
+v1Router.get(
+  "/getNetsuiteFiledsByRecordId",
+  scheduleController.getNetsuiteFiledsByRecordId
+);
 v1Router.get("/getFields", scheduleController.getFields);
-
 v1Router.post("/scheduleTask", scheduleController.scheduleTask);
 v1Router.get(
   "/getMappedRecordByIntegrationId",
   scheduleController.getMappedRecordByIntegrationId
 );
-
-
-// console.log(new Date())
 
 app.listen(port, () => {
   console.log("Server is running on port " + port);

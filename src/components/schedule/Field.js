@@ -224,7 +224,8 @@ const Field = ({ mappedRecordId }) => {
   }, [fieldsData]);
 
   useEffect(() => {
-    if (customFilterFieldsData?.length) {
+    console.log("**customFilterFieldsData", customFilterFieldsData)
+    if (customFilterFieldsData?.length > 0) {
       customFilterFieldsData.map((item, index) => {
         setValue(`netsuiteFields[${index}]`, {
           label: item.sourceFieldLabel,
@@ -241,7 +242,28 @@ const Field = ({ mappedRecordId }) => {
       });
 
       setRows(customFilterFieldsData);
-      return;
+      // return;
+    } else {
+      console.log("else")
+      setValue(`netsuiteFields`, {
+        label: null,
+        value: null,
+      });
+      setValue(`operator`, {
+        label: null,
+        value: null,
+      });
+      setValue(`googleSheetFields`, {
+        label: null,
+        value: null
+      });
+      setRows([
+        // {
+        //   netsuiteFields: "",
+        //   operator: "",
+        //   googleSheetFields: "",
+        // },
+      ]);
     }
   }, [customFilterFieldsData, setValue]);
 
@@ -261,20 +283,31 @@ const Field = ({ mappedRecordId }) => {
   };
 
   const onSubmit = (data) => {
-    // console.log("data", data);
-    const fiterItem = data.googleSheetFields.map((item, index) => {
-      return {
-        userId: userId,
-        mappedRecordId: JSON.parse(mappedRecordId),
-        integrationId: configurationData[0].integrationId,
-        sourceFieldValue: data.netsuiteFields[index].value,
-        sourceFieldLabel: data.netsuiteFields[index].label,
-        destinationFieldValue: item.value,
-        destinationFieldLabel: item.label,
-        operator: data.operator[index].label,
-      };
-    });
-    console.log("fiterItem", fiterItem);
+    console.log("data", data);
+    // const fiterItem = data.googleSheetFields.map((item, index) => {
+    //   return {
+    //     userId: userId,
+    //     mappedRecordId: JSON.parse(mappedRecordId),
+    //     integrationId: configurationData[0].integrationId,
+    //     sourceFieldValue: data.netsuiteFields[index].value,
+    //     sourceFieldLabel: data.netsuiteFields[index].label,
+    //     destinationFieldValue: item.value,
+    //     destinationFieldLabel: item.label,
+    //     operator: data.operator[index].label,
+    //   };
+    // });
+    // console.log("fiterItem", fiterItem);
+
+    const fiterItem = {
+      userId: userId,
+      mappedRecordId: JSON.parse(mappedRecordId),
+      integrationId: configurationData[0].integrationId,
+      sourceFieldValue: data.netsuiteFields[0].value,
+      sourceFieldLabel: data.netsuiteFields[0].label,
+      destinationFieldValue: data.googleSheetFields[0].value,
+      destinationFieldLabel: data.googleSheetFields[0].label,
+      operator: data.operator[0].label,
+    }
 
     addCustomFilterFields.mutate(fiterItem, {
       onSuccess: (data) => {
