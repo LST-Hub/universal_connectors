@@ -859,65 +859,8 @@ const syncData = async (req, res) => {
       id,
     } = req.body;
 
-    switch (source) {
-      case "NetSuite":
-        const nsResult = await netsuiteOperations(
-          userId,
-          mappedRecordId,
-          integrationId,
-          operationType,
-          range,
-          id
-        );
-        response({
-          res,
-          status_code: 200,
-          success: true,
-          data: [nsResult],
-          message: "success",
-        });
-        return nsResult;
+    const accessToken = await getAccessTokenByUserId(userId);
 
-      case "GoogleSheet":
-        const gsResult = googleSheetsOperations(
-          userId,
-          mappedRecordId,
-          integrationId,
-          operationType
-        );
-        response({
-          res,
-          status_code: 200,
-          success: true,
-          data: [gsResult],
-          message: "success",
-        });
-        return gsResult;
-
-      default:
-        console.log("source not matched");
-        throw new Error("Unknown data source");
-    }
-  } catch (error) {
-    console.log("syncData error", error);
-    response({
-      res,
-      success: false,
-      status_code: 400,
-      message: "Error in sync data",
-    });
-  }
-};
-
-const netsuiteOperations = async (
-  userId,
-  mappedRecordId,
-  integrationId,
-  operationType,
-  range,
-  id
-) => {
-  try {
     const [mappedRecord, credentials] = await prisma.$transaction([
       prisma.mappedRecords.findMany({
         where: {
@@ -950,7 +893,79 @@ const netsuiteOperations = async (
       }),
     ]);
 
-    const sheetsValue = getSheetsData(mappedRecord[0].UrlValue, userId);
+    switch (source) {
+      case "NetSuite":
+        const nsResult = await netsuiteOperations(
+          userId,
+          mappedRecordId,
+          integrationId,
+          operationType,
+          range,
+          id,
+          mappedRecord,
+          credentials,
+          accessToken
+        );
+        response({
+          res,
+          status_code: 200,
+          success: true,
+          data: [nsResult],
+          message: "success",
+        });
+        return nsResult;
+
+      case "GoogleSheet":
+        const gsResult = googleSheetsOperations(
+          userId,
+          mappedRecordId,
+          integrationId,
+          operationType,
+          mappedRecord,
+          credentials,
+          accessToken
+        );
+        response({
+          res,
+          status_code: 200,
+          success: true,
+          data: [gsResult],
+          message: "success",
+        });
+        return gsResult;
+
+      default:
+        console.log("source not matched");
+        throw new Error("Unknown data source");
+    }
+  } catch (error) {
+    console.log("syncData error", error);
+    response({
+      res,
+      success: false,
+      status_code: 400,
+      message: "Error in sync data",
+    });
+  }
+};
+
+const netsuiteOperations = async (
+  userId,
+  mappedRecordId,
+  integrationId,
+  operationType,
+  range,
+  id,
+  mappedRecord,
+  credentials,
+  accessToken
+) => {
+  try {
+    const sheetsValue = getSheetsData(
+      mappedRecord[0].UrlValue,
+      userId,
+      accessToken
+    );
     sheetsValue
       .then((values) => {
         const result = getMappedFields(
@@ -963,7 +978,8 @@ const netsuiteOperations = async (
           integrationId,
           range,
           mappedRecord[0].UrlValue,
-          id
+          id,
+          accessToken
         );
 
         result
@@ -985,10 +1001,8 @@ const netsuiteOperations = async (
   }
 };
 
-const getSheetsData = async (sheetsId, userId) => {
+const getSheetsData = async (sheetsId, userId, accessToken) => {
   try {
-    const accessToken = await getAccessTokenByUserId(userId);
-
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/A1:ZZ100000`;
     const headers = {
       Authorization: `Bearer ${accessToken}`,
@@ -1060,7 +1074,8 @@ const getMappedFields = async (
   integrationId,
   range,
   UrlValue,
-  id
+  id,
+  accessToken
 ) => {
   try {
     const mappedFields = await prisma.fields.findMany({
@@ -1101,7 +1116,8 @@ const getMappedFields = async (
             integrationId,
             mappedRecordId,
             range,
-            UrlValue
+            UrlValue,
+            accessToken
           );
           return updateResult;
           break;
@@ -1116,7 +1132,8 @@ const getMappedFields = async (
             integrationId,
             mappedRecordId,
             range,
-            UrlValue
+            UrlValue,
+            accessToken
           );
           return deleteResult;
           break;
@@ -1298,7 +1315,8 @@ const updateNetsuiteV1Api = async (
   integrationId,
   mappedRecordId,
   range,
-  UrlValue
+  UrlValue,
+  accessToken
 ) => {
   console.log("update record in ns");
   try {
@@ -1310,7 +1328,7 @@ const updateNetsuiteV1Api = async (
       },
     });
 
-    const sheetsData = await getSheetsDataByRange(userId, range, UrlValue);
+    const sheetsData = await getSheetsDataByRange(userId, range, UrlValue, accessToken);
 
     sheetsData.values.map((row) => {
       const internalId = row[0];
@@ -1402,10 +1420,9 @@ const updateNetsuiteV1Api = async (
   }
 };
 
-const getSheetsDataByRange = async (userId, range, UrlValue) => {
+const getSheetsDataByRange = async (userId, range, UrlValue, accessToken) => {
   try {
-    const accessToken = await getAccessTokenByUserId(userId);
-    console.log(userId, range, UrlValue)
+    console.log(userId, range, UrlValue, accessToken);
 
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${UrlValue}/values/${range}`;
     const headers = {
@@ -1418,9 +1435,8 @@ const getSheetsDataByRange = async (userId, range, UrlValue) => {
       headers: headers,
     })
       .then((values) => {
-        console.log("values.data", values.data)
+        console.log("values.data", values.data);
         return values.data;
-
       })
       .catch((error) => {
         console.log("getSheetsDataByRange error =>", error);
@@ -1442,7 +1458,8 @@ const deleteNetsuiteV1Api = async (
   integrationId,
   mappedRecordId,
   range,
-  UrlValue
+  UrlValue,
+  accessToken
 ) => {
   console.log("delete record from ns");
   try {
@@ -1454,7 +1471,12 @@ const deleteNetsuiteV1Api = async (
       },
     });
 
-    const sheetsData = await getSheetsDataByRange(userId, range, UrlValue);
+    const sheetsData = await getSheetsDataByRange(
+      userId,
+      range,
+      UrlValue,
+      accessToken
+    );
 
     sheetsData.values.map((row) => {
       const fieldValue = row[0];
@@ -1573,43 +1595,12 @@ const googleSheetsOperations = async (
   userId,
   mappedRecordId,
   integrationId,
-  operationType
+  operationType,
+  mappedRecord,
+  credentials,
+  accessToken
 ) => {
   try {
-    const accessToken = await getAccessTokenByUserId(userId);
-    console.log("accessToken", accessToken);
-
-    const [mappedRecord, credentials] = await prisma.$transaction([
-      prisma.mappedRecords.findMany({
-        where: {
-          id: Number(mappedRecordId),
-          userId: Number(userId),
-          integrationId: Number(integrationId),
-        },
-        select: {
-          id: true,
-          MappedRecordName: true,
-          recordTypeValue: true,
-          UrlLabel: true,
-          UrlValue: true,
-        },
-      }),
-
-      prisma.configurations.findMany({
-        where: {
-          userId: Number(userId),
-          integrationId: Number(integrationId),
-          systemName: "NetSuite™",
-        },
-        select: {
-          accountId: true,
-          consumerKey: true,
-          consumerSecretKey: true,
-          accessToken: true,
-          accessSecretToken: true,
-        },
-      }),
-    ]);
     switch (operationType) {
       case "add":
         const addRecordResult = addGoogleSheetRecords(
@@ -1699,8 +1690,6 @@ const addGoogleSheetRecords = async (
       values: recordValues,
     };
     // console.log("recordList", recordList)
-
-    const accessToken = await getAccessTokenByUserId(userId);
 
     if (accessToken) {
       const urlParams = {
@@ -1890,7 +1879,11 @@ const deleteGoogleSheetRecord = async (
 
     // *** gs data
     const gsIds = [];
-    const sheetsValue = getSheetsData(mappedRecord[0].UrlValue, userId);
+    const sheetsValue = getSheetsData(
+      mappedRecord[0].UrlValue,
+      userId,
+      accessToken
+    );
     sheetsValue
       .then((res) => {
         const titles = res.data.values[0];
@@ -1919,7 +1912,8 @@ const deleteGoogleSheetRecord = async (
             userId,
             mappedRecord[0].UrlValue,
             item.startIndex,
-            item.endIndex
+            item.endIndex,
+            accessToken
           );
         });
       })
@@ -1931,8 +1925,13 @@ const deleteGoogleSheetRecord = async (
   }
 };
 
-const deleteRecord = async (userId, sheetsId, startIndex, endIndex) => {
-  const accessToken = await getAccessTokenByUserId(userId);
+const deleteRecord = async (
+  userId,
+  sheetsId,
+  startIndex,
+  endIndex,
+  accessToken
+) => {
   console.log(accessToken);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}:batchUpdate`;
   const headers = {
@@ -1956,17 +1955,17 @@ const deleteRecord = async (userId, sheetsId, startIndex, endIndex) => {
   };
 
   await axios({
-      method: "POST",
-      url: url,
-      headers: headers,
-      data: data,
+    method: "POST",
+    url: url,
+    headers: headers,
+    data: data,
+  })
+    .then((values) => {
+      console.log("deleteGoogleSheetRecord", values.data);
     })
-      .then((values) => {
-        console.log("deleteGoogleSheetRecord", values.data);
-      })
-      .catch((error) => {
-        console.log("deleteGoogleSheetRecord error", error);
-      });
+    .catch((error) => {
+      console.log("deleteGoogleSheetRecord error", error);
+    });
 };
 
 const getNetsuiteFiledsByRecordId = async (req, res) => {
