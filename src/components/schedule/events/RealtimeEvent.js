@@ -155,7 +155,9 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
       // });
 
       updateRealTimeEvent.mutate(realtimeEventData, {
-        onSuccess: (res) => {},
+        onSuccess: (res) => {
+          console.log("updateRealTimeEvent res", res)
+        },
         onError: (err) => {
           console.log("err", err);
         },
@@ -201,18 +203,18 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
       // });
 
       addEvent.mutate(eventData, {
-        onSuccess: (res) => {},
+        onSuccess: (res) => {
+          syncDataMutation.mutate({ ...eventData, id: res[0].id }, {
+            onSuccess: (res) => {},
+            onError: (err) => {
+              console.log("err", err);
+            }
+          })
+        },
         onError: (err) => {
           console.log("err", err);
         },
       });
-
-      syncDataMutation.mutate(eventData, {
-        onSuccess: (res) => {},
-        onError: (err) => {
-          console.log("err", err);
-        }
-      })
     }
 
     // queryClient.invalidateQueries({

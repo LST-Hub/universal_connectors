@@ -129,6 +129,7 @@ model Schedule {
   range            String?
   creationDate     DateTime      @default(now())
   modificationDate DateTime      @updatedAt
+  Logs             Logs[]
 }
 
 model CustomFilterFields {
@@ -156,8 +157,14 @@ model Logs {
   integration    Integrations  @relation(fields: [integrationId], references: [id])
   mappedRecordId Int
   mappedRecord   MappedRecords @relation(fields: [mappedRecordId], references: [id])
+  scheduleId     Int
+  schedule       Schedule      @relation(fields: [scheduleId], references: [id])
+  recordType     String
   status         String
   logMessage     String
+  internalId     Int?
+  creationDate   DateTime      @default(now())
+  modificationDate DateTime      @updatedAt
 }
 
 model NotificationSettings {

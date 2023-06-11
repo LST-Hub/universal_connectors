@@ -1,4 +1,3 @@
-import { Tooltip } from "@nextui-org/react";
 import Link from "next/link";
 
 const MinEmailLength = 6;
@@ -653,85 +652,6 @@ const data = [
   // }
 ];
 
-
-
-const logsHead = [
-  {
-    Header: "Integration Name",
-    accessor: "integrationName",
-  },
-  {
-    Header: "Record Type",
-    accessor: "recordType",
-  },
-  {
-    Header: "Sync Date",
-    accessor: "syncDate",
-    Cell: (props) => {
-      return (
-        <>
-          <Tooltip
-            color="invert"
-            content={`${props.value} ${props.row.original?.syncTime}`}
-            placement="bottom"
-          >
-            <span>{props.value}</span>
-          </Tooltip>
-        </>
-      );
-    },
-  },
-  {
-    Header: "Last Sync Date",
-    accessor: "lastSyncDate",
-    Cell: (props) => {
-      return (
-        <>
-          <Tooltip
-            color="invert"
-            content={`${props.value} ${props.row.original?.lastSyncTime}`}
-            placement="bottom"
-          >
-            <span>{props.value}</span>
-          </Tooltip>
-        </>
-      );
-    },
-  },
-  {
-    Header: "Status",
-    accessor: "status",
-  },
-  {
-    Header: "Message",
-    accessor: "message",
-    Cell: (props) => {
-      return (
-        <Tooltip
-          color="invert"
-          content={`${props.value}: ${props.row.original?.details}`}
-          placement="bottom"
-        >
-          <span>{props.value}</span>
-        </Tooltip>
-      );
-    },
-  },
-  {
-    Header: "Action",
-    accessor: "action",
-    Cell: () => {
-      return (
-        <>
-          {/* <Link href=""> */}
-          <i className="ri-eye-fill" />
-          {/* </Link> */}
-        </>
-      );
-    },
-  },
-];
-
 const serachFields = {
   dashboard: [
     "integrationName",
@@ -824,7 +744,6 @@ export {
   days,
   months,
   data,
-  logsHead,
   serachFields,
   filterFields,
 };

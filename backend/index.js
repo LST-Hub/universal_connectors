@@ -137,6 +137,11 @@ v1Router.get(
   "/getMappedRecordByIntegrationId",
   scheduleController.getMappedRecordByIntegrationId
 );
+v1Router.get(
+  "/getLogs/:id",
+  scheduleController.getLogs
+);
+
 
 app.listen(port, () => {
   console.log("Server is running on port " + port);

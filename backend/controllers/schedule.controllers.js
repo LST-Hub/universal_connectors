@@ -856,6 +856,7 @@ const syncData = async (req, res) => {
       operationType,
       source,
       range,
+      id,
     } = req.body;
 
     switch (source) {
@@ -865,7 +866,8 @@ const syncData = async (req, res) => {
           mappedRecordId,
           integrationId,
           operationType,
-          range
+          range,
+          id
         );
         response({
           res,
@@ -912,7 +914,8 @@ const netsuiteOperations = async (
   mappedRecordId,
   integrationId,
   operationType,
-  range
+  range,
+  id
 ) => {
   try {
     const [mappedRecord, credentials] = await prisma.$transaction([
@@ -959,7 +962,8 @@ const netsuiteOperations = async (
           operationType,
           integrationId,
           range,
-          mappedRecord[0].UrlValue
+          mappedRecord[0].UrlValue,
+          id
         );
 
         result
@@ -1055,7 +1059,8 @@ const getMappedFields = async (
   operationType,
   integrationId,
   range,
-  UrlValue
+  UrlValue,
+  id
 ) => {
   try {
     const mappedFields = await prisma.fields.findMany({
@@ -1077,7 +1082,11 @@ const getMappedFields = async (
             credentials,
             values,
             recordType,
-            mappedFields
+            mappedFields,
+            userId,
+            integrationId,
+            mappedRecordId,
+            id
           );
           return result;
           break;
@@ -1135,12 +1144,16 @@ function getNonce(length) {
     .join("");
 }
 
-// add data in netsuite
+// // add data in netsuite
 const addNetsuiteV1Api = async (
   credentials,
   values,
   recordType,
-  mappedFields
+  mappedFields,
+  userId,
+  integrationId,
+  mappedRecordId,
+  id
 ) => {
   console.log("add record in ns");
   try {
@@ -1167,10 +1180,13 @@ const addNetsuiteV1Api = async (
       const result = { ...data, bodyfields: { ...obj } };
       resultArray.push(result);
     });
-console.log(resultArray)
-    const requests = [];
-    const results = [];
-    for (const item of resultArray) {
+
+    const logs = [];
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < resultArray.length; i++) {
+      const item = resultArray[i];
       const authentication = {
         account: credentials[0].accountId,
         consumerKey: credentials[0].consumerKey,
@@ -1209,33 +1225,64 @@ console.log(resultArray)
 
       const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
 
-      const request = axios({
-        method: "POST",
-        url: url,
-        headers: {
-          Authorization: oAuth_String,
-          "Content-Type": "application/json",
-        },
-        data: item,
-      })
-        .then((res) => {
-          results.push(res.data);
-        })
-        .catch((error) => {
-          results.push(error.response.data);
+      try {
+        const res = await axios({
+          method: "POST",
+          url: url,
+          headers: {
+            Authorization: oAuth_String,
+            "Content-Type": "application/json",
+          },
+          data: item,
         });
 
-      requests.push(request);
+        console.log("output => ", res.data);
+
+        if (res.data.add_success) {
+          successCount++;
+        } else if (res.data.add_error) {
+          errorCount++;
+          logs.push({
+            userId: userId,
+            scheduleId: id,
+            integrationId: integrationId,
+            mappedRecordId: mappedRecordId,
+            recordType: item.recordtype,
+            status: "error",
+            internalid: item.bodyfields.internalid,
+            message: res.data.add_error.message,
+          });
+        }
+      } catch (error) {
+        console.log("error => ", error.response.data);
+        errorCount++;
+        logs.push({
+          userId: userId,
+          scheduleId: id,
+          integrationId: integrationId,
+          mappedRecordId: mappedRecordId,
+          recordType: item.recordtype,
+          status: "error",
+          internalid: item.bodyfields.internalid,
+          message: error.response.data,
+        });
+      }
     }
 
-    Promise.all(requests)
-      .then(() => {
-        console.log("All Results:", results);
-        return results;
-      })
-      .catch((error) => {
-        console.log("Error:", error);
-      });
+    const summaryMessage = `Successfully added ${successCount} records out of ${resultArray.length}`;
+    logs.unshift({
+      userId: userId,
+      scheduleId: Number(id),
+      integrationId: integrationId,
+      mappedRecordId: mappedRecordId,
+      recordType: recordType,
+      status: "success",
+      message: summaryMessage,
+    });
+
+    // console.log(logs);
+    const logResult = addLogs(logs);
+    return logs;
   } catch (error) {
     throw error;
   }
@@ -1262,8 +1309,6 @@ const updateNetsuiteV1Api = async (
         mappedRecordId: Number(mappedRecordId),
       },
     });
-
-    console.log("filterData", filterData)
 
     const sheetsData = await getSheetsDataByRange(userId, range, UrlValue);
 
@@ -1351,7 +1396,7 @@ const updateNetsuiteV1Api = async (
       return request;
     });
   } catch (error) {
-    console.log("Please add filter to update the record")
+    console.log("Please add filter to update the record");
     console.log("error", error);
     return error;
   }
@@ -1360,6 +1405,7 @@ const updateNetsuiteV1Api = async (
 const getSheetsDataByRange = async (userId, range, UrlValue) => {
   try {
     const accessToken = await getAccessTokenByUserId(userId);
+    console.log(userId, range, UrlValue)
 
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${UrlValue}/values/${range}`;
     const headers = {
@@ -1372,7 +1418,9 @@ const getSheetsDataByRange = async (userId, range, UrlValue) => {
       headers: headers,
     })
       .then((values) => {
+        console.log("values.data", values.data)
         return values.data;
+
       })
       .catch((error) => {
         console.log("getSheetsDataByRange error =>", error);
@@ -1474,7 +1522,7 @@ const deleteNetsuiteV1Api = async (
         });
     });
   } catch (error) {
-    console.log("Please add filter to delete record")
+    console.log("Please add filter to delete record");
     console.log("error", error);
     return error;
   }
@@ -1574,18 +1622,31 @@ const googleSheetsOperations = async (
         return addRecordResult;
 
       case "update":
-        const updateRecordResult = updateGoogleSheetRecord(
+        const updateRecordResult = addGoogleSheetRecords(
           accessToken,
           mappedRecord,
-          credentials
+          credentials,
+          userId,
+          mappedRecordId
         );
         return updateRecordResult;
+      // const updateRecordResult = updateGoogleSheetRecord(
+      //   accessToken,
+      //   mappedRecord,
+      //   credentials,
+      //   userId,
+      //   mappedRecordId
+      // );
+      // return updateRecordResult;
 
       case "delete":
         const deleteRecordResult = deleteGoogleSheetRecord(
           accessToken,
           mappedRecord,
-          credentials
+          credentials,
+          userId,
+          mappedRecordId,
+          integrationId
         );
         return deleteRecordResult;
 
@@ -1605,7 +1666,7 @@ const addGoogleSheetRecords = async (
   mappedRecordId
 ) => {
   try {
-    console.log("add record in google sheet");
+    console.log("add or update record in google sheet");
     // console.log("mappedRecord", mappedRecord)
 
     const result = await getNetsuiteData(
@@ -1628,6 +1689,7 @@ const addGoogleSheetRecords = async (
       }
       return modifiedValues;
     });
+    // console.log("records", records)
     const recordValues = records.map((record) => Object.values(record));
     // console.log("recordValues", recordValues);
 
@@ -1663,7 +1725,9 @@ const addGoogleSheetRecords = async (
 
       request
         .then((res) => {
-          console.log("res=>", res.data);
+          console.log("res==>", res.data);
+          console.log("res==>", res.data.updatedData);
+
           return res.data;
         })
         .catch((error) => {
@@ -1702,12 +1766,13 @@ const getNetsuiteData = async (
     });
 
     const columns = mappedFields.map((field) => field.sourceFieldValue);
-
+    // console.log("columns", columns)
     const data = {
       resttype: "Search",
       recordtype: recordType,
       columns: columns,
     };
+    // console.log("data", data)
 
     const authentication = {
       account: credentials[0].accountId,
@@ -1757,6 +1822,7 @@ const getNetsuiteData = async (
       data: data,
     })
       .then((res) => {
+        // console.log("res.data", res.data)
         return res.data;
       })
       .catch((error) => {
@@ -1769,19 +1835,139 @@ const getNetsuiteData = async (
   }
 };
 
-const updateGoogleSheetRecord = async (
-  accessToken,
-  mappedRecord,
-  credentials
-) => {
-  
-};
+// const updateGoogleSheetRecord = async (
+//   accessToken,
+//   mappedRecord,
+//   credentials,
+//   userId,
+//   mappedRecordId
+// ) => {
+//   console.log("update record in google sheet");
+// };
 
 const deleteGoogleSheetRecord = async (
   accessToken,
   mappedRecord,
-  credentials
-) => {};
+  credentials,
+  userId,
+  mappedRecordId,
+  integrationId
+) => {
+  try {
+    console.log("delete record in google sheet");
+
+    const gsData = [];
+    // ***filter condition
+    const filterData = await prisma.customFilterFields.findMany({
+      where: {
+        userId: Number(userId),
+        integrationId: Number(integrationId),
+        mappedRecordId: Number(mappedRecordId),
+      },
+    });
+
+    const sourceField = filterData[0].sourceFieldValue;
+    const destinationField = filterData[0].destinationFieldValue;
+
+    // ***ns data
+    let filterValues = [];
+    const result = await getNetsuiteData(
+      userId,
+      mappedRecordId,
+      credentials,
+      mappedRecord[0].recordTypeValue
+    );
+    result.list.map((item) => {
+      if (item.values.hasOwnProperty(sourceField)) {
+        const nsValue = item.values[sourceField];
+        if (Array.isArray(nsValue)) {
+          filterValues.push(nsValue[0].value);
+        } else {
+          filterValues.push(nsValue);
+        }
+      }
+    });
+
+    // *** gs data
+    const gsIds = [];
+    const sheetsValue = getSheetsData(mappedRecord[0].UrlValue, userId);
+    sheetsValue
+      .then((res) => {
+        const titles = res.data.values[0];
+
+        if (titles.includes(destinationField)) {
+          const itemIndex = titles.indexOf(destinationField);
+          for (let i = 1; i < res.data.values.length; i++) {
+            const row = res.data.values[i];
+            gsIds.push(row[itemIndex]);
+          }
+        }
+
+        const filterIdsWithIndex = gsIds.reduce((acc, element, index) => {
+          if (!filterValues.includes(element)) {
+            acc.push({
+              value: element,
+              startIndex: index + 1,
+              endIndex: index + 2,
+            });
+          }
+          return acc;
+        }, []);
+        // console.log("filterIdsWithIndex", filterIdsWithIndex)
+        filterIdsWithIndex.map((item) => {
+          deleteRecord(
+            userId,
+            mappedRecord[0].UrlValue,
+            item.startIndex,
+            item.endIndex
+          );
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  } catch (error) {
+    return error;
+  }
+};
+
+const deleteRecord = async (userId, sheetsId, startIndex, endIndex) => {
+  const accessToken = await getAccessTokenByUserId(userId);
+  console.log(accessToken);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}:batchUpdate`;
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  };
+
+  const data = {
+    requests: [
+      {
+        deleteDimension: {
+          range: {
+            sheetId: 0,
+            dimension: "ROWS",
+            startIndex: startIndex,
+            endIndex: endIndex,
+          },
+        },
+      },
+    ],
+  };
+
+  await axios({
+      method: "POST",
+      url: url,
+      headers: headers,
+      data: data,
+    })
+      .then((values) => {
+        console.log("deleteGoogleSheetRecord", values.data);
+      })
+      .catch((error) => {
+        console.log("deleteGoogleSheetRecord error", error);
+      });
+};
 
 const getNetsuiteFiledsByRecordId = async (req, res) => {
   try {
@@ -1931,6 +2117,88 @@ const getFields = async (req, res) => {
   }
 };
 
+const addLogs = async (values) => {
+  try {
+    const logResult = await prisma.logs.createMany({
+      data: values.map((value) => ({
+        userId: Number(value.userId),
+        integrationId: Number(value.integrationId),
+        mappedRecordId: Number(value.mappedRecordId),
+        scheduleId: Number(value.scheduleId),
+        recordType: value.recordType,
+        status: value.status,
+        logMessage: value.message,
+        internalId: value.internalid && Number(value.internalid),
+      })),
+    });
+
+    const result = {
+      status_code: 200,
+      success: true,
+      message: "Added logs",
+      data: logResult,
+    };
+    console.log("logResult", result);
+
+    return result;
+  } catch (error) {
+    console.log("logs error", error);
+    return error;
+  }
+};
+
+const getLogs = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await prisma.logs.findMany({
+      where: {
+        userId: Number(id),
+      },
+      select: {
+        id: true,
+        userId: true,
+        integrationId: true,
+        mappedRecordId: true,
+        scheduleId: true,
+        recordType: true,
+        status: true,
+        logMessage: true,
+        internalId: true,
+        integration: {
+          select: {
+            integrationName: true,
+          },
+        },
+        mappedRecord: {
+          select: {
+            recordTypeLabel: true,
+          },
+        },
+        creationDate: true,
+        modificationDate: true,
+      },
+    });
+
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      data: result,
+      message: "Get all Logs",
+    });
+  } catch (error) {
+    console.log("error", error);
+    response({
+      res,
+      success: false,
+      status_code: 400,
+      data: [],
+      message: "Error while fetching data",
+    });
+  }
+};
+
 module.exports = {
   addRealTimeEvent,
   addSingleEvent,
@@ -1950,4 +2218,5 @@ module.exports = {
   syncData,
   getNetsuiteFiledsByRecordId,
   getFields,
+  getLogs,
 };

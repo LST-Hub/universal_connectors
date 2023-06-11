@@ -1,8 +1,43 @@
 import TkTableContainer from "@/globalComponents/TkTableContainer";
-import { logsHead } from "@/utils/Constants";
-import React from "react";
+import { useQueries } from "@tanstack/react-query";
+import tkFetch from "@/utils/fetch";
+import React, { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/utils/Constants";
+import { Tooltip } from "@nextui-org/react";
+
+
 
 const LogTable = () => {
+  const [userId, setUserId] = useState(null);
+  const [rows, setRows] = useState([]);
+
+  const apiResults = useQueries({
+    queries: [
+      {
+        queryKey: ["logs", userId],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getLogs/${userId}`),
+        enabled: !!userId,
+      }
+    ]
+  })
+  
+  const [logs] = apiResults
+  const { data: logsData, isLoading, error } = logs;
+
+  console.log("logsData", logsData)
+  useEffect(() => {
+    const id = sessionStorage.getItem("userId");
+    if(id){
+      setUserId(JSON.parse(id))
+    }
+  },[])
+
+  useEffect(() => {
+    if(logsData){
+      setRows(logsData)
+    }
+  },[logsData])
+
   const data = [
     {
       id: 1,
@@ -31,10 +66,94 @@ const LogTable = () => {
       details: "All NSGS Vendor records updated successfully",
     },
   ];
+
+  const logsHead = [
+    {
+      Header: "Integration Name",
+      accessor: "integrationName",
+      Cell: (props) => {
+        return <a>{props.row.original?.integration.integrationName}</a>;
+      },
+    },
+    {
+      Header: "Record Type",
+      accessor: "recordType",
+      Cell: (props) => {
+        return <a>{props.row.original?.mappedRecord.recordTypeLabel}</a>;
+      },
+    },
+    {
+      Header: "Sync Date",
+      accessor: "syncDate",
+      Cell: (props) => {
+        return (
+          <>
+            <Tooltip
+              color="invert"
+              content={`${props.value} ${props.row.original?.syncTime}`}
+              placement="bottom"
+            >
+              <span>{props.value}</span>
+            </Tooltip>
+          </>
+        );
+      },
+    },
+    {
+      Header: "Last Sync Date",
+      accessor: "lastSyncDate",
+      Cell: (props) => {
+        return (
+          <>
+            <Tooltip
+              color="invert"
+              content={`${props.value} ${props.row.original?.lastSyncTime}`}
+              placement="bottom"
+            >
+              <span>{props.value}</span>
+            </Tooltip>
+          </>
+        );
+      },
+    },
+    {
+      Header: "Status",
+      accessor: "status",
+    },
+    {
+      Header: "Message",
+      accessor: "logMessage",
+      // Cell: (props) => {
+      //   return (
+      //     <Tooltip
+      //       color="invert"
+      //       content={`${props.value}: ${props.row.original?.details}`}
+      //       placement="bottom"
+      //     >
+      //       <span>{props.value}</span>
+      //     </Tooltip>
+      //   );
+      // },
+    },
+    // {
+    //   Header: "Action",
+    //   accessor: "action",
+    //   Cell: () => {
+    //     return (
+    //       <>
+    //         {/* <Link href=""> */}
+    //         <i className="ri-eye-fill" />
+    //         {/* </Link> */}
+    //       </>
+    //     );
+    //   },
+    // },
+  ];
+
   return (
     <>
       {data.length ? (
-        <TkTableContainer columns={logsHead} data={data} showPagination={true} />
+        <TkTableContainer columns={logsHead} data={rows} showPagination={true} />
       ) : (
         "No data found"
       )}
