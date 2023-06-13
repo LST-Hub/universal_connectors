@@ -15,12 +15,13 @@ import { Controller, useForm } from "react-hook-form";
 import * as Yup from "yup";
 
 const schema = Yup.object({
-  MappedRecordName: Yup.string().required("Mapped record name is required."),
+  mappedRecordName: Yup.string().required("Mapped record name is required."),
   integrationName: Yup.object()
     .nullable()
     .required("Integration name is required."),
-  recordType: Yup.object().required("Record type is required."),
-  googleSheetUrl: Yup.object().required("Google sheet url is required."),
+  recordType: Yup.object().nullable().required("Record type is required."),
+  googleSheetWorkBook: Yup.object().nullable().required("Google sheet workbook is required."),
+  sheetName: Yup.object().nullable().required("Google sheet is required."),
 }).required();
 
 const FieldMap = () => {
@@ -48,11 +49,13 @@ const FieldMap = () => {
   const router = useRouter();
   const [integrationOptions, setIntegrationOptions] = useState([]);
   const [records, setRecords] = useState([]);
-  const [googleSheetUrl, setGoogleSheetUrl] = useState([]);
+  const [googleSheetWorkBook, setGoogleSheetWorkBook] = useState([]);
   const [integrationId, setIntegrationId] = useState(null);
   const [configurationData, setConfigurationData] = useState(null);
   const [userId, setUserId] = useState();
   const [accessToken, setAccessToken] = useState(null);
+  const [workbookDetails, setWorkbookDetails] = useState(null);
+  const [sheetName, setSheetName] = useState([]);
 
   const addMappedRecord = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/addMappedRecord`),
@@ -91,10 +94,17 @@ const FieldMap = () => {
         }),
         enabled: !!accessToken,
       },
+      {
+        queryKey: ["getSheets", workbookDetails],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getSheets`, {
+          params: workbookDetails,
+        }),
+        enabled: !!workbookDetails,
+      },
     ],
   });
 
-  const [config, restlet, integrations, asscessToken, getFilesData] =
+  const [config, restlet, integrations, asscessToken, getFilesData, getSheets] =
     apiResults;
   const {
     isLoading: isconfigLoading,
@@ -126,6 +136,12 @@ const FieldMap = () => {
     error: filesError,
     data: filesData,
   } = getFilesData;
+  const {
+    isLoading: isSheetsLoading,
+    isError: isSheetsError,
+    error: sheetsError,
+    data: sheetsData,
+  } = getSheets;
 
   useEffect(() => {
     if (accessTokenData) {
@@ -137,25 +153,29 @@ const FieldMap = () => {
 
   useEffect(() => {
     if (filesData) {
-      // setGoogleSheetUrl(
-      //   filesData[0].files.map((item) => {
-      //     if (item.mimeType === "application/vnd.google-apps.spreadsheet") {
-      //       return { label: item.name, value: item.id };
-      //     }
-      //   })
-      // );
-
+      const filterField = [];
       filesData[0].files.map((item) => {
         if (item.mimeType === "application/vnd.google-apps.spreadsheet") {
-          // TODO: edit this
-          setGoogleSheetUrl((prev) => [
-            ...prev,
-            { label: item.name, value: item.id },
-          ]);
+          // return { label: item.name, value: item.id };
+          filterField.push({ label: item.name, value: item.id });
         }
       });
+      setGoogleSheetWorkBook(filterField);
     }
   }, [filesData]);
+
+  useEffect(() => {
+    if (sheetsData) {
+      setSheetName(
+        sheetsData.map((item) => 
+        ({
+          label: item.properties.title,
+          value: item.properties.sheetId,
+        })
+        )
+      );
+    }
+  }, [sheetsData]);
 
   // *** record types
   useEffect(() => {
@@ -209,25 +229,35 @@ const FieldMap = () => {
     }
   };
 
+  const onChangeWorkBook = (e) => {
+    if (e) {
+      setWorkbookDetails({
+        userId: userId,
+        workBookId: e.value,
+      })
+    }
+  }
+
   const onsubmit = (data) => {
     const mapprdRecord = {
       userId: userId,
       integrationId: data.integrationName.value,
-      MappedRecordName: data.MappedRecordName,
-      source: data.source.label,
-      destination: data.destination.label,
+      mappedRecordName: data.mappedRecordName,
       recordTypeLabel: data.recordType.label,
       recordTypeValue: data.recordType.value,
-      UrlLabel: data.googleSheetUrl.label,
-      UrlValue: data.googleSheetUrl.value,
+      workBookLabel: data.googleSheetWorkBook.label,
+      workBookValue: data.googleSheetWorkBook.value,
+      sheetLabel: data.sheetName.label,
+      sheetValue: data.sheetName.value,
     };
-
+// console.log("mapprdRecord", mapprdRecord)
     addMappedRecord.mutate(mapprdRecord, {
       onSuccess: (data) => {
         router.push(`/fieldMapping/${data[0].id}`);
       },
       onError: (error) => {
         console.log("error==", error);
+        router.push(`/fieldMapping`);
       },
     });
   };
@@ -238,8 +268,8 @@ const FieldMap = () => {
         <TkRow className="mt-5 justify-content-center">
           <TkCol lg={5} className="mx-2 my-3">
             <TkInput
-              {...register("MappedRecordName")}
-              id="MappedRecordName"
+              {...register("mappedRecordName")}
+              id="mappedRecordName"
               type="text"
               labelName="Name"
               placeholder="Enter mapped record name"
@@ -247,8 +277,8 @@ const FieldMap = () => {
               // invalid={errors.integrationName?.message ? true : false}
               // disabled={integrationsData ? true : false}
             />
-            {errors.MappedRecordName?.message ? (
-              <FormErrorText>{errors.MappedRecordName?.message}</FormErrorText>
+            {errors.mappedRecordName?.message ? (
+              <FormErrorText>{errors.mappedRecordName?.message}</FormErrorText>
             ) : null}
           </TkCol>
 
@@ -277,7 +307,7 @@ const FieldMap = () => {
             ) : null}
           </TkCol>
 
-          <TkCol lg={5} className="mx-2 my-3">
+          {/* <TkCol lg={5} className="mx-2 my-3">
             <Controller
               name="source"
               control={control}
@@ -295,9 +325,9 @@ const FieldMap = () => {
             {errors.source?.message ? (
               <FormErrorText>{errors.source?.message}</FormErrorText>
             ) : null}
-          </TkCol>
+          </TkCol> */}
 
-          <TkCol lg={5} className="mx-2 my-3">
+          {/* <TkCol lg={5} className="mx-2 my-3">
             <Controller
               name="destination"
               control={control}
@@ -315,7 +345,7 @@ const FieldMap = () => {
             {errors.destination?.message ? (
               <FormErrorText>{errors.destination?.message}</FormErrorText>
             ) : null}
-          </TkCol>
+          </TkCol> */}
 
           <TkCol lg={5} className="mx-2 my-3">
             <Controller
@@ -339,21 +369,45 @@ const FieldMap = () => {
 
           <TkCol lg={5} className="mx-2 my-3">
             <Controller
-              name="googleSheetUrl"
+              name="googleSheetWorkBook"
               control={control}
               render={({ field }) => (
                 <TkSelect
                   {...field}
-                  labelName="Google Sheets™ Url"
-                  id="googleSheetUrl"
-                  options={googleSheetUrl}
+                  labelName="Google Sheets™ WorkBook"
+                  id="googleSheetWorkBook"
+                  options={googleSheetWorkBook}
+                  maxMenuHeight="120px"
+                  requiredStarOnLabel={true}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onChangeWorkBook(e);
+                  }}
+                />
+              )}
+            />
+            {errors.googleSheetWorkBook?.message ? (
+              <FormErrorText>{errors.googleSheetWorkBook?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={5} className="mx-2 my-3">
+            <Controller
+              name="sheetName"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Google Sheets™ Sheet"
+                  id="sheetName"
+                  options={sheetName}
                   maxMenuHeight="120px"
                   requiredStarOnLabel={true}
                 />
               )}
             />
-            {errors.googleSheetUrl?.message ? (
-              <FormErrorText>{errors.googleSheetUrl?.message}</FormErrorText>
+            {errors.sheetName?.message ? (
+              <FormErrorText>{errors.sheetName?.message}</FormErrorText>
             ) : null}
           </TkCol>
 

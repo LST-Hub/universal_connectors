@@ -144,7 +144,7 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
   useEffect(() => {
     if (accessTokenData && mappedRecordData) {
       sheetData.current = {
-        sheetsId: mappedRecordData[0].UrlValue,
+        sheetsId: mappedRecordData[0].workBookValue,
         accessToken: accessTokenData[0].access_token,
       };
     }
@@ -202,9 +202,10 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
         });
       }
     }
-  }, [configData, mappedRecordDetails.source, restletOptions]);
+  }, [configData, mappedRecordDetails.recordTypeValue, mappedRecordDetails.source, restletOptions]);
 
   useEffect(() => {
+    console.log("fieldsData", fieldsData)
     if (fieldsData?.length > 0) {
       fieldsData.map((field, index) => {
         setValue(
@@ -436,7 +437,7 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
         <TkCol>
           <TkLabel>
             <span className="fw-bold">
-              Google Sheets™ Url: {mappedRecordDetails.UrlLabel}
+              Google Sheet: {mappedRecordDetails.workBookLabel}
             </span>
             &nbsp;&nbsp;
           </TkLabel>

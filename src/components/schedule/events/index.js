@@ -162,7 +162,7 @@ const EventSchedule = ({ eventId }) => {
         value: scheduleEventData[0].integrationId,
       });
       setValue("mappedRecords", {
-        label: scheduleEventData[0].mappedRecord.MappedRecordName,
+        label: scheduleEventData[0].mappedRecord.mappedRecordName,
         value: scheduleEventData[0].mappedRecordId,
       });
       setValue("perform", {
@@ -249,11 +249,12 @@ const EventSchedule = ({ eventId }) => {
 
   // Mapped record options
   useEffect(() => {
+    console.log("mappedRecordData", mappedRecordData)
     if (mappedRecordData) {
       console.log("mappedRecordData==>", mappedRecordData);
       if (mappedRecordData.length === 1) {
         setValue("mappedRecords", {
-          label: mappedRecordData[0].name,
+          label: mappedRecordData[0].mappedRecordName,
           value: mappedRecordData[0].id,
         });
         setMappedRecordId(mappedRecordData[0].id);
@@ -262,11 +263,11 @@ const EventSchedule = ({ eventId }) => {
           mappedRecordId: mappedRecordData[0].id,
           integrationId: integrationId,
         };
-        setData((prev) => ({ ...prev, mappedRecordId: e.value }));
+        setData((prev) => ({ ...prev, mappedRecordId: mappedRecordData[0].id }));
       } else {
         setMappedRecordOptions(
           mappedRecordData?.map((item) => ({
-            label: item.MappedRecordName,
+            label: item.mappedRecordName,
             value: item.id,
           }))
         );

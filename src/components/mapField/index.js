@@ -89,7 +89,7 @@ const FieldMappingTable = () => {
   const columnHead = [
     {
       Header: "Name",
-      accessor: "MappedRecordName",
+      accessor: "mappedRecordName",
     },
     {
       Header: "Integration Name",

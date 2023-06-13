@@ -125,7 +125,6 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         endDate: data.endDate,
         noEndDate: data.noEndDate,
         performType: syncData.perform,
-        // savedSearchType: syncData.savedSearchType,
         operationType: syncData.operationType,
         source: syncData.source,
         range: syncData.range,
@@ -135,24 +134,6 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         realtimeEventData.savedSearchLabel = syncData.savedSearchLabel;
         realtimeEventData.savedSearchValue = syncData.savedSearchValue;
       }
-
-      // addNetsuiteFields.mutate(realtimeEventData, {
-      //   onSuccess: (res) => {
-      //     console.log("*************res", res);
-      //   },
-      //   onError: (err) => {
-      //     console.log("err", err);
-      //   },
-      // });
-
-      // scheduleRealtimeEvent.mutate(realtimeEventData, {
-      //   onSuccess: (res) => {
-      //     console.log("res", res);
-      //   },
-      //   onError: (err) => {
-      //     console.log("err", err);
-      //   },
-      // });
 
       updateRealTimeEvent.mutate(realtimeEventData, {
         onSuccess: (res) => {
@@ -180,7 +161,6 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         endDate: data.endDate,
         noEndDate: data.noEndDate,
         performType: syncData.perform,
-        // savedSearchType: syncData.savedSearchType,
         operationType: syncData.operationType,
         source: syncData.source,
         range: syncData.range,
@@ -193,17 +173,9 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
 
       console.log("eventData", eventData)
 
-      // addNetsuiteFields.mutate(eventData, {
-      //   onSuccess: (res) => {
-      //     console.log("****************res=>", res);
-      //   },
-      //   onError: (err) => {
-      //     console.log("err", err);
-      //   },
-      // });
-
       addEvent.mutate(eventData, {
         onSuccess: (res) => {
+          console.log("realtime event data", res)
           syncDataMutation.mutate({ ...eventData, id: res[0].id }, {
             onSuccess: (res) => {},
             onError: (err) => {

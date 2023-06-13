@@ -76,13 +76,13 @@ model MappedRecords {
   user               Users                @relation(fields: [userId], references: [id])
   integrationId      Int
   integration        Integrations         @relation(fields: [integrationId], references: [id])
-  MappedRecordName   String
-  source             String
-  destination        String
+  mappedRecordName   String
   recordTypeLabel    String
   recordTypeValue    String
-  UrlLabel           String
-  UrlValue           String
+  workBookLabel      String
+  workBookValue      String
+  sheetLabel         String
+  sheetValue         Int
   status             Boolean
   creationDate       DateTime             @default(now())
   modificationDate   DateTime             @updatedAt
@@ -150,20 +150,20 @@ model CustomFilterFields {
 }
 
 model Logs {
-  id             Int           @id @default(autoincrement())
-  userId         Int
-  user           Users         @relation(fields: [userId], references: [id])
-  integrationId  Int
-  integration    Integrations  @relation(fields: [integrationId], references: [id])
-  mappedRecordId Int
-  mappedRecord   MappedRecords @relation(fields: [mappedRecordId], references: [id])
-  scheduleId     Int
-  schedule       Schedule      @relation(fields: [scheduleId], references: [id])
-  recordType     String
-  status         String
-  logMessage     String
-  internalId     Int?
-  creationDate   DateTime      @default(now())
+  id               Int           @id @default(autoincrement())
+  userId           Int
+  user             Users         @relation(fields: [userId], references: [id])
+  integrationId    Int
+  integration      Integrations  @relation(fields: [integrationId], references: [id])
+  mappedRecordId   Int
+  mappedRecord     MappedRecords @relation(fields: [mappedRecordId], references: [id])
+  scheduleId       Int
+  schedule         Schedule      @relation(fields: [scheduleId], references: [id])
+  recordType       String
+  status           String
+  logMessage       String
+  internalId       Int?
+  creationDate     DateTime      @default(now())
   modificationDate DateTime      @updatedAt
 }
 

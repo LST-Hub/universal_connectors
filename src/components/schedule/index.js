@@ -47,12 +47,13 @@ const queryClient = useQueryClient();
 
   const selectedRowsId = useCallback((rows) => {
     const ids = data.map((row) => row.id);
-  }, []);
+  }, [data]);
 
-  const toggleDeleteModel = (eventId, ontegrationId) => {
+  const toggleDeleteModel = (eventId, integrationId) => {
+    // console.log("eventId", eventId)
     deleteEventId.current = {
       id: eventId,
-      integrationId: ontegrationId,
+      integrationId: integrationId,
     }
     setDeleteModal(true);
   }

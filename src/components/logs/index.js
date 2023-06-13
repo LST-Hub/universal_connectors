@@ -4,6 +4,7 @@ import tkFetch from "@/utils/fetch";
 import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/utils/Constants";
 import { Tooltip } from "@nextui-org/react";
+import { formatDate, formatTime } from "@/utils/date";
 
 
 
@@ -84,35 +85,35 @@ const LogTable = () => {
     },
     {
       Header: "Sync Date",
-      accessor: "syncDate",
+      accessor: "creationDate",
       Cell: (props) => {
+        const date = formatDate(props.row.original?.creationDate);
+        const time = formatTime(props.row.original?.creationDate);
         return (
-          <>
-            <Tooltip
-              color="invert"
-              content={`${props.value} ${props.row.original?.syncTime}`}
-              placement="bottom"
-            >
-              <span>{props.value}</span>
-            </Tooltip>
-          </>
+          <Tooltip
+            color="invert"
+            content={`${date} ${time}`}
+            placement="bottom"
+          >
+            <div>{date}</div>
+          </Tooltip>
         );
       },
     },
     {
       Header: "Last Sync Date",
-      accessor: "lastSyncDate",
+      accessor: "modificationDate",
       Cell: (props) => {
+        const date = formatDate(props.row.original?.modificationDate);
+        const time = formatTime(props.row.original?.modificationDate);
         return (
-          <>
-            <Tooltip
-              color="invert"
-              content={`${props.value} ${props.row.original?.lastSyncTime}`}
-              placement="bottom"
-            >
-              <span>{props.value}</span>
-            </Tooltip>
-          </>
+          <Tooltip
+            color="invert"
+            content={`${date} ${time}`}
+            placement="bottom"
+          >
+            <div>{date}</div>
+          </Tooltip>
         );
       },
     },

@@ -70,6 +70,7 @@ v1Router.get("/getRedirectPage", resletController.getRedirectPage);
 v1Router.post("/addRefreshToken", resletController.addRefreshToken);
 v1Router.get("/getAccessToken/:id", resletController.getAccessToken);
 v1Router.get("/getFiles", resletController.getFiles);
+v1Router.get("/getSheets", resletController.getSheets);
 v1Router.get("/getSheetsData", resletController.getSheetsData);
 v1Router.get(
   "/getcredentialDetailsById/:id",

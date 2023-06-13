@@ -580,6 +580,53 @@ const getFiles = async (req, res) => {
   }
 };
 
+const getSheets = async (req, res) => {
+  try {
+    const { userId, workBookId } = req.query;
+
+    const accessToken = await getAccessTokenByUserId(userId);
+
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${workBookId}`;
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    await axios({
+      method: "GET",
+      url: url,
+      headers: headers,
+    })
+      .then((values) => {
+        response({
+          res,
+          success: true,
+          status_code: 200,
+          data: values.data.sheets,
+          message: "Sheets fetched successfully",
+        });
+      })
+      .catch((error) => {
+        response({
+          res,
+          success: false,
+          status_code: 400,
+          data: [],
+          message: "Sheets not fetched",
+        });
+        return;
+      });
+  } catch {
+    response({
+      res,
+      success: false,
+      status_code: 400,
+      data: [],
+      message: "Error while fetching sheets",
+    });
+    return;
+  }
+};
+
 const getSheetsData = async (req, res) => {
   const { sheetsId, accessToken } = req.query;
   // console.log("oo", req.query);
@@ -587,6 +634,7 @@ const getSheetsData = async (req, res) => {
   const headers = {
     Authorization: `Bearer ${accessToken}`,
   };
+
   try {
     await axios({
       method: "GET",
@@ -1122,6 +1170,7 @@ module.exports = {
   addRefreshToken,
   getAccessToken,
   getFiles,
+  getSheets,
   getSheetsData,
   getcredentialDetailsById,
   updateSheetValues,
