@@ -144,7 +144,8 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
   useEffect(() => {
     if (accessTokenData && mappedRecordData) {
       sheetData.current = {
-        sheetsId: mappedRecordData[0].workBookValue,
+        workBookId: mappedRecordData[0].workBookValue,
+        sheetLabel: mappedRecordData[0].sheetLabel,
         accessToken: accessTokenData[0].access_token,
       };
     }

@@ -541,7 +541,7 @@ const updateWeeklyEvent = async (req, res) => {
 
 const deleteScheduleEvent = async (req, res) => {
   const { id, integrationId } = req.params;
-  console.log("req.params", req.params)
+  console.log("req.params", req.params);
 
   try {
     const [deleteScheduleEvent, updateIntegrations] = await prisma.$transaction(
@@ -859,7 +859,7 @@ const syncData = async (req, res) => {
       range,
       id,
     } = req.body;
-    console.log(" req.body",  req.body)
+    console.log(" req.body", req.body);
 
     const accessToken = await getAccessTokenByUserId(userId);
 
@@ -878,7 +878,7 @@ const syncData = async (req, res) => {
           workBookLabel: true,
           workBookValue: true,
           sheetLabel: true,
-          sheetValue: true
+          sheetValue: true,
         },
       }),
 
@@ -968,6 +968,7 @@ const netsuiteOperations = async (
   try {
     const sheetsValue = getSheetsData(
       mappedRecord[0].workBookValue,
+      mappedRecord[0].sheetLabel,
       userId,
       accessToken
     );
@@ -984,6 +985,7 @@ const netsuiteOperations = async (
           integrationId,
           range,
           mappedRecord[0].workBookValue,
+          mappedRecord[0].sheetLabel,
           id,
           accessToken
         );
@@ -1007,9 +1009,10 @@ const netsuiteOperations = async (
   }
 };
 
-const getSheetsData = async (sheetsId, userId, accessToken) => {
+const getSheetsData = async (workBookId, sheetLabel, userId, accessToken) => {
   try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/A1:ZZ100000`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${workBookId}/values/${sheetLabel}!A1:ZZ100000`;
+    // const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/A1:ZZ100000`;
     const headers = {
       Authorization: `Bearer ${accessToken}`,
     };
@@ -1059,7 +1062,7 @@ const getAccessTokenByUserId = async (userId) => {
         headers: headers,
       });
 
-      console.log(response.data.access_token)
+      console.log(response.data.access_token);
       return response.data.access_token;
     } catch (error) {
       console.log("getAccessTokenByUserId error=>", error);
@@ -1082,6 +1085,7 @@ const getMappedFields = async (
   integrationId,
   range,
   workBookValue,
+  sheetLabel,
   id,
   accessToken
 ) => {
@@ -1127,6 +1131,7 @@ const getMappedFields = async (
             mappedRecordId,
             range,
             workBookValue,
+            sheetLabel,
             accessToken,
             id
           );
@@ -1145,6 +1150,7 @@ const getMappedFields = async (
             mappedRecordId,
             range,
             workBookValue,
+            sheetLabel,
             accessToken,
             id
           );
@@ -1174,7 +1180,7 @@ function getNonce(length) {
     .join("");
 }
 
-// // add data in netsuite
+// add data in netsuite
 const addNetsuiteV1Api = async (
   credentials,
   values,
@@ -1332,6 +1338,7 @@ const updateNetsuiteV1Api = async (
   mappedRecordId,
   range,
   workBookValue,
+  sheetLabel,
   accessToken,
   id
 ) => {
@@ -1353,6 +1360,7 @@ const updateNetsuiteV1Api = async (
       userId,
       range,
       workBookValue,
+      sheetLabel,
       accessToken
     );
 
@@ -1479,11 +1487,17 @@ const updateNetsuiteV1Api = async (
   }
 };
 
-const getSheetsDataByRange = async (userId, range, workBookValue, accessToken) => {
+const getSheetsDataByRange = async (
+  userId,
+  range,
+  workBookValue,
+  sheetLabel,
+  accessToken
+) => {
   try {
     console.log(userId, range, workBookValue, accessToken);
 
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${workBookValue}/values/${range}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${workBookValue}/values/${sheetLabel}!${range}`;
     const headers = {
       Authorization: `Bearer ${accessToken}`,
     };
@@ -1498,7 +1512,7 @@ const getSheetsDataByRange = async (userId, range, workBookValue, accessToken) =
         return values.data;
       })
       .catch((error) => {
-        console.log("getSheetsDataByRange error =>", error);
+        console.log("getSheetsDataByRange error =>", error.response.data);
         return error;
       });
   } catch (error) {
@@ -1519,6 +1533,7 @@ const deleteNetsuiteV1Api = async (
   mappedRecordId,
   range,
   workBookValue,
+  sheetLabel,
   accessToken,
   id
 ) => {
@@ -1539,6 +1554,7 @@ const deleteNetsuiteV1Api = async (
       userId,
       range,
       workBookValue,
+      sheetLabel,
       accessToken
     );
 
@@ -1744,7 +1760,6 @@ const addGoogleSheetRecords = async (
   integrationId,
   id
 ) => {
-  const logs = [];
   try {
     console.log("add record in google sheet");
 
@@ -1755,62 +1770,91 @@ const addGoogleSheetRecords = async (
       mappedRecord[0].recordTypeValue
     );
 
-    const sheetsValue = await getSheetsData(
-      mappedRecord[0].workBookValue,
-      userId,
-      accessToken
-      );
-
-    const fields = [];
     const records = result.list.map((record) => {
       const values = record.values;
-      let modifiedValues = {};
-    // console.log("values", values)
+      const modifiedValues = {};
       for (const key in values) {
+        console.log("values", values);
         if (Array.isArray(values[key])) {
-          modifiedValues[key] = values[key][0].text;
+          // console.log(values[key].length > 0 ? "GT" : "LT")
+          // modifiedValues[key] = values[key][0].text;
+          modifiedValues[key] =
+            values[key].length > 0 ? values[key][0].text : "";
         } else {
           modifiedValues[key] = values[key];
         }
       }
-    
-      const row = sheetsValue.data.values;
-      // console.log("row", row)
-      const filterValue = [];
-      for (const key in modifiedValues) {
-        const modifiedValue = modifiedValues[key];
-        // console.log("modifiedValue", modifiedValue)
-        const foundInRow = row.some((item) => {
-          return item.includes(modifiedValue);
-        });
-    
-        if (!foundInRow) {
-          filterValue.push(modifiedValue);
-        }
-      }
-    
-      if (filterValue.length > 0) {
-        fields.push(filterValue);
-      }
+      return modifiedValues;
     });
-    
-    // console.log("fields", fields);
+    const recordValues = records.map((record) => Object.values(record));
 
     const recordList = {
-      range: `${mappedRecord[0].workBookLabel}`,
+      range: `${mappedRecord[0].sheetLabel}`,
       majorDimension: "ROWS",
-      values: fields,
+      values: recordValues,
     };
 
-    const urlParams = {
-      valueInputOption: "USER_ENTERED",
-    };
-
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].workBookLabel}:append?valueInputOption=${urlParams.valueInputOption}`
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}!A2:ZZ100000:clear`;
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     };
+    const bodyData = {
+      spreadsheetId: mappedRecord[0].workBookValue,
+      range: `${mappedRecord[0].sheetLabel}!A2:ZZ100000`,
+    };
+
+    try {
+      await axios({
+        method: "POST",
+        url: url,
+        headers: headers,
+        body: bodyData,
+      })
+        .then((res) => {
+          addFields(
+            userId,
+            mappedRecordId,
+            integrationId,
+            mappedRecord,
+            accessToken,
+            recordList,
+            recordValues.length,
+            id
+          );
+        })
+        .catch((error) => {
+          console.log("addGoogleSheetRecords error", error);
+        });
+    } catch (error) {
+      console.log("addGoogleSheetRecords error => ", error);
+    }
+  } catch (error) {
+    console.log("addGoogleSheetRecords error=> ", error);
+    return error;
+  }
+};
+
+const addFields = async (
+  userId,
+  mappedRecordId,
+  integrationId,
+  mappedRecord,
+  accessToken,
+  recordList,
+  count,
+  id
+) => {
+  const logs = [];
+  try {
+    const urlParams = {
+      valueInputOption: "USER_ENTERED",
+    };
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    };
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}:append?valueInputOption=${urlParams.valueInputOption}`;
 
     try {
       const request = await axios({
@@ -1820,7 +1864,7 @@ const addGoogleSheetRecords = async (
         data: recordList,
       });
       console.log("output =>", request.data);
-      const summaryMessage = `Successfully added ${request.data.updates.updatedRows} records in Google Sheet out of ${fields.length}`;
+      const summaryMessage = `Successfully added ${request.data.updates.updatedRows} records in Google Sheet out of ${count}`;
       logs.push({
         userId: userId,
         scheduleId: Number(id),
@@ -1838,112 +1882,8 @@ const addGoogleSheetRecords = async (
     addLogs(logs);
     console.log("added GS record logs => ", logs);
   } catch (error) {
-    console.log("addGoogleSheetRecords error=> ", error.response.data.error.message);
-    logs.push({
-      userId: userId,
-      scheduleId: Number(id),
-      integrationId: integrationId,
-      mappedRecordId: mappedRecordId,
-      recordType: mappedRecord[0].recordTypeLabel,
-      status: "Error",
-      message: error.response.data.error.message,
-    });
-    addLogs(logs);
-    return error;
+    console.log("addFields error => ", error);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // // ****
-  // const logs = [];
-  // try {
-  //   console.log("add record in google sheet");
-
-  //   const result = await getNetsuiteData(
-  //     userId,
-  //     mappedRecordId,
-  //     credentials,
-  //     mappedRecord[0].recordTypeValue
-  //   );
-
-  //   const records = result.list.map((record) => {
-  //     const values = record.values;
-  //     const modifiedValues = {};
-  //     for (const key in values) {
-  //       if (Array.isArray(values[key])) {
-  //         modifiedValues[key] = values[key][0].text;
-  //       } else {
-  //         modifiedValues[key] = values[key];
-  //       }
-  //     }
-  //     return modifiedValues;
-  //   });
-  //   const recordValues = records.map((record) => Object.values(record));
-
-  //   const recordList = {
-  //     range: `${mappedRecord[0].workBookLabel}`,
-  //     majorDimension: "ROWS",
-  //     values: recordValues,
-  //   };
-
-  //   const urlParams = {
-  //     valueInputOption: "USER_ENTERED",
-  //   };
-  //   console.log("recordList", recordList)
-
-  //   const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].workBookLabel}:append?valueInputOption=${urlParams.valueInputOption}`
-  //   const headers = {
-  //     "Content-Type": "application/json",
-  //     Authorization: `Bearer ${accessToken}`,
-  //   };
-
-  //   try {
-  //     const request = await axios({
-  //       method: "POST",
-  //       url: url,
-  //       headers: headers,
-  //       data: recordList,
-  //     });
-  //     console.log("output =>", request.data);
-  //     const summaryMessage = `Successfully added ${request.data.updates.updatedRows} records in Google Sheet out of ${recordValues.length}`;
-  //     logs.push({
-  //       userId: userId,
-  //       scheduleId: Number(id),
-  //       integrationId: integrationId,
-  //       mappedRecordId: mappedRecordId,
-  //       recordType: mappedRecord[0].recordTypeLabel,
-  //       status: "Success",
-  //       message: summaryMessage,
-  //     });
-  //   } catch (error) {
-  //     console.log("addGoogleSheetRecords error", error);
-  //     return error;
-  //   }
-
-  //   addLogs(logs);
-  //   console.log("added GS record logs => ", logs);
-  // } catch (error) {
-  //   console.log("addGoogleSheetRecords error=> ", error);
-  //   return error;
-  // }
 };
 
 const getNetsuiteData = async (
@@ -2120,23 +2060,6 @@ const updateGoogleSheetRecord = async (
   //   console.log("updateGoogleSheetRecord error ==> ", error);
   // }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // ******
   const logs = [];
   try {
@@ -2176,7 +2099,7 @@ const updateGoogleSheetRecord = async (
       valueInputOption: "USER_ENTERED",
     };
 
-    const url =  `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].workBookLabel}!A2:ZZ100000?includeValuesInResponse=${urlParams.includeValuesInResponse}&responseDateTimeRenderOption=${urlParams.responseDateTimeRenderOption}&responseValueRenderOption=${urlParams.responseValueRenderOption}&valueInputOption=${urlParams.valueInputOption}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].workBookLabel}!A2:ZZ100000?includeValuesInResponse=${urlParams.includeValuesInResponse}&responseDateTimeRenderOption=${urlParams.responseDateTimeRenderOption}&responseValueRenderOption=${urlParams.responseValueRenderOption}&valueInputOption=${urlParams.valueInputOption}`;
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
@@ -2224,6 +2147,7 @@ const deleteGoogleSheetRecord = async (
 ) => {
   const logs = [];
   let deleteCount = 0;
+  let totalRecords = 0;
   try {
     console.log("delete record in google sheet");
 
@@ -2257,11 +2181,13 @@ const deleteGoogleSheetRecord = async (
         }
       }
     });
+    // console.log("filterValues", filterValues)
 
     // *** gs data
     const gsIds = [];
     const sheetsValue = getSheetsData(
       mappedRecord[0].workBookValue,
+      mappedRecord[0].sheetLabel,
       userId,
       accessToken
     );
@@ -2277,56 +2203,50 @@ const deleteGoogleSheetRecord = async (
           }
         }
 
-        const filterIdsWithIndex = gsIds.reduce((acc, element, index) => {
-          if (!filterValues.includes(element)) {
-            acc.push({
-              value: element,
-              startIndex: index + 1,
-              endIndex: index + 2,
-            });
-          }
-          return acc;
-        }, []);
+        // console.log("gsIds", gsIds)
+        await Promise.all(
+          gsIds.map(async (element, index) => {
+            if (!filterValues.includes(element)) {
+              totalRecords++;
 
-        const deletePromises = filterIdsWithIndex.map(async (item) => {
-          const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
-          const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          };
+              const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
+              const headers = {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              };
 
-          const data = {
-            requests: [
-              {
-                deleteDimension: {
-                  range: {
-                    sheetId: 0,
-                    dimension: "ROWS",
-                    startIndex: item.startIndex,
-                    endIndex: item.endIndex,
+              const data = {
+                requests: [
+                  {
+                    deleteDimension: {
+                      range: {
+                        sheetId: mappedRecord[0].sheetValue,
+                        dimension: "ROWS",
+                        startIndex: index + 1,
+                        endIndex: index + 2,
+                      },
+                    },
                   },
-                },
-              },
-            ],
-          };
+                ],
+              };
 
-          try {
-            const result = await axios({
-              method: "POST",
-              url: url,
-              headers: headers,
-              data: data,
-            });
+              try {
+                const res = await axios({
+                  method: "POST",
+                  url: url,
+                  headers: headers,
+                  data: data,
+                });
 
-            console.log("output => ", result.data);
-            deleteCount++;
-          } catch (error) {
-            console.log("deleteGoogleSheetRecord error", error);
-          }
-        });
-        await Promise.all(deletePromises);
-
-        const summaryMessage = `Successfully deleted ${deleteCount} records from Google Sheet out of ${filterIdsWithIndex.length}`;
+                // console.log("output => ", res.data);
+                deleteCount++;
+              } catch (error) {
+                console.log("deleteGoogleSheetRecord error", error);
+              }
+            }
+          })
+        );
+        const summaryMessage = `Successfully deleted ${deleteCount} records in Google Sheet out of ${totalRecords}`;
         logs.push({
           userId: userId,
           scheduleId: Number(id),
@@ -2339,49 +2259,139 @@ const deleteGoogleSheetRecord = async (
         addLogs(logs);
         console.log("deleted GS record logs => ", logs);
       })
-      .catch((error) => {
-        console.log("deleteGoogleSheetRecord error => ", error);
+      .catch((err) => {
+        console.log("getSheetsData error", err);
       });
   } catch (error) {
-    console.log("deleteGoogleSheetRecord error ==> ", error);
+    console.log("deleteGoogleSheetRecord error=> ", error);
     return error;
   }
 };
 
-const deleteRecord = async (
-  userId,
+// gsIds.reduce((element, index) => {
+//   if (!filterValues.includes(element)) {
+//     // acc.push({
+//     //   value: element,
+//     //   startIndex: index + 1,
+//     //   endIndex: index + 2,
+//     // });
+
+//     const data = {
+//       // requests: [
+//       //   {
+//           // deleteDimension: {
+//             range: {
+//               sheetId: mappedRecord[0].sheetValue,
+//               dimension: "ROWS",
+//               startIndex: index + 1,
+//               endIndex: index + 2,
+//             },
+//           // },
+//       //   },
+//       // ],
+//     };
+
+//     deleteRecords(data)
+
+//   }
+//   // return acc;
+// }, []);
+// console.log("filterIdsWithIndex", filterIdsWithIndex)
+// const deletePromises = filterIdsWithIndex.map(async (item) => {
+//   const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
+//   const headers = {
+//     "Content-Type": "application/json",
+//     Authorization: `Bearer ${accessToken}`,
+//   };
+
+//   const data = {
+//     requests: [
+//       {
+//         deleteDimension: {
+//           range: {
+//             sheetId: mappedRecord[0].sheetValue,
+//             dimension: "ROWS",
+//             startIndex: item.startIndex,
+//             endIndex: item.endIndex,
+//           },
+//         },
+//       },
+//     ],
+//   };
+
+// try {
+//   const result = await axios({
+//     method: "POST",
+//     url: url,
+//     headers: headers,
+//     data: data,
+//   });
+
+//   console.log("output => ", result.data);
+//   deleteCount++;
+// } catch (error) {
+//   console.log("deleteGoogleSheetRecord error", error);
+// }
+// });
+// await Promise.all(deletePromises);
+
+// const summaryMessage = `Successfully deleted ${deleteCount} records from Google Sheet out of ${filterIdsWithIndex.length}`;
+// logs.push({
+//   userId: userId,
+//   scheduleId: Number(id),
+//   integrationId: integrationId,
+//   mappedRecordId: mappedRecordId,
+//   recordType: mappedRecord[0].recordTypeLabel,
+//   status: "Success",
+//   message: summaryMessage,
+// });
+// addLogs(logs);
+// console.log("deleted GS record logs => ", logs);
+//       })
+//       .catch((error) => {
+//         console.log("deleteGoogleSheetRecord error => ", error);
+//       });
+//   } catch (error) {
+//     console.log("deleteGoogleSheetRecord error ==> ", error);
+//     return error;
+//   }
+// };
+
+const deleteRecords = async (
   sheetsId,
-  startIndex,
-  endIndex,
+  record,
+  // userId,
+  // startIndex,
+  // endIndex,
   accessToken
 ) => {
-  console.log(accessToken);
+  // console.log(accessToken);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}:batchUpdate`;
   const headers = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${accessToken}`,
   };
 
-  const data = {
-    requests: [
-      {
-        deleteDimension: {
-          range: {
-            sheetId: 0,
-            dimension: "ROWS",
-            startIndex: startIndex,
-            endIndex: endIndex,
-          },
-        },
-      },
-    ],
-  };
+  // const data = {
+  //   requests: [
+  //     {
+  //       deleteDimension: {
+  //         range: {
+  //           sheetId: 0,
+  //           dimension: "ROWS",
+  //           startIndex: startIndex,
+  //           endIndex: endIndex,
+  //         },
+  //       },
+  //     },
+  //   ],
+  // };
 
   await axios({
     method: "POST",
     url: url,
     headers: headers,
-    data: data,
+    data: record,
   })
     .then((values) => {
       console.log("deleteGoogleSheetRecord", values.data);

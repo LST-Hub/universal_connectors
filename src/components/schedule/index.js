@@ -9,16 +9,18 @@ import Link from "next/link";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Tooltip } from "@nextui-org/react";
 import DeleteModal from "@/utils/DeleteModal";
+import TkButton from "@/globalComponents/TkButton";
+import { TkCol } from "@/globalComponents/TkRow";
 
 const ScheduleTable = () => {
-let deleteEventId = useRef(null);
+  let deleteEventId = useRef(null);
 
-const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
   const [userId, setUserId] = useState(null);
   const [data, setData] = useState([]);
   const [deleteModal, setDeleteModal] = useState(false);
-
+  const [selectedRowId, setSelectedRowId] = useState([]);
 
   const { data: scheduleData, isLoading } = useQuery({
     queryKey: ["schedule", userId],
@@ -38,25 +40,28 @@ const queryClient = useQueryClient();
       setUserId(JSON.parse(id));
     }
   }, []);
-  
+
   useEffect(() => {
     if (scheduleData?.length > 0) {
       setData(scheduleData);
     }
   }, [scheduleData]);
 
-  const selectedRowsId = useCallback((rows) => {
-    const ids = data.map((row) => row.id);
-  }, [data]);
+  const selectedRowsId = (rows) => {
+    console.log("rows", rows);
+    const ids = rows.map((row) => row.original.id);
+    setSelectedRowId(ids);
+  };
+  console.log("SelectedRowId", selectedRowId);
 
   const toggleDeleteModel = (eventId, integrationId) => {
     // console.log("eventId", eventId)
     deleteEventId.current = {
       id: eventId,
       integrationId: integrationId,
-    }
+    };
     setDeleteModal(true);
-  }
+  };
 
   const onClickDelete = () => {
     deleteScheduleEvent.mutate(deleteEventId.current, {
@@ -68,10 +73,11 @@ const queryClient = useQueryClient();
           queryKey: ["integrations"],
         });
         setDeleteModal(false);
-      }, onError: () => {
+      },
+      onError: () => {
         setDeleteModal(false);
-      }
-    })
+      },
+    });
   };
 
   const scheduleHead = [
@@ -151,24 +157,40 @@ const queryClient = useQueryClient();
     },
   ];
 
+  const onClickSync = () => {};
+
   return (
     <>
       {isLoading ? (
         <TkLoader />
       ) : scheduleData?.length > 0 ? (
         <>
-        <DeleteModal
+          <DeleteModal
             show={deleteModal}
             onDeleteClick={onClickDelete}
             onCloseClick={() => setDeleteModal(false)}
           />
-        <TkTableContainer
-          columns={scheduleHead}
-          data={data}
-          rowSelection={true}
-          onRowSelection={selectedRowsId}
-          showPagination={true}
-        />
+
+          <TkCol lg={2}>
+            <div>
+              <TkButton
+                color="primary"
+                className="btn add-btn mb-2"
+                disabled={selectedRowId.length > 0 ? false : true}
+                onClick={onClickSync}
+              >
+                Run / Sync Now
+              </TkButton>
+            </div>
+          </TkCol>
+
+          <TkTableContainer
+            columns={scheduleHead}
+            data={data}
+            rowSelection={true}
+            onRowSelection={(rows) => selectedRowsId(rows)}
+            showPagination={true}
+          />
         </>
       ) : (
         <TkNoData />

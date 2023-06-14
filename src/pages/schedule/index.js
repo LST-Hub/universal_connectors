@@ -18,7 +18,7 @@ const Schedule = () => {
       <div className="page-content">
         <BreadCrumb
           pageTitle="Schedule"
-          syncButton="Run / Sync Now"
+          // syncButton="Run / Sync Now"
           buttonText={"Add Schedule"}
           onButtonClick={addSchedule}
         />

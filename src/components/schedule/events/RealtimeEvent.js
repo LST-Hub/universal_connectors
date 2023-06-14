@@ -144,12 +144,35 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         },
       });
 
-      syncDataMutation.mutate(realtimeEventData, {
-        onSuccess: (res) => {},
-        onError: (err) => {
-          console.log("err", err);
+      // if(syncData.operationType === "add" && syncData.source === "GoogleSheet"){
+      //   alert("delete")
+      // } else {
+      //   syncDataMutation.mutate(realtimeEventData, {
+      //     onSuccess: (res) => {},
+      //     onError: (err) => {
+      //       console.log("err", err);
+      //     }
+      //   })
+      // }
+
+      if (syncData.operationType === "add" && syncData.source === "GoogleSheet") {
+        if (confirm("Do you want to delete?")) {
+          syncDataMutation.mutate(realtimeEventData, {
+            onSuccess: (res) => {},
+            onError: (err) => {
+              console.log("err", err);
+            }
+          });
         }
-      })
+      } else {
+        console.log("*********************other", syncData.operationType)
+        syncDataMutation.mutate(realtimeEventData, {
+          onSuccess: (res) => {},
+          onError: (err) => {
+            console.log("err", err);
+          }
+        });
+      }
     } else {
       console.log("add realtime Event**********");
       const eventData = {
