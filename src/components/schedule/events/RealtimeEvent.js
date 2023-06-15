@@ -6,6 +6,7 @@ import TkForm from "@/globalComponents/TkForm";
 import TkLabel from "@/globalComponents/TkLabel";
 import TkRow, { TkCol } from "@/globalComponents/TkRow";
 import { API_BASE_URL } from "@/utils/Constants";
+import DeleteModal from "@/utils/DeleteModal";
 import { formatDate } from "@/utils/date";
 import tkFetch from "@/utils/fetch";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -21,6 +22,7 @@ const schema = Yup.object({
 
 const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
   let userId = useRef(null);
+  let scheduleEventData = useRef(null);
   const {
     control,
     register,
@@ -35,6 +37,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
   const queryClient = useQueryClient();
   const [checkboxValue, setCheckboxValue] = useState(false);
   const [ids, setIds] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(false);
 
   const addEvent = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/addRealTimeEvent`),
@@ -135,44 +138,56 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         realtimeEventData.savedSearchValue = syncData.savedSearchValue;
       }
 
-      updateRealTimeEvent.mutate(realtimeEventData, {
-        onSuccess: (res) => {
-          console.log("updateRealTimeEvent res", res)
-        },
-        onError: (err) => {
-          console.log("err", err);
-        },
-      });
+      if (
+        syncData.operationType === "add" &&
+        syncData.source === "GoogleSheet"
+      ) {
+        toggleDeleteModel(realtimeEventData);
+        // if (
+        //   confirm(
+        //     "This will erase all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
+        //   )
+        // ) {
+        //   updateRealTimeEvent.mutate(realtimeEventData, {
+        //     onSuccess: (res) => {
+        //       console.log("updateRealTimeEvent res", res);
+        //     },
+        //     onError: (err) => {
+        //       console.log("err", err);
+        //     },
+        //   });
+        // }
+      } else {
+        updateRealTimeEvent.mutate(realtimeEventData, {
+          onSuccess: (res) => {
+            console.log("updateRealTimeEvent res", res);
+          },
+          onError: (err) => {
+            console.log("err", err);
+          },
+        });
+        router.push("/schedule");
+      }
 
-      // if(syncData.operationType === "add" && syncData.source === "GoogleSheet"){
-      //   alert("delete")
+      // ***
+      // if (syncData.operationType === "add" && syncData.source === "GoogleSheet") {
+      //   if (confirm("Do you want to delete?")) {
+      //     syncDataMutation.mutate(realtimeEventData, {
+      //       onSuccess: (res) => {},
+      //       onError: (err) => {
+      //         console.log("err", err);
+      //       }
+      //     });
+      //   }
       // } else {
+      //   // console.log("*********************other", syncData.operationType)
       //   syncDataMutation.mutate(realtimeEventData, {
       //     onSuccess: (res) => {},
       //     onError: (err) => {
       //       console.log("err", err);
       //     }
-      //   })
+      //   });
       // }
-
-      if (syncData.operationType === "add" && syncData.source === "GoogleSheet") {
-        if (confirm("Do you want to delete?")) {
-          syncDataMutation.mutate(realtimeEventData, {
-            onSuccess: (res) => {},
-            onError: (err) => {
-              console.log("err", err);
-            }
-          });
-        }
-      } else {
-        console.log("*********************other", syncData.operationType)
-        syncDataMutation.mutate(realtimeEventData, {
-          onSuccess: (res) => {},
-          onError: (err) => {
-            console.log("err", err);
-          }
-        });
-      }
     } else {
       console.log("add realtime Event**********");
       const eventData = {
@@ -194,31 +209,90 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
-      console.log("eventData", eventData)
+      console.log("eventData", eventData);
 
-      addEvent.mutate(eventData, {
+      if (
+        syncData.operationType === "add" &&
+        syncData.source === "GoogleSheet"
+      ) {
+        toggleDeleteModel(eventData);
+        // if (
+        //   confirm(
+        //     "This will erase all all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
+        //   )
+        // ) {
+        //   addEvent.mutate(eventData, {
+        //     onSuccess: (res) => {
+        //       console.log("realtime event data", res);
+        //     },
+        //     onError: (err) => {
+        //       console.log("err", err);
+        //     },
+        //   });
+        // }
+      } else {
+        addEvent.mutate(eventData, {
+          onSuccess: (res) => {
+            console.log("realtime event data", res);
+          },
+          onError: (err) => {
+            console.log("err", err);
+          },
+        });
+        router.push("/schedule");
+      }
+
+      // ***
+      // addEvent.mutate(eventData, {
+      //   onSuccess: (res) => {
+      //     console.log("realtime event data", res)
+      //     syncDataMutation.mutate({ ...eventData, id: res[0].id }, {
+      //       onSuccess: (res) => {},
+      //       onError: (err) => {
+      //         console.log("err", err);
+      //       }
+      //     })
+      //   },
+      //   onError: (err) => {
+      //     console.log("err", err);
+      //   },
+      // });
+    }
+    // router.push("/schedule");
+  };
+  const onCancel = () => {
+    history.back();
+  };
+
+  const onClickDelete = () => {
+    console.log("scheduleEventData", scheduleEventData.current);
+
+    if (scheduleEventData.current.id) {
+      updateRealTimeEvent.mutate(scheduleEventData.current, {
         onSuccess: (res) => {
-          console.log("realtime event data", res)
-          syncDataMutation.mutate({ ...eventData, id: res[0].id }, {
-            onSuccess: (res) => {},
-            onError: (err) => {
-              console.log("err", err);
-            }
-          })
+          console.log("updateRealTimeEvent res", res);
+        },
+        onError: (err) => {
+          console.log("err", err);
+        },
+      });
+    } else {
+      addEvent.mutate(scheduleEventData.current, {
+        onSuccess: (res) => {
+          console.log("realtime event data", res);
         },
         onError: (err) => {
           console.log("err", err);
         },
       });
     }
-
-    // queryClient.invalidateQueries({
-    //   queryKey: ["schedule", userId],
-    // });
+    setDeleteModal(false);
     router.push("/schedule");
   };
-  const onCancel = () => {
-    history.back();
+
+  const toggleDeleteModel = (eventData) => {
+    scheduleEventData.current = eventData;
+    setDeleteModal(true);
   };
 
   return (
@@ -313,6 +387,14 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
           </TkCol>
         </TkRow>
       </TkForm>
+
+      <DeleteModal
+        show={deleteModal}
+        onDeleteClick={onClickDelete}
+        onCloseClick={() => setDeleteModal(false)}
+        label="This will erase all all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
+        image={false}
+      />
     </>
   );
 };

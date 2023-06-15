@@ -14,6 +14,7 @@ import { TkCol } from "@/globalComponents/TkRow";
 
 const ScheduleTable = () => {
   let deleteEventId = useRef(null);
+  let id = useRef([]);
 
   const queryClient = useQueryClient();
 
@@ -26,6 +27,10 @@ const ScheduleTable = () => {
     queryKey: ["schedule", userId],
     queryFn: tkFetch.get(`${API_BASE_URL}/getSchedules/${userId}`),
     enabled: !!userId,
+  });
+
+  const syncEvent = useMutation({
+    mutationFn: tkFetch.post(`${API_BASE_URL}/syncEvent`),
   });
 
   const deleteScheduleEvent = useMutation({
@@ -49,10 +54,19 @@ const ScheduleTable = () => {
 
   const selectedRowsId = (rows) => {
     console.log("rows", rows);
-    const ids = rows.map((row) => row.original.id);
-    setSelectedRowId(ids);
+    setSelectedRowId(
+      rows.map((row) => {
+        return {
+          userId: row.original.userId,
+          id: row.original.id,
+          mappedRecordId: row.original.mappedRecord.id,
+          integrationId: row.original.integration.id,
+        };
+      })
+    );
+    // const ids = rows.map((row) => row.original.id);
+    // setSelectedRowId(ids);
   };
-  console.log("SelectedRowId", selectedRowId);
 
   const toggleDeleteModel = (eventId, integrationId) => {
     // console.log("eventId", eventId)
@@ -157,7 +171,13 @@ const ScheduleTable = () => {
     },
   ];
 
-  const onClickSync = () => {};
+  const onClickSync = () => {
+    syncEvent.mutate(selectedRowId, {
+      onSuccess: (data) => {
+        console.log("data", data);
+      },
+    });
+  };
 
   return (
     <>
@@ -169,6 +189,8 @@ const ScheduleTable = () => {
             show={deleteModal}
             onDeleteClick={onClickDelete}
             onCloseClick={() => setDeleteModal(false)}
+            label="Are you sure you want to remove this record ?"
+            image={true}
           />
 
           <TkCol lg={2}>

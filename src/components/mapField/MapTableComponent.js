@@ -454,6 +454,8 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
               show={deleteModal}
               onDeleteClick={onClickDelete}
               onCloseClick={() => setDeleteModal(false)}
+              label="Are you sure you want to remove this record ?"
+            image={true}
             />
             <TkTableContainer
               columns={columns}
