@@ -9,60 +9,76 @@ const syncEvent = async (req, res) => {
     const eventIds = req.body;
 
     // await Promise.all(
-      eventIds.map(async (ids) => {
-        console.log("event id", ids);
-        const scheduleData = await prisma.schedule.findMany({
-          where: {
-            userId: Number(ids.userId),
-            id: Number(ids.id),
-            integrationId: Number(ids.integrationId),
-            mappedRecordId: Number(ids.mappedRecordId),
-          },
-          select: {
-            id: true,
-            userId: true,
-            integrationId: true,
-            mappedRecordId: true,
-            eventType: true,
-            startDate: true,
-            endDate: true,
-            startTime: true,
-            day: true,
-            noEndDate: true,
-            repeatEveryDay: true,
-            operationType: true,
-            source: true,
-            range: true,
-          },
-        });
-        console.log("scheduleData", scheduleData);
+    eventIds.map(async (ids) => {
+      console.log("event id", ids);
+      const scheduleData = await prisma.schedule.findMany({
+        where: {
+          userId: Number(ids.userId),
+          id: Number(ids.id),
+          integrationId: Number(ids.integrationId),
+          mappedRecordId: Number(ids.mappedRecordId),
+        },
+        select: {
+          id: true,
+          userId: true,
+          integrationId: true,
+          mappedRecordId: true,
+          eventType: true,
+          startDate: true,
+          endDate: true,
+          startTimeLabel: true,
+          startTimeValue: true,
+          day: true,
+          noEndDate: true,
+          repeatEveryDay: true,
+          operationType: true,
+          source: true,
+          range: true,
+        },
+      });
+      console.log("scheduleData", scheduleData);
 
-        switch (scheduleData[0].eventType) {
-          case "Realtime":
-            scheduleRealTimeEvent(
-              ids.userId,
-              ids.id,
-              ids.integrationId,
-              ids.mappedRecordId,
-              scheduleData[0].startDate,
-              scheduleData[0].endDate,
-              scheduleData[0].noEndDate,
-              scheduleData[0].operationType,
-              scheduleData[0].source,
-              scheduleData[0].range
-            );
-            break;
+      switch (scheduleData[0].eventType) {
+        case "Realtime":
+          scheduleRealTimeEvent(
+            ids.userId,
+            ids.id,
+            ids.integrationId,
+            ids.mappedRecordId,
+            scheduleData[0].startDate,
+            scheduleData[0].endDate,
+            scheduleData[0].noEndDate,
+            scheduleData[0].operationType,
+            scheduleData[0].source,
+            scheduleData[0].range
+          );
+          break;
 
-          case "Single":
-            break;
+        case "Single":
+          scheduleSingleEvent(
+            ids.userId,
+            ids.id,
+            ids.integrationId,
+            ids.mappedRecordId,
+            scheduleData[0].startDate,
+            scheduleData[0].startTimeLabel,
+            scheduleData[0].startTimeValue,
+            scheduleData[0].endDate,
+            scheduleData[0].repeatEveryDay,
+            scheduleData[0].noEndDate,
+            scheduleData[0].operationType,
+            scheduleData[0].source,
+            scheduleData[0].range
+          );
+          break;
 
-          case "Weekly":
-            break;
+        case "Weekly":
+          break;
 
-          default:
-            console.log("event not found");
-        }
-      })
+        default:
+          console.log("event not found");
+      }
+    });
     // );
 
     response({
@@ -122,6 +138,68 @@ const scheduleRealTimeEvent = (
     });
   } catch (error) {
     console.log("scheduleRealTimeEvent error => ", error);
+  }
+};
+
+// start date, start time, repeat every day (checkbox), end date, no end date (checkbox)
+const scheduleSingleEvent = (
+  userId,
+  eventId,
+  integrationId,
+  mappedRecordId,
+  startDate,
+  startTimeLabel,
+  startTimeValue,
+  endDate,
+  repeatEveryDay,
+  noEndDate,
+  operationType,
+  source,
+  range
+) => {
+  try {
+    // const [year, month, day] = startDate.split("-");
+
+    const dateObj = new Date(startDate);
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth() + 1;
+    const day = dateObj.getDate();
+
+    const [hour, minutes] = startTimeValue.split(":");
+    const minute = minutes.split(" ")[0];
+
+    console.log("date", day, month, year);
+    console.log("time", hour, minute);
+
+    const repeat = repeatEveryDay ? "*" : day;
+
+    schedule.scheduleJob(
+      `${minute} ${hour} ${repeat} ${month} *`,
+      async function () {
+        console.log("Schedule Single Event", new Date());
+        const now = new Date();
+        const options = { timeZone: "Asia/Kolkata" };
+        const indianDate = now.toLocaleString("en-IN", options);
+        // const [date, time] = indianDate.split(",");
+        // console.log("date", date, "time", time);
+
+        const accessToken = await getAccessTokenByUserId(userId);
+        // console.log("accessToken", accessToken);
+        const res = await syncData(
+          userId,
+          mappedRecordId,
+          integrationId,
+          operationType,
+          source,
+          range,
+          eventId,
+          accessToken
+        );
+        // result.push(res);
+      }
+    );
+  } catch (error) {
+    console.log("scheduleSingleEvent error", error);
   }
 };
 
@@ -502,7 +580,7 @@ const addNetsuiteV1Api = async (
           data: item,
         });
 
-        console.log("output => ", res.data);
+        // console.log("output => ", res.data);
 
         if (res.data.add_success) {
           successCount++;
@@ -535,19 +613,21 @@ const addNetsuiteV1Api = async (
       }
     }
 
-    // const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
-    // logs.unshift({
-    //   userId: userId,
-    //   scheduleId: Number(id),
-    //   integrationId: integrationId,
-    //   mappedRecordId: mappedRecord[0].id,
-    //   recordType: mappedRecord[0].recordTypeLabel,
-    //   status: "Success",
-    //   message: summaryMessage,
-    // });
+    const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
+    if(successCount > 0){
+      logs.unshift({
+        userId: userId,
+        scheduleId: Number(id),
+        integrationId: integrationId,
+        mappedRecordId: mappedRecord[0].id,
+        recordType: mappedRecord[0].recordTypeLabel,
+        status: "Success",
+        message: summaryMessage,
+      });
+    }
 
-    // addLogs(logs);
-    // console.log("added record logs => ", logs);
+    addLogs(logs);
+    console.log("added record logs => ", logs);
     return logs;
   } catch (error) {
     console.log("addNetsuiteV1Api error => ", error);
@@ -690,6 +770,7 @@ const updateNetsuiteV1Api = async (
     );
 
     const summaryMessage = `Successfully updated ${updatedCount} records in NetSuite out of ${sheetsData.values.length}`;
+    if(updatedCount > 0) {
     logs.unshift({
       userId: userId,
       scheduleId: Number(id),
@@ -699,6 +780,7 @@ const updateNetsuiteV1Api = async (
       status: "Success",
       message: summaryMessage,
     });
+  }
 
     addLogs(logs);
     console.log("updated record logs => ", logs);
@@ -775,16 +857,21 @@ const deleteNetsuiteV1Api = async (
       accessToken
     );
 
+    const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+    // console.log("sheetsValue", sheetsValue.data)
+    const sheetHeader = sheetsValue.data.values[0].indexOf(
+      filterData[0].destinationFieldLabel
+    );
     await Promise.all(
       sheetsData.values.map(async (row) => {
-        console.log("****************row", row);
-        const fieldValue = row[0];
+        // console.log("****************row", row);
+        const fieldValue = row[sheetHeader];
         const filter = [
           filterData[0].sourceFieldValue,
           filterData[0].operator,
           fieldValue,
         ];
-        console.log("^^^^^^^^^filter", filter);
+        // console.log("^^^^^^^^^filter", filter);
 
         const deleteRecord = {
           resttype: "Delete",
@@ -843,7 +930,7 @@ const deleteNetsuiteV1Api = async (
             data: deleteRecord,
           });
 
-          console.log("output =>", res);
+          // console.log("output =>", res);
 
           if (res.data[0].delete_success) {
             deleteCount++;
@@ -861,24 +948,26 @@ const deleteNetsuiteV1Api = async (
             });
           }
         } catch (error) {
-          console.log("deleteNetsuiteV1Api error", error.response.data);
+          console.log("deleteNetsuiteV1Api error", error);
           return error;
         }
       })
     );
-
-    // const summaryMessage = `Successfully deleted ${deleteCount} records from NetSuite out of ${sheetsData.values.length}`;
-    // logs.unshift({
-    //   userId: userId,
-    //   scheduleId: Number(id),
-    //   integrationId: integrationId,
-    //   mappedRecordId: mappedRecord[0].id,
-    //   recordType: mappedRecord[0].recordTypeLabel,
-    //   status: "Success",
-    //   message: summaryMessage,
-    // });
-    // addLogs(logs);
-    // console.log("deleted record logs => ", logs);
+    
+    const summaryMessage = `Successfully deleted ${deleteCount} records from NetSuite out of ${sheetsData.values.length}`;
+    if(deleteCount > 0){
+      logs.unshift({
+        userId: userId,
+        scheduleId: Number(id),
+        integrationId: integrationId,
+        mappedRecordId: mappedRecord[0].id,
+        recordType: mappedRecord[0].recordTypeLabel,
+        status: "Success",
+        message: summaryMessage,
+      });
+    }
+    addLogs(logs);
+    console.log("deleted record logs => ", logs);
   } catch (error) {
     console.log("Please add filter to delete record");
     console.log("deleteNetsuiteV1Api error => ", error);
@@ -976,7 +1065,7 @@ const addGoogleSheetRecords = async (
       const values = record.values;
       const modifiedValues = {};
       for (const key in values) {
-        console.log("values", values);
+        // console.log("values", values);
         if (Array.isArray(values[key])) {
           // console.log(values[key].length > 0 ? "GT" : "LT")
           // modifiedValues[key] = values[key][0].text;
@@ -1154,7 +1243,7 @@ const addFields = async (
         headers: headers,
         data: recordList,
       });
-      console.log("output =>", request.data);
+      // console.log("output =>", request.data);
       const summaryMessage = `Successfully added ${request.data.updates.updatedRows} records in Google Sheet out of ${count}`;
       logs.push({
         userId: userId,
@@ -1444,6 +1533,7 @@ const deleteGoogleSheetRecord = async (
           })
         );
         const summaryMessage = `Successfully deleted ${deleteCount} records in Google Sheet out of ${totalRecords}`;
+        if(deleteCount > 0){
         logs.push({
           userId: userId,
           scheduleId: Number(id),
@@ -1453,6 +1543,8 @@ const deleteGoogleSheetRecord = async (
           status: "Success",
           message: summaryMessage,
         });
+      }
+
         addLogs(logs);
         console.log("deleted GS record logs => ", logs);
       })
@@ -1528,78 +1620,6 @@ const getScheduleEvent = async (
 };
 
 //   **** events
-// start date, end date, no end date (checkbox)
-// const scheduleRealTimeEvent = (
-//   userId,
-//   eventId,
-//   integrationId,
-//   mappedRecordId,
-//   url,
-//   oAuth_String,
-//   item
-// ) => {
-//   try {
-//     const eventData = getScheduleEvent(
-//       userId,
-//       eventId,
-//       integrationId,
-//       mappedRecordId
-//     );
-
-//     eventData
-//       .then((values) => {
-//         console.log("response", values);
-//         const { startDate, endDate, noEndDate } = values[0];
-//         // date format is 2023-06-13T06:50:01.308Z
-//         const dateObj = new Date(startDate);
-//         const year = dateObj.getFullYear();
-//         const month = dateObj.getMonth() + 1;
-//         const day = dateObj.getDate();
-
-//         console.log("date", day, month, year);
-
-//         schedule.scheduleJob(`* * ${day} ${month} *`, async function () {});
-//       })
-//       .catch((error) => {
-//         console.log("scheduleRealTimeEvent error", error.response.data);
-//         return error;
-//       });
-//   } catch (error) {
-//     console.log("scheduleRealTimeEvent error => ", scheduleRealTimeEvent);
-//   }
-
-// *
-// const [year, month, day] = date.split("-");
-// const [hour, minute] = time.split(":");
-// console.log(day, month);
-
-// schedule.scheduleJob(`* * ${day} ${month} *`, function () {
-//   console.log("Schedule Single Event", new Date());
-// });
-
-// res.status(200).send("scheduled realtime event");
-// };
-
-// start date, start time, repeat every day (checkbox), end date, no end date (checkbox)
-const scheduleSingleEvent = (req, res) => {
-  const { startDate, startTime, endDate, repeatEveryDay } = req.body;
-  const [year, month, day] = startDate.split("-");
-  const [hour, minutes] = startTime.split(":");
-  const minute = minutes.split(" ")[0];
-
-  const repeat = repeatEveryDay ? "*" : day;
-
-  schedule.scheduleJob(`${minute} ${hour} ${repeat} ${month} *`, function () {
-    console.log("Schedule Single Event", new Date());
-    const now = new Date();
-    const options = { timeZone: "Asia/Kolkata" };
-    const indianDate = now.toLocaleString("en-IN", options);
-    const [date, time] = indianDate.split(",");
-    console.log("date", date, "time", time);
-  });
-
-  res.status(200).send("scheduled single event");
-};
 
 // start date, start time, days, end date, no end date (checkbox)
 const scheduleWeeklyEvent = (req, res) => {

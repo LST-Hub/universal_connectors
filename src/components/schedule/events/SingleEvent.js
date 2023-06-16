@@ -14,6 +14,7 @@ import FormErrorText from "@/globalComponents/ErrorText";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import tkFetch from "@/utils/fetch";
 import { useRouter } from "next/router";
+import DeleteModal from "@/utils/DeleteModal";
 
 const schema = Yup.object({
   startDate: Yup.date().required("Start date is required"),
@@ -23,6 +24,7 @@ const schema = Yup.object({
 
 const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
   const userId = useRef(null);
+  let scheduleEventData = useRef(null);
   const {
     control,
     register,
@@ -37,6 +39,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
   const [endDateCheckbox, setEndDateCheckbox] = useState(false);
   const [repeatEveryDay, setRepeatEveryDay] = useState(true);
   const [ids, setIds] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(false);
 
   const addEvent = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/addSingleEvent`),
@@ -75,8 +78,8 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
         setValue("endDate", eventData[0]?.endDate);
 
         setValue("startTime", {
-          label: eventData[0]?.startTime,
-          value: eventData[0]?.startTime,
+          label: eventData[0]?.startTimeLabel,
+          value: eventData[0]?.startTimeValue,
         });
         setRepeatEveryDay(eventData[0]?.repeatEveryDay);
         setEndDateCheckbox(eventData[0]?.noEndDate);
@@ -123,13 +126,15 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
         mappedRecordId: syncData.mappedRecordId,
         eventType: "Single",
         startDate: data.startDate,
-        startTime: data.startTime.value,
+        startTimeLabel: data.startTime.label,
+        startTimeValue: data.startTime.value,
         repeatEveryDay: data.repeatEveryDay,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
         performType: syncData.perform,
-        // savedSearchType: syncData.savedSearchType,
-        operationType: syncData.operationType
+        operationType: syncData.operationType,
+        source: syncData.source,
+        range: syncData.range,
       };
 
       if (syncData.savedSearchLabel) {
@@ -137,12 +142,21 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
         eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
-      updateSingleEvent.mutate(eventData, {
-        onSuccess: (data) => {},
-        onError: (error) => {
-          console.log(error);
-        },
-      });
+      // ***API call
+      if (
+        syncData.operationType === "add" &&
+        syncData.source === "GoogleSheet"
+      ) {
+        toggleDeleteModel(eventData);
+      } else {
+        updateSingleEvent.mutate(eventData, {
+          onSuccess: (data) => {},
+          onError: (error) => {
+            console.log(error);
+          },
+        });
+        router.push("/schedule");
+      }
     } else {
       console.log("add single event*********");
 
@@ -152,13 +166,15 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
         mappedRecordId: syncData.mappedRecordId,
         eventType: "Single",
         startDate: data.startDate,
-        startTime: data.startTime.value,
+        startTimeLabel: data.startTime.label,
+        startTimeValue: data.startTime.value,
         repeatEveryDay: data.repeatEveryDay,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
         performType: syncData.perform,
-        // savedSearchType: syncData.savedSearchType,
-        operationType: syncData.operationType
+        operationType: syncData.operationType,
+        source: syncData.source,
+        range: syncData.range,
       };
 
       if (syncData.savedSearchLabel) {
@@ -166,19 +182,55 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
         eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
-      addEvent.mutate(eventData, {
+      // API call
+      if (
+        syncData.operationType === "add" &&
+        syncData.source === "GoogleSheet"
+      ) {
+        toggleDeleteModel(eventData);
+      } else {
+        addEvent.mutate(eventData, {
+          onSuccess: (data) => {},
+          onError: (error) => {
+            console.log(error);
+          },
+        });
+        router.push("/schedule");
+      }
+    }
+
+    // router.push("/schedule");
+  };
+
+  const onCancel = () => {
+    history.back();
+  };
+
+  const onClickDelete = () => {
+    console.log("scheduleEventData", scheduleEventData.current);
+
+    if (scheduleEventData.current.id) {
+      updateSingleEvent.mutate(scheduleEventData.current, {
+        onSuccess: (data) => {},
+        onError: (error) => {
+          console.log(error);
+        },
+      });
+    } else {
+      addEvent.mutate(scheduleEventData.current, {
         onSuccess: (data) => {},
         onError: (error) => {
           console.log(error);
         },
       });
     }
-
+    setDeleteModal(false);
     router.push("/schedule");
   };
 
-  const onCancel = () => {
-    history.back();
+  const toggleDeleteModel = (eventData) => {
+    scheduleEventData.current = eventData;
+    setDeleteModal(true);
   };
 
   return (
@@ -302,6 +354,14 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
           </TkCol>
         </TkRow>
       </TkForm>
+
+      <DeleteModal
+        show={deleteModal}
+        onDeleteClick={onClickDelete}
+        onCloseClick={() => setDeleteModal(false)}
+        label="This will erase all all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
+        image={false}
+      />
     </>
   );
 };

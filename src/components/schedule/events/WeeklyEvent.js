@@ -80,8 +80,8 @@ const WeeklyEvent = ({
       if (eventData[0]?.eventType === "Weekly") {
         setValue("startDate", eventData[0].startDate);
         setValue("startTime", {
-          label: eventData[0].startTime,
-          value: eventData[0].startTime,
+          label: eventData[0].startTimeLabel,
+          value: eventData[0].startTimeValue,
         });
         setValue("days", {
           label: eventData[0].day,
@@ -133,7 +133,8 @@ const WeeklyEvent = ({
         mappedRecordId: syncData.mappedRecordId,
         eventType: "Weekly",
         startDate: data.startDate,
-        startTime: data.startTime.label,
+        startTimeLabel: data.startTime.label,
+        startTimeValue: data.startTime.value,
         day: data.days.label,
         endDate: data.endDate,
         noEndDate: data.noEndDate,
@@ -162,7 +163,8 @@ const WeeklyEvent = ({
         mappedRecordId: syncData.mappedRecordId,
         eventType: "Weekly",
         startDate: data.startDate,
-        startTime: data.startTime.label,
+        startTimeLabel: data.startTime.label,
+        startTimeValue: data.startTime.value,
         day: data.days.label,
         endDate: data.endDate,
         noEndDate: data.noEndDate,

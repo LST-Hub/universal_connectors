@@ -138,25 +138,12 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         realtimeEventData.savedSearchValue = syncData.savedSearchValue;
       }
 
+      // ***API call
       if (
         syncData.operationType === "add" &&
         syncData.source === "GoogleSheet"
       ) {
         toggleDeleteModel(realtimeEventData);
-        // if (
-        //   confirm(
-        //     "This will erase all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
-        //   )
-        // ) {
-        //   updateRealTimeEvent.mutate(realtimeEventData, {
-        //     onSuccess: (res) => {
-        //       console.log("updateRealTimeEvent res", res);
-        //     },
-        //     onError: (err) => {
-        //       console.log("err", err);
-        //     },
-        //   });
-        // }
       } else {
         updateRealTimeEvent.mutate(realtimeEventData, {
           onSuccess: (res) => {
@@ -211,25 +198,12 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
 
       console.log("eventData", eventData);
 
+      // API call
       if (
         syncData.operationType === "add" &&
         syncData.source === "GoogleSheet"
       ) {
         toggleDeleteModel(eventData);
-        // if (
-        //   confirm(
-        //     "This will erase all all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
-        //   )
-        // ) {
-        //   addEvent.mutate(eventData, {
-        //     onSuccess: (res) => {
-        //       console.log("realtime event data", res);
-        //     },
-        //     onError: (err) => {
-        //       console.log("err", err);
-        //     },
-        //   });
-        // }
       } else {
         addEvent.mutate(eventData, {
           onSuccess: (res) => {
