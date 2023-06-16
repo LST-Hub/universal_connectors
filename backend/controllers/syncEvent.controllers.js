@@ -230,6 +230,7 @@ const syncData = async (
           workBookValue: true,
           sheetLabel: true,
           sheetValue: true,
+          status: true,
         },
       }),
 
@@ -249,7 +250,8 @@ const syncData = async (
       }),
     ]);
 
-    switch (source) {
+    if(mappedRecord[0].status){
+      switch (source) {
       case "NetSuite":
         const nsResult = await netsuiteOperations(
           userId,
@@ -279,6 +281,9 @@ const syncData = async (
 
       default:
         console.log("source not matched");
+    }
+    }else{
+      console.log("****status false", mappedRecord[0].sheetLabel)
     }
   } catch (error) {
     console.log("syncData error", error);
