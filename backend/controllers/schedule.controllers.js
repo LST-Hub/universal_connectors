@@ -262,8 +262,8 @@ const getSchedules = async (req, res) => {
         },
         mappedRecord: {
           select: {
-            id: true
-          }
+            id: true,
+          },
         },
       },
     });
@@ -567,14 +567,12 @@ const deleteScheduleEvent = async (req, res) => {
   console.log("req.params", req.params);
 
   try {
-
     const deleteCount = await prisma.logs.deleteMany({
       where: {
         scheduleId: Number(id),
-        integrationId: Number(integrationId)
-      }
-    })
-
+        integrationId: Number(integrationId),
+      },
+    });
 
     const [deleteScheduleEvent, updateIntegrations] = await prisma.$transaction(
       [
@@ -594,12 +592,12 @@ const deleteScheduleEvent = async (req, res) => {
       ]
     );
 
-      response({
-        res,
-        success: true,
-        status_code: 200,
-        message: "Schedule deleted successfully",
-      });
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      message: "Schedule deleted successfully",
+    });
   } catch (error) {
     response({
       res,

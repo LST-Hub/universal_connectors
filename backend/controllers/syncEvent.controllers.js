@@ -521,6 +521,8 @@ const addNetsuiteV1Api = async (
         }
       });
 
+      console.log("obj", obj)
+
       const result = { ...data, bodyfields: { ...obj } };
       resultArray.push(result);
     });
@@ -569,48 +571,48 @@ const addNetsuiteV1Api = async (
 
       const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
 
-      try {
-        const res = await axios({
-          method: "POST",
-          url: url,
-          headers: {
-            Authorization: oAuth_String,
-            "Content-Type": "application/json",
-          },
-          data: item,
-        });
+      // try {
+      //   const res = await axios({
+      //     method: "POST",
+      //     url: url,
+      //     headers: {
+      //       Authorization: oAuth_String,
+      //       "Content-Type": "application/json",
+      //     },
+      //     data: item,
+      //   });
 
-        // console.log("output => ", res.data);
+      //   // console.log("output => ", res.data);
 
-        if (res.data.add_success) {
-          successCount++;
-        } else if (res.data.add_error) {
-          errorCount++;
-          logs.push({
-            userId: userId,
-            scheduleId: id,
-            integrationId: integrationId,
-            mappedRecordId: mappedRecord[0].id,
-            recordType: mappedRecord[0].recordTypeLabel,
-            status: "Error",
-            internalid: item.bodyfields.internalid,
-            message: res.data.add_error.message,
-          });
-        }
-      } catch (error) {
-        console.log("addNetsuiteV1Api error", error);
-        // errorCount++;
-        // logs.push({
-        //   userId: userId,
-        //   scheduleId: id,
-        //   integrationId: integrationId,
-        //   mappedRecordId: mappedRecordId,
-        //   recordType: recordTypeLabel,
-        //   status: "Error",
-        //   internalid: item.bodyfields.internalid,
-        //   message: error.response.data,
-        // });
-      }
+      //   if (res.data.add_success) {
+      //     successCount++;
+      //   } else if (res.data.add_error) {
+      //     errorCount++;
+      //     logs.push({
+      //       userId: userId,
+      //       scheduleId: id,
+      //       integrationId: integrationId,
+      //       mappedRecordId: mappedRecord[0].id,
+      //       recordType: mappedRecord[0].recordTypeLabel,
+      //       status: "Error",
+      //       internalid: item.bodyfields.internalid,
+      //       message: res.data.add_error.message,
+      //     });
+      //   }
+      // } catch (error) {
+      //   console.log("addNetsuiteV1Api error", error);
+      //   // errorCount++;
+      //   // logs.push({
+      //   //   userId: userId,
+      //   //   scheduleId: id,
+      //   //   integrationId: integrationId,
+      //   //   mappedRecordId: mappedRecordId,
+      //   //   recordType: recordTypeLabel,
+      //   //   status: "Error",
+      //   //   internalid: item.bodyfields.internalid,
+      //   //   message: error.response.data,
+      //   // });
+      // }
     }
 
     const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
@@ -626,8 +628,8 @@ const addNetsuiteV1Api = async (
       });
     }
 
-    addLogs(logs);
-    console.log("added record logs => ", logs);
+    // addLogs(logs);
+    // console.log("added record logs => ", logs);
     return logs;
   } catch (error) {
     console.log("addNetsuiteV1Api error => ", error);
@@ -986,6 +988,19 @@ const googleSheetsOperations = async (
   id
 ) => {
   try {
+    const mappedFields = await prisma.fields.findMany({
+      where: {
+        userId: Number(userId),
+        mappedRecordId: Number(mappedRecord[0].id),
+      },
+      select: {
+        id: true,
+        sourceFieldValue: true,
+        destinationFieldValue: true,
+      },
+    });
+
+    if (mappedFields.length > 0 ){
     switch (operationType) {
       case "add":
         const addRecordResult = addGoogleSheetRecords(
@@ -995,7 +1010,8 @@ const googleSheetsOperations = async (
           userId,
           mappedRecordId,
           integrationId,
-          id
+          id,
+          mappedFields
         );
         return addRecordResult;
 
@@ -1036,6 +1052,7 @@ const googleSheetsOperations = async (
 
       default:
     }
+  }
   } catch (error) {
     console.log("googleSheetsOperations error", error);
     return error;
@@ -1049,7 +1066,8 @@ const addGoogleSheetRecords = async (
   userId,
   mappedRecordId,
   integrationId,
-  id
+  id,
+  mappedFields
 ) => {
   try {
     console.log("add record in google sheet");
@@ -1060,6 +1078,10 @@ const addGoogleSheetRecords = async (
       credentials,
       mappedRecord
     );
+
+    // console.log("mappedFields", mappedFields)
+    const titles = mappedFields.map(field => field.destinationFieldValue);
+// console.log(titles);
 
     const records = result.list.map((record) => {
       const values = record.values;
@@ -1082,10 +1104,12 @@ const addGoogleSheetRecords = async (
     const recordList = {
       range: `${mappedRecord[0].sheetLabel}`,
       majorDimension: "ROWS",
-      values: recordValues,
+      values: [titles, ...recordValues],
     };
 
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}!A2:ZZ100000:clear`;
+    console.log("recordList", recordList)
+
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}!A1:ZZ100000:clear`;
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,

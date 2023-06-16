@@ -309,6 +309,7 @@ const Field = ({ mappedRecordId }) => {
       operator: data.operator[0].label,
     }
 
+    console.log("fiterItem", fiterItem)
     addCustomFilterFields.mutate(fiterItem, {
       onSuccess: (data) => {
         console.log(data);
