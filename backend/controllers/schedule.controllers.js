@@ -567,6 +567,15 @@ const deleteScheduleEvent = async (req, res) => {
   console.log("req.params", req.params);
 
   try {
+
+    const deleteCount = await prisma.logs.deleteMany({
+      where: {
+        scheduleId: Number(id),
+        integrationId: Number(integrationId)
+      }
+    })
+
+
     const [deleteScheduleEvent, updateIntegrations] = await prisma.$transaction(
       [
         prisma.schedule.deleteMany({
@@ -585,21 +594,12 @@ const deleteScheduleEvent = async (req, res) => {
       ]
     );
 
-    if (deleteScheduleEvent) {
       response({
         res,
         success: true,
         status_code: 200,
         message: "Schedule deleted successfully",
       });
-    } else {
-      response({
-        res,
-        success: false,
-        status_code: 400,
-        message: "Schedule not deleted successfully",
-      });
-    }
   } catch (error) {
     response({
       res,

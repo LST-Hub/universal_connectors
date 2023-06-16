@@ -147,6 +147,7 @@ const ScheduleTable = () => {
       Header: "Action",
       accessor: "action",
       Cell: (props) => {
+        console.log("props", props.row.original)
         return (
           <>
             <i
