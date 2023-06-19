@@ -158,46 +158,51 @@ const scheduleSingleEvent = (
   range
 ) => {
   try {
-    // const [year, month, day] = startDate.split("-");
-
+    // *** startDate and startTime from user
     const dateObj = new Date(startDate);
     const year = dateObj.getFullYear();
     const month = dateObj.getMonth() + 1;
     const day = dateObj.getDate();
-
     const [hour, minutes] = startTimeValue.split(":");
     const minute = minutes.split(" ")[0];
 
-    console.log("date", day, month, year);
-    console.log("time", hour, minute);
-
     const repeat = repeatEveryDay ? "*" : day;
 
-    schedule.scheduleJob(
-      `${minute} ${hour} ${repeat} ${month} *`,
-      async function () {
-        console.log("Schedule Single Event", new Date());
-        const now = new Date();
-        const options = { timeZone: "Asia/Kolkata" };
-        const indianDate = now.toLocaleString("en-IN", options);
-        // const [date, time] = indianDate.split(",");
-        // console.log("date", date, "time", time);
+    // ***todays date and time
+    const date = new Date();
+    const todaysYear = date.getFullYear();
+    const TodaysMonth = date.getMonth() + 1;
+    const TodaysDate = date.getDate();
+    const todaysHour = date.getHours();
+    const todaysMinute = date.getMinutes();
 
-        const accessToken = await getAccessTokenByUserId(userId);
-        // console.log("accessToken", accessToken);
-        const res = await syncData(
-          userId,
-          mappedRecordId,
-          integrationId,
-          operationType,
-          source,
-          range,
-          eventId,
-          accessToken
-        );
-        // result.push(res);
-      }
-    );
+    if (todaysYear === year && TodaysMonth === month && TodaysDate === day) {
+      schedule.scheduleJob(
+        `${minute} ${hour} ${repeat} ${month} *`,
+        async function () {
+          console.log("Schedule Single Event", new Date());
+          // const now = new Date();
+          // const options = { timeZone: "Asia/Kolkata" };
+          // const indianDate = now.toLocaleString("en-IN", options);
+          // const [date, time] = indianDate.split(",");
+          // console.log("date", date, "time", time);
+
+          const accessToken = await getAccessTokenByUserId(userId);
+          // console.log("accessToken", accessToken);
+          const res = await syncData(
+            userId,
+            mappedRecordId,
+            integrationId,
+            operationType,
+            source,
+            range,
+            eventId,
+            accessToken
+          );
+          // result.push(res);
+        }
+      );
+    }
   } catch (error) {
     console.log("scheduleSingleEvent error", error);
   }
@@ -250,40 +255,40 @@ const syncData = async (
       }),
     ]);
 
-    if(mappedRecord[0].status){
+    if (mappedRecord[0].status) {
       switch (source) {
-      case "NetSuite":
-        const nsResult = await netsuiteOperations(
-          userId,
-          mappedRecordId,
-          integrationId,
-          operationType,
-          range,
-          id,
-          mappedRecord,
-          credentials,
-          accessToken
-        );
-        return nsResult;
+        case "NetSuite":
+          const nsResult = await netsuiteOperations(
+            userId,
+            mappedRecordId,
+            integrationId,
+            operationType,
+            range,
+            id,
+            mappedRecord,
+            credentials,
+            accessToken
+          );
+          return nsResult;
 
-      case "GoogleSheet":
-        const gsResult = googleSheetsOperations(
-          userId,
-          mappedRecordId,
-          integrationId,
-          operationType,
-          mappedRecord,
-          credentials,
-          accessToken,
-          id
-        );
-        return gsResult;
+        case "GoogleSheet":
+          const gsResult = googleSheetsOperations(
+            userId,
+            mappedRecordId,
+            integrationId,
+            operationType,
+            mappedRecord,
+            credentials,
+            accessToken,
+            id
+          );
+          return gsResult;
 
-      default:
-        console.log("source not matched");
-    }
-    }else{
-      console.log("****status false", mappedRecord[0].sheetLabel)
+        default:
+          console.log("source not matched");
+      }
+    } else {
+      console.log("****status false", mappedRecord[0].sheetLabel);
     }
   } catch (error) {
     console.log("syncData error", error);
@@ -509,28 +514,67 @@ const addNetsuiteV1Api = async (
     const headerRow = values[0];
     const dataRows = values.slice(1);
 
-    const data = {
-      resttype: "Add",
-      recordtype: mappedRecord[0].recordTypeValue,
-      internalid: null,
-    };
+    // const data = {
+    //   resttype: "Add",
+    //   recordtype: mappedRecord[0].recordTypeValue,
+    //   internalid: null,
+    // };
+
+    // const resultArray = [];
+
+    // dataRows.forEach((row) => {
+    //   const obj = {};
+    //   mappedFields.forEach((field) => {
+    //     const columnIndex = headerRow.indexOf(field.destinationFieldValue);
+    //     if (columnIndex !== -1) {
+    //       obj[field.sourceFieldValue] = row[columnIndex];
+    //     }
+    //   });
+
+    //   const result = { ...data, bodyfields: { ...obj } };
+    //   resultArray.push(result);
+    // });
+    // const recordFilelds = await recordField(credentials, mappedRecord);
+    // console.log("recordFilelds", recordFilelds)
 
     const resultArray = [];
+    // console.log("dataRows", dataRows)
 
-    dataRows.forEach((row) => {
-      const obj = {};
-      mappedFields.forEach((field) => {
-        const columnIndex = headerRow.indexOf(field.destinationFieldValue);
-        if (columnIndex !== -1) {
-          obj[field.sourceFieldValue] = row[columnIndex];
+    for (const dataRow of dataRows) {
+      const record = {
+        resttype: "Add",
+        recordtype: "customsale_receipt",
+        bodyfields: {},
+        linefields: {},
+      };
+
+      for (const field of mappedFields) {
+        const sourceField = field.sourceFieldValue;
+        const destinationField = field.destinationFieldValue;
+        const fieldValue = dataRow[mappedFields.indexOf(field)];
+
+        if (sourceField.includes("__")) {
+          const [parentField, childField] = sourceField.split("__");
+          if (!record.linefields[parentField]) {
+            record.linefields[parentField] = [];
+          }
+          const lineFieldObject = record.linefields[parentField].find(
+            (lineField) => Object.keys(lineField)[0] === childField
+          );
+          if (lineFieldObject) {
+            lineFieldObject[childField] = fieldValue;
+          } else {
+            const newLineField = { [childField]: fieldValue };
+            record.linefields[parentField].push(newLineField);
+          }
+        } else {
+          record.bodyfields[destinationField] = fieldValue;
         }
-      });
+      }
+      resultArray.push(record);
+    }
 
-      // console.log("obj", obj)
-
-      const result = { ...data, bodyfields: { ...obj } };
-      resultArray.push(result);
-    });
+    console.log("data to add", resultArray);
 
     const logs = [];
     let successCount = 0;
@@ -587,7 +631,7 @@ const addNetsuiteV1Api = async (
           data: item,
         });
 
-        // console.log("output => ", res.data);
+        console.log("output => ", res.data);
 
         if (res.data.add_success) {
           successCount++;
@@ -606,40 +650,153 @@ const addNetsuiteV1Api = async (
         }
       } catch (error) {
         console.log("addNetsuiteV1Api error", error);
-        // errorCount++;
-        // logs.push({
-        //   userId: userId,
-        //   scheduleId: id,
-        //   integrationId: integrationId,
-        //   mappedRecordId: mappedRecordId,
-        //   recordType: recordTypeLabel,
-        //   status: "Error",
-        //   internalid: item.bodyfields.internalid,
-        //   message: error.response.data,
-        // });
       }
     }
 
-    const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
-    if(successCount > 0){
-      logs.unshift({
-        userId: userId,
-        scheduleId: Number(id),
-        integrationId: integrationId,
-        mappedRecordId: mappedRecord[0].id,
-        recordType: mappedRecord[0].recordTypeLabel,
-        status: "Success",
-        message: summaryMessage,
-      });
-    }
+    // const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
+    // if(successCount > 0){
+    //   logs.unshift({
+    //     userId: userId,
+    //     scheduleId: Number(id),
+    //     integrationId: integrationId,
+    //     mappedRecordId: mappedRecord[0].id,
+    //     recordType: mappedRecord[0].recordTypeLabel,
+    //     status: "Success",
+    //     message: summaryMessage,
+    //   });
+    // }
 
     // addLogs(logs);
     // console.log("added record logs => ", logs);
-    return logs;
+    // return logs;
   } catch (error) {
     console.log("addNetsuiteV1Api error => ", error);
     throw error;
   }
+
+  // console.log("add record in ns");
+  // try {
+  //   const headerRow = values[0];
+  //   const dataRows = values.slice(1);
+
+  //   const data = {
+  //     resttype: "Add",
+  //     recordtype: mappedRecord[0].recordTypeValue,
+  //     internalid: null,
+  //   };
+
+  //   const resultArray = [];
+
+  //   dataRows.forEach((row) => {
+  //     const obj = {};
+  //     mappedFields.forEach((field) => {
+  //       const columnIndex = headerRow.indexOf(field.destinationFieldValue);
+  //       if (columnIndex !== -1) {
+  //         obj[field.sourceFieldValue] = row[columnIndex];
+  //       }
+  //     });
+
+  //     const result = { ...data, bodyfields: { ...obj } };
+  //     resultArray.push(result);
+  //   });
+
+  //   const logs = [];
+  //   let successCount = 0;
+  //   let errorCount = 0;
+
+  //   for (let i = 0; i < resultArray.length; i++) {
+  //     const item = resultArray[i];
+  //     const authentication = {
+  //       account: credentials[0].accountId,
+  //       consumerKey: credentials[0].consumerKey,
+  //       consumerSecret: credentials[0].consumerSecretKey,
+  //       tokenId: credentials[0].accessToken,
+  //       tokenSecret: credentials[0].accessSecretToken,
+  //       timestamp: Math.floor(Date.now() / 1000).toString(),
+  //       nonce: getNonce(10),
+  //       http_method: "POST",
+  //       version: "1.0",
+  //       scriptDeploymentId: "1",
+  //       scriptId: "1529",
+  //       signatureMethod: "HMAC-SHA256",
+  //     };
+
+  //     const base_url =
+  //       "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+  //     const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+  //     const baseString = `${authentication.http_method}&${encodeURIComponent(
+  //       base_url
+  //     )}&${encodeURIComponent(concatenatedString)}`;
+  //     const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+  //     const signature = crypto
+  //       .createHmac("sha256", keys)
+  //       .update(baseString)
+  //       .digest("base64");
+  //     const oAuth_String = `OAuth realm="${
+  //       authentication.account
+  //     }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+  //       authentication.tokenId
+  //     }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+  //       authentication.timestamp
+  //     }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+  //       signature
+  //     )}"`;
+
+  //     const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+
+  //     // try {
+  //     //   const res = await axios({
+  //     //     method: "POST",
+  //     //     url: url,
+  //     //     headers: {
+  //     //       Authorization: oAuth_String,
+  //     //       "Content-Type": "application/json",
+  //     //     },
+  //     //     data: item,
+  //     //   });
+
+  //     //   // console.log("output => ", res.data);
+
+  //     //   if (res.data.add_success) {
+  //     //     successCount++;
+  //     //   } else if (res.data.add_error) {
+  //     //     errorCount++;
+  //     //     logs.push({
+  //     //       userId: userId,
+  //     //       scheduleId: id,
+  //     //       integrationId: integrationId,
+  //     //       mappedRecordId: mappedRecord[0].id,
+  //     //       recordType: mappedRecord[0].recordTypeLabel,
+  //     //       status: "Error",
+  //     //       internalid: item.bodyfields.internalid,
+  //     //       message: res.data.add_error.message,
+  //     //     });
+  //     //   }
+  //     // } catch (error) {
+  //     //   console.log("addNetsuiteV1Api error", error);
+  //     // }
+  //   }
+
+  //   // const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
+  //   // if(successCount > 0){
+  //   //   logs.unshift({
+  //   //     userId: userId,
+  //   //     scheduleId: Number(id),
+  //   //     integrationId: integrationId,
+  //   //     mappedRecordId: mappedRecord[0].id,
+  //   //     recordType: mappedRecord[0].recordTypeLabel,
+  //   //     status: "Success",
+  //   //     message: summaryMessage,
+  //   //   });
+  //   // }
+
+  //   // addLogs(logs);
+  //   // console.log("added record logs => ", logs);
+  //   return logs;
+  // } catch (error) {
+  //   console.log("addNetsuiteV1Api error => ", error);
+  //   throw error;
+  // }
 };
 
 const updateNetsuiteV1Api = async (
@@ -783,17 +940,17 @@ const updateNetsuiteV1Api = async (
     );
 
     const summaryMessage = `Successfully updated ${updatedCount} records in NetSuite out of ${sheetsData.values.length}`;
-    if(updatedCount > 0) {
-    logs.unshift({
-      userId: userId,
-      scheduleId: Number(id),
-      integrationId: integrationId,
-      mappedRecordId: mappedRecord[0].id,
-      recordType: mappedRecord[0].recordTypeLabel,
-      status: "Success",
-      message: summaryMessage,
-    });
-  }
+    if (updatedCount > 0) {
+      logs.unshift({
+        userId: userId,
+        scheduleId: Number(id),
+        integrationId: integrationId,
+        mappedRecordId: mappedRecord[0].id,
+        recordType: mappedRecord[0].recordTypeLabel,
+        status: "Success",
+        message: summaryMessage,
+      });
+    }
 
     addLogs(logs);
     console.log("updated record logs => ", logs);
@@ -966,9 +1123,9 @@ const deleteNetsuiteV1Api = async (
         }
       })
     );
-    
+
     const summaryMessage = `Successfully deleted ${deleteCount} records from NetSuite out of ${sheetsData.values.length}`;
-    if(deleteCount > 0){
+    if (deleteCount > 0) {
       logs.unshift({
         userId: userId,
         scheduleId: Number(id),
@@ -1011,59 +1168,59 @@ const googleSheetsOperations = async (
       },
     });
 
-    if (mappedFields.length > 0 ){
-    switch (operationType) {
-      case "add":
-        const addRecordResult = addGoogleSheetRecords(
-          accessToken,
-          mappedRecord,
-          credentials,
-          userId,
-          mappedRecordId,
-          integrationId,
-          id,
-          mappedFields
-        );
-        return addRecordResult;
+    if (mappedFields.length > 0) {
+      switch (operationType) {
+        case "add":
+          const addRecordResult = addGoogleSheetRecords(
+            accessToken,
+            mappedRecord,
+            credentials,
+            userId,
+            mappedRecordId,
+            integrationId,
+            id,
+            mappedFields
+          );
+          return addRecordResult;
 
-      case "update":
-        // const updateRecordResult = addGoogleSheetRecords(
-        //   accessToken,
-        //   mappedRecord,
-        //   credentials,
-        //   userId,
-        //   mappedRecordId,
-        //   integrationId,
-        //   id
-        // );
-        // return updateRecordResult;
+        case "update":
+          // const updateRecordResult = addGoogleSheetRecords(
+          //   accessToken,
+          //   mappedRecord,
+          //   credentials,
+          //   userId,
+          //   mappedRecordId,
+          //   integrationId,
+          //   id
+          // );
+          // return updateRecordResult;
 
-        const updateRecordResult = updateGoogleSheetRecord(
-          accessToken,
-          mappedRecord,
-          credentials,
-          userId,
-          mappedRecordId,
-          integrationId,
-          id
-        );
-        return updateRecordResult;
+          const updateRecordResult = updateGoogleSheetRecord(
+            accessToken,
+            mappedRecord,
+            credentials,
+            userId,
+            mappedRecordId,
+            integrationId,
+            id
+          );
+          return updateRecordResult;
 
-      case "delete":
-        const deleteRecordResult = deleteGoogleSheetRecord(
-          accessToken,
-          mappedRecord,
-          credentials,
-          userId,
-          mappedRecordId,
-          integrationId,
-          id
-        );
-        return deleteRecordResult;
+        case "delete":
+          const deleteRecordResult = deleteGoogleSheetRecord(
+            accessToken,
+            mappedRecord,
+            credentials,
+            userId,
+            mappedRecordId,
+            integrationId,
+            id
+          );
+          return deleteRecordResult;
 
-      default:
+        default:
+      }
     }
-  }
   } catch (error) {
     console.log("googleSheetsOperations error", error);
     return error;
@@ -1091,8 +1248,8 @@ const addGoogleSheetRecords = async (
     );
 
     // console.log("mappedFields", mappedFields)
-    const titles = mappedFields.map(field => field.destinationFieldValue);
-// console.log(titles);
+    const titles = mappedFields.map((field) => field.destinationFieldValue);
+    // console.log(titles);
 
     const records = result.list.map((record) => {
       const values = record.values;
@@ -1278,7 +1435,7 @@ const addFields = async (
         headers: headers,
         data: recordList,
       });
-      // console.log("output =>", request.data);
+
       const summaryMessage = `Successfully added ${request.data.updates.updatedRows} records in Google Sheet out of ${count}`;
       logs.push({
         userId: userId,
@@ -1568,17 +1725,17 @@ const deleteGoogleSheetRecord = async (
           })
         );
         const summaryMessage = `Successfully deleted ${deleteCount} records in Google Sheet out of ${totalRecords}`;
-        if(deleteCount > 0){
-        logs.push({
-          userId: userId,
-          scheduleId: Number(id),
-          integrationId: integrationId,
-          mappedRecordId: mappedRecordId,
-          recordType: mappedRecord[0].recordTypeLabel,
-          status: "Success",
-          message: summaryMessage,
-        });
-      }
+        if (deleteCount > 0) {
+          logs.push({
+            userId: userId,
+            scheduleId: Number(id),
+            integrationId: integrationId,
+            mappedRecordId: mappedRecordId,
+            recordType: mappedRecord[0].recordTypeLabel,
+            status: "Success",
+            message: summaryMessage,
+          });
+        }
 
         addLogs(logs);
         console.log("deleted GS record logs => ", logs);
@@ -1588,6 +1745,70 @@ const deleteGoogleSheetRecord = async (
       });
   } catch (error) {
     console.log("deleteGoogleSheetRecord error=> ", error);
+    return error;
+  }
+};
+
+const recordField = async (credentials, mappedRecord) => {
+  try {
+    const authentication = {
+      account: credentials[0].accountId,
+      consumerKey: credentials[0].consumerKey,
+      consumerSecret: credentials[0].consumerSecretKey,
+      tokenId: credentials[0].accessToken,
+      tokenSecret: credentials[0].accessSecretToken,
+      timestamp: Math.floor(Date.now() / 1000).toString(),
+      nonce: getNonce(10),
+      http_method: "POST",
+      version: "1.0",
+      scriptDeploymentId: "1",
+      scriptId: "1529",
+      signatureMethod: "HMAC-SHA256",
+    };
+
+    const base_url =
+      "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+    const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+    const baseString = `${authentication.http_method}&${encodeURIComponent(
+      base_url
+    )}&${encodeURIComponent(concatenatedString)}`;
+    const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+    const signature = crypto
+      .createHmac("sha256", keys)
+      .update(baseString)
+      .digest("base64");
+    const oAuth_String = `OAuth realm="${
+      authentication.account
+    }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+      authentication.tokenId
+    }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+      authentication.timestamp
+    }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+      signature
+    )}"`;
+
+    const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+
+    const data = {
+      resttype: "ListOfRecordField",
+      recordtype: mappedRecord[0].recordTypeValue,
+    };
+
+    const payload = JSON.stringify(data);
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: oAuth_String,
+    };
+
+    const res = await axios({
+      method: "POST",
+      url: url,
+      headers: headers,
+      data: payload,
+    });
+    return res.data;
+  } catch (error) {
+    console.log("recordField error => ", error);
     return error;
   }
 };

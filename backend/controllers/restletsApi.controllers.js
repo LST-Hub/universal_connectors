@@ -111,6 +111,7 @@ const getRecordTypes = async (req, res) => {
 };
 
 const getOptions = async (req, res) => {
+  console.log(req.body)
   try {
     const authentication = {
       account: req.body.account,
