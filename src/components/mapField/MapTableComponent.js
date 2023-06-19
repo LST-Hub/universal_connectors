@@ -389,6 +389,7 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
           sheetsRecord.push({
             destinationFieldValue: row.destinationFieldValue,
             sourceFieldValue: row.sourceFieldValue,
+            sourceFieldLabel: row.sourceFieldLabel
           });
         } else {
           sheetsRecord.push({
@@ -405,7 +406,7 @@ const MapTableComponent = ({ mappedRecordId, integrationsName }) => {
           `sourceFieldValue[${index}]`,
           item.sourceFieldValue
             ? {
-                label: item.sourceFieldValue,
+                label: item.sourceFieldLabel,
                 value: item.sourceFieldValue,
               }
             : null
