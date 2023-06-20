@@ -14,6 +14,7 @@ import FormErrorText from "@/globalComponents/ErrorText";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import tkFetch from "@/utils/fetch";
 import { useRouter } from "next/router";
+import DeleteModal from "@/utils/DeleteModal";
 
 const schema = Yup.object({
   startDate: Yup.date().required("Start date is required"),
@@ -23,13 +24,9 @@ const schema = Yup.object({
   days: Yup.object().required("Day is required"),
 }).required();
 
-const WeeklyEvent = ({
-  checkBoxValue,
-  toggleComponet,
-  eventId,
-  syncData,
-}) => {
+const WeeklyEvent = ({ checkBoxValue, toggleComponet, eventId, syncData }) => {
   let userId = useRef(null);
+  let scheduleEventData = useRef(null);
 
   const {
     control,
@@ -44,6 +41,7 @@ const WeeklyEvent = ({
   const router = useRouter();
   const [checkboxValue, setCheckboxValue] = useState(false);
   const [ids, setIds] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(false);
 
   const addEvent = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/addWeeklyEvent`),
@@ -139,8 +137,9 @@ const WeeklyEvent = ({
         endDate: data.endDate,
         noEndDate: data.noEndDate,
         performType: syncData.perform,
-        // savedSearchType: syncData.savedSearchType,
-        operationType: syncData.operationType
+        operationType: syncData.operationType,
+        source: syncData.source,
+        range: syncData.range,
       };
 
       if (syncData.savedSearchLabel) {
@@ -148,12 +147,28 @@ const WeeklyEvent = ({
         eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
-      updateWeeklyEvent.mutate(eventData, {
-        onSuccess: (res) => {},
-        onError: (err) => {
-          console.log("err", err);
-        },
-      });
+      // ***API call
+      if (
+        syncData.operationType === "add" &&
+        syncData.source === "GoogleSheet"
+      ) {
+        toggleDeleteModel(eventData);
+      } else {
+        updateWeeklyEvent.mutate(eventData, {
+          onSuccess: (res) => {},
+          onError: (err) => {
+            console.log("err", err);
+          },
+        });
+        router.push("/schedule");
+      }
+
+      // updateWeeklyEvent.mutate(eventData, {
+      //   onSuccess: (res) => {},
+      //   onError: (err) => {
+      //     console.log("err", err);
+      //   },
+      // });
     } else {
       console.log("add weekly event******");
 
@@ -169,28 +184,75 @@ const WeeklyEvent = ({
         endDate: data.endDate,
         noEndDate: data.noEndDate,
         performType: syncData.perform,
-        // savedSearchType: syncData.savedSearchType,
-        operationType: syncData.operationType
+        operationType: syncData.operationType,
+        source: syncData.source,
+        range: syncData.range,
       };
       if (syncData.savedSearchLabel) {
         eventData.savedSearchLabel = syncData.savedSearchLabel;
         eventData.savedSearchValue = syncData.savedSearchValue;
       }
 
-      addEvent.mutate(eventData, {
+      console.log("eventData", eventData)
+
+      // API call
+      if (
+        syncData.operationType === "add" &&
+        syncData.source === "GoogleSheet"
+      ) {
+        console.log("if")
+        toggleDeleteModel(eventData);
+      } else {
+        addEvent.mutate(eventData, {
+          onSuccess: (res) => {},
+          onError: (err) => {
+            console.log("err", err);
+          },
+        });
+        router.push("/schedule");
+      }
+
+      // addEvent.mutate(eventData, {
+      //   onSuccess: (res) => {},
+      //   onError: (err) => {
+      //     console.log("err", err);
+      //   },
+      // });
+    }
+
+    // router.push("/schedule");
+  };
+
+  const onCancel = () => {
+    // toggleComponet("singleEvent");
+    history.back();
+  };
+
+  const onClickDelete = () => {
+    console.log("scheduleEventData", scheduleEventData.current);
+
+    if (scheduleEventData.current.id) {
+      updateWeeklyEvent.mutate(scheduleEventData.current, {
+        onSuccess: (res) => {},
+        onError: (err) => {
+          console.log("err", err);
+        },
+      });
+    } else {
+      addEvent.mutate(scheduleEventData.current, {
         onSuccess: (res) => {},
         onError: (err) => {
           console.log("err", err);
         },
       });
     }
-
+    setDeleteModal(false);
     router.push("/schedule");
   };
 
-  const onCancel = () => {
-    // toggleComponet("singleEvent");
-    history.back();
+  const toggleDeleteModel = (eventData) => {
+    scheduleEventData.current = eventData;
+    setDeleteModal(true);
   };
 
   return (
@@ -332,6 +394,14 @@ const WeeklyEvent = ({
           </TkCol>
         </TkRow>
       </TkForm>
+
+      <DeleteModal
+        show={deleteModal}
+        onDeleteClick={onClickDelete}
+        onCloseClick={() => setDeleteModal(false)}
+        label="This will erase all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
+        image={false}
+      />
     </>
   );
 };

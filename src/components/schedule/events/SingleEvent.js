@@ -359,7 +359,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
         show={deleteModal}
         onDeleteClick={onClickDelete}
         onCloseClick={() => setDeleteModal(false)}
-        label="This will erase all all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
+        label="This will erase all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
         image={false}
       />
     </>

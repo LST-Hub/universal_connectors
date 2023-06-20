@@ -3,6 +3,7 @@ const response = require("../lib/response");
 const schedule = require("node-schedule");
 const crypto = require("crypto");
 const axios = require("axios");
+const cron = require("node-cron");
 
 const syncEvent = async (req, res) => {
   try {
@@ -73,6 +74,21 @@ const syncEvent = async (req, res) => {
           break;
 
         case "Weekly":
+          scheduleWeeklyEvent(
+            ids.userId,
+            ids.id,
+            ids.integrationId,
+            ids.mappedRecordId,
+            scheduleData[0].startDate,
+            scheduleData[0].startTimeLabel,
+            scheduleData[0].startTimeValue,
+            scheduleData[0].day,
+            scheduleData[0].endDate,
+            scheduleData[0].noEndDate,
+            scheduleData[0].operationType,
+            scheduleData[0].source,
+            scheduleData[0].range
+          );
           break;
 
         default:
@@ -119,9 +135,11 @@ const scheduleRealTimeEvent = (
     const month = dateObj.getMonth() + 1;
     const day = dateObj.getDate();
 
-    console.log("date", day, month, year);
+    console.log(`date * * ${day} ${month} *`);
 
-    schedule.scheduleJob(`* * ${day} ${month} *`, async function () {
+    cron.schedule(`* * ${day} ${month} *`, async function () {
+      console.log("schedule RealTime Event", new Date());
+
       const accessToken = await getAccessTokenByUserId(userId);
       // console.log("accessToken", accessToken);
       const res = await syncData(
@@ -136,6 +154,8 @@ const scheduleRealTimeEvent = (
       );
       // result.push(res);
     });
+
+    console.log("running")
   } catch (error) {
     console.log("scheduleRealTimeEvent error => ", error);
   }
@@ -176,11 +196,13 @@ const scheduleSingleEvent = (
     const todaysHour = date.getHours();
     const todaysMinute = date.getMinutes();
 
+    console.log(`date ${minute} ${hour} ${repeat} ${month} *`);
+
     if (todaysYear === year && TodaysMonth === month && TodaysDate === day) {
-      schedule.scheduleJob(
+      cron.schedule(
         `${minute} ${hour} ${repeat} ${month} *`,
         async function () {
-          console.log("Schedule Single Event", new Date());
+          console.log("schedule Single Event", new Date());
           // const now = new Date();
           // const options = { timeZone: "Asia/Kolkata" };
           // const indianDate = now.toLocaleString("en-IN", options);
@@ -205,6 +227,71 @@ const scheduleSingleEvent = (
     }
   } catch (error) {
     console.log("scheduleSingleEvent error", error);
+  }
+};
+
+// start date, start time, days, end date, no end date (checkbox)
+const scheduleWeeklyEvent = (
+  userId,
+  eventId,
+  integrationId,
+  mappedRecordId,
+  startDate,
+  startTimeLabel,
+  startTimeValue,
+  dayOfWeek,
+  endDate,
+  noEndDate,
+  operationType,
+  source,
+  range
+) => {
+  try {
+    const dateObj = new Date(startDate);
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth() + 1;
+    const day = dateObj.getDate();
+
+    const [hour, minutes] = startTimeValue.split(":");
+    const minute = minutes.split(" ")[0];
+    // const hour = "12";
+    // const minute = "39";
+
+    const weekDays = [
+      "sunday",
+      "monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    const dayIndex = weekDays.indexOf(dayOfWeek);
+    console.log(dayOfWeek);
+
+    console.log("date", minute, hour, day, month, dayIndex);
+
+    cron.schedule(
+      `${minute} ${hour} ${day} ${month} ${dayIndex}`,
+      async function () {
+        console.log("schedule Weekly Event", new Date());
+        const accessToken = await getAccessTokenByUserId(userId);
+
+        const res = await syncData(
+          userId,
+          mappedRecordId,
+          integrationId,
+          operationType,
+          source,
+          range,
+          eventId,
+          accessToken
+        );
+        // result.push(res);
+      }
+    );
+  } catch (error) {
+    console.log("scheduleWeeklyEvent error", error);
   }
 };
 
@@ -332,11 +419,12 @@ const getAccessTokenByUserId = async (userId) => {
       console.log(response.data.access_token);
       return response.data.access_token;
     } catch (error) {
-      console.log("getAccessTokenByUserId error=>", error);
+      console.log("getAccessTokenByUserId error", error.response.data);
+      // ***invalid_grant
       //   throw error;
     }
   } catch (error) {
-    console.log("getAccessTokenByUserId error", error);
+    console.log("getAccessTokenByUserId error=>", error);
     // throw error;
   }
 };
@@ -1251,6 +1339,7 @@ const addGoogleSheetRecords = async (
     const titles = mappedFields.map((field) => field.destinationFieldValue);
     // console.log(titles);
 
+    // console.log("result.list", result.list);
     const records = result.list.map((record) => {
       const values = record.values;
       const modifiedValues = {};
@@ -1307,7 +1396,7 @@ const addGoogleSheetRecords = async (
           );
         })
         .catch((error) => {
-          console.log("addGoogleSheetRecords error", error);
+          console.log("addGoogleSheetRecords error", error.response.data);
         });
     } catch (error) {
       console.log("addGoogleSheetRecords error => ", error);
@@ -1435,24 +1524,27 @@ const addFields = async (
         headers: headers,
         data: recordList,
       });
+      console.log("request", request.data)
 
-      const summaryMessage = `Successfully added ${request.data.updates.updatedRows} records in Google Sheet out of ${count}`;
-      logs.push({
-        userId: userId,
-        scheduleId: Number(id),
-        integrationId: integrationId,
-        mappedRecordId: mappedRecordId,
-        recordType: mappedRecord[0].recordTypeLabel,
-        status: "Success",
-        message: summaryMessage,
-      });
+      const summaryMessage = `Successfully added ${request.data.updates.updatedRows - 1} records in Google Sheet out of ${count}`;
+      if (count > 0) {
+        logs.push({
+          userId: userId,
+          scheduleId: Number(id),
+          integrationId: integrationId,
+          mappedRecordId: mappedRecordId,
+          recordType: mappedRecord[0].recordTypeLabel,
+          status: "Success",
+          message: summaryMessage,
+        });
+      }
     } catch (error) {
-      console.log("addGoogleSheetRecords error", error);
+      console.log("addGoogleSheetRecords error", error.response.data);
       return error;
     }
 
-    addLogs(logs);
-    console.log("added GS record logs => ", logs);
+    // addLogs(logs);
+    console.log("added GS record logs =>", logs);
   } catch (error) {
     console.log("addFields error => ", error);
   }
@@ -1873,36 +1965,6 @@ const getScheduleEvent = async (
     console.log("getScheduleEvent error", error);
     return error;
   }
-};
-
-//   **** events
-
-// start date, start time, days, end date, no end date (checkbox)
-const scheduleWeeklyEvent = (req, res) => {
-  const { startDate, startTime, endDate, days } = req.body;
-  const [year, month, day] = startDate.split("-");
-  const [hour, minutes] = startTime.split(":");
-  const minute = minutes.split(" ")[0];
-  const dayOfWeek = days;
-  const weekDays = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
-  const dayIndex = weekDays.indexOf(dayOfWeek);
-
-  schedule.scheduleJob(
-    `${minute} ${hour} ${day} ${month} ${dayIndex}`,
-    function () {
-      console.log("Schedule Weekly Event", new Date());
-    }
-  );
-
-  res.status(200).send("scheduled weekly event");
 };
 
 module.exports = {

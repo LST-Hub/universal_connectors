@@ -104,9 +104,9 @@ const addSingleEvent = async (req, res) => {
     const [schedule, updateCount] = await prisma.$transaction([
       prisma.schedule.create({
         data: {
-          userId: userId,
-          integrationId: integrationId,
-          mappedRecordId: mappedRecordId,
+          userId: Number(userId),
+          integrationId: Number(integrationId),
+          mappedRecordId: Number(mappedRecordId),
           eventType: eventType,
           startDate: startDate,
           startTimeLabel: startTimeLabel,
@@ -178,6 +178,8 @@ const addWeeklyEvent = async (req, res) => {
     savedSearchLabel,
     savedSearchValue,
     operationType,
+    source,
+    range,
   } = req.body;
 
   try {
@@ -198,6 +200,10 @@ const addWeeklyEvent = async (req, res) => {
           savedSearchLabel: savedSearchLabel,
           savedSearchValue: savedSearchValue,
           operationType: operationType,
+          source: source,
+          range: range,
+          creationDate: new Date(),
+          modificationDate: new Date(),
         },
       }),
       prisma.integrations.updateMany({
@@ -445,6 +451,9 @@ const updateSingleEvent = async (req, res) => {
     performType,
     savedSearchLabel,
     savedSearchValue,
+    operationType,
+    source,
+    range,
   } = req.body;
 
   try {
@@ -466,6 +475,9 @@ const updateSingleEvent = async (req, res) => {
         performType: performType,
         savedSearchLabel: savedSearchLabel,
         savedSearchValue: savedSearchValue,
+        operationType: operationType,
+        source: source,
+        range: range,
       },
     });
 
@@ -511,6 +523,9 @@ const updateWeeklyEvent = async (req, res) => {
     performType,
     savedSearchLabel,
     savedSearchValue,
+    operationType,
+    source,
+    range,
   } = req.body;
 
   try {
@@ -529,10 +544,12 @@ const updateWeeklyEvent = async (req, res) => {
         day: day,
         endDate: endDate,
         noEndDate: noEndDate,
-        modificationDate: new Date(),
         performType: performType,
         savedSearchLabel: savedSearchLabel,
         savedSearchValue: savedSearchValue,
+        operationType: operationType,
+        source: source,
+        range: range,
       },
     });
 
