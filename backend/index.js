@@ -128,7 +128,6 @@ v1Router.get(
   "/getCustomFilterFields",
   scheduleController.getCustomFilterFields
 );
-v1Router.post("/syncData", scheduleController.syncData);
 v1Router.get(
   "/getNetsuiteFiledsByRecordId",
   scheduleController.getNetsuiteFiledsByRecordId
