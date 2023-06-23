@@ -410,15 +410,14 @@ const updateRealTimeEvent = async (req, res) => {
       },
     });
 
-    const result = await syncEventData (
+    const result = await syncEventData(
       userId,
       id,
       integrationId,
       mappedRecordId
-    ) 
-    console.log("final result", result)
+    );
+    console.log("final result", result);
     return result;
-
   } catch (error) {
     response({
       res,
@@ -476,15 +475,14 @@ const updateSingleEvent = async (req, res) => {
       },
     });
 
-    const result = await syncEventData (
+    const result = await syncEventData(
       userId,
       id,
       integrationId,
       mappedRecordId
-    ) 
-    console.log("final result", result)
+    );
+    console.log("final result", result);
     return result;
-
   } catch (error) {
     response({
       res,
@@ -542,15 +540,14 @@ const updateWeeklyEvent = async (req, res) => {
       },
     });
 
-    const result = await syncEventData (
+    const result = await syncEventData(
       userId,
       id,
       integrationId,
       mappedRecordId
-    ) 
-    console.log("final result", result)
+    );
+    console.log("final result", result);
     return result;
-
   } catch (error) {
     response({
       res,
@@ -1168,10 +1165,10 @@ const syncEventData = async (
     }
 
     const res = {
-      "success": true,
-      "status_code": 200,
-      "message": "Event scheduled successfully"
-    }
+      success: true,
+      status_code: 200,
+      message: "Event scheduled successfully",
+    };
     return res;
   } catch (error) {
     console.log("syncEventData error", error);
@@ -2409,31 +2406,197 @@ const addGoogleSheetRecords = async (
 
     // console.log("mappedFields", mappedFields)
     const titles = mappedFields.map((field) => field.destinationFieldValue);
+    const mappedKeys = mappedFields.map((field) => field.sourceFieldValue);
     // console.log(titles);
 
-    // console.log("result.list", result.list);
-    const records = result.list.map((record) => {
-      const values = record.values;
-      const modifiedValues = {};
+    console.log("result", result);
+    // const records = result.map((record) => {
+    //   const values = record.bodyValues;
+    //   const lineValues = record.lineValues;
+
+    //   const recordValues = [];
+    //   // *pushn only values
+    //   // for (const key in values) {
+    //   //   if (Array.isArray(values[key])) {
+    //   //     values[key].length > 0
+    //   //       ? recordValues.push(values[key][0].text)
+    //   //       : recordValues.push("");
+    //   //     // recordValues.push(values[key][0].text);
+    //   //   } else {
+    //   //     recordValues.push(values[key]);
+    //   //   }
+    //   // }
+    //   // *push both
+    //   for (const key in values) {
+    //     if (Array.isArray(values[key])) {
+    //       values[key].length > 0 ?
+    //       recordValues.push({ [key]: values[key][0].text }) :
+    //       recordValues.push({ [key]: "" });
+    //     } else {
+    //       recordValues.push({ [key]: values[key] });
+    //     }
+    //   }
+
+    //   // *push only values lineValues
+    //   // console.log("lineValues", lineValues)
+    //   // for (const key in lineValues) {
+    //   //   if (Array.isArray(lineValues[key])) {
+    //   //     // console.log("array is", lineValues[key])
+    //   //     if (lineValues[key].length > 0) {
+    //   //       lineValues[key].forEach((item) => {
+    //   //         Object.entries(item).forEach(([keys, values]) => {
+    //   //           // console.log(key, value);
+    //   //           if (Array.isArray(values)) {
+    //   //             // console.log("val", values[0].text)
+    //   //             recordValues.push(values[0].text);
+    //   //           } else {
+    //   //             // console.log("val2", values)
+    //   //             recordValues.push(values);
+    //   //           }
+    //   //         });
+    //   //       });
+    //   //     } else {
+    //   //       // console.log("val3", lineValues[key])
+    //   //       recordValues.push("");
+    //   //     }
+    //   //   }
+    //   // }
+
+    //   // *push both for lineValues
+    //   for (const key in lineValues) {
+    //     console.log("lineValues", lineValues)
+    //     if (Array.isArray(lineValues[key])) {
+    //       if (lineValues[key].length > 0) {
+    //         lineValues[key].forEach((item) => {
+    //           Object.entries(item).forEach(([itemKey, itemValue]) => {
+    //             if (Array.isArray(itemValue)) {
+    //               // console.log("itemValue", itemKey, itemValue[0].text)
+    //               itemValue.length > 0 ?
+    //               recordValues.push({ [itemKey]: itemValue[0].text }) :
+    //               recordValues.push({[itemKey]: ""});
+    //             } else {
+    //               recordValues.push({ [itemKey]: itemValue });
+    //             }
+    //           });
+    //         });
+    //       } else {
+    //         // console.log("lineValues[key]", lineValues[key])
+    //         recordValues.push({ [key]: "" });
+    //       }
+    //     }
+    //   }
+
+    //   //## // console.log("lineValues", lineValues)
+    //   // for (const key in lineValues) {
+    //   //   if (Array.isArray(lineValues[key])) {
+    //   //     console.log("line array", lineValues)
+
+    //   //     for (const lineItem of lineValues[key]) {
+    //   //       // lineItem[key].length > 0 ? recordValues.push(lineItem[key][0].text) : recordValues.push("");
+    //   //       // recordValues.push(lineItem[key]);
+    //   //       console.log("lineItem", lineItem)
+    //   //     }
+    //   //   }
+    //   //  // ###// else {
+    //   //   //   // recordValues.push(lineValues[key]);
+    //   //   //   console.log("line", lineValues)
+
+    //   //   // }
+    //   // }
+
+    //   return recordValues;
+    // });
+
+    const records = result.map((record) => {
+      const values = record.bodyValues;
+      const lineValues = record.lineValues;
+
+      const recordValues = {};
+
+      // Extract values from bodyValues
       for (const key in values) {
-        // console.log("values", values);
         if (Array.isArray(values[key])) {
-          // console.log(values[key].length > 0 ? "GT" : "LT")
-          // modifiedValues[key] = values[key][0].text;
-          modifiedValues[key] =
-            values[key].length > 0 ? values[key][0].text : "";
+          recordValues[key] = values[key].length > 0 ? values[key][0].text : "";
         } else {
-          modifiedValues[key] = values[key];
+          recordValues[key] = values[key];
         }
       }
-      return modifiedValues;
+
+      // Extract values from lineValues
+      for (const key in lineValues) {
+        if (Array.isArray(lineValues[key])) {
+          if (lineValues[key].length > 0) {
+            recordValues[key] = lineValues[key].map((item) => {
+              const itemValues = {};
+              for (const itemKey in item) {
+                if (Array.isArray(item[itemKey])) {
+                  itemValues[itemKey] =
+                    item[itemKey].length > 0 ? item[itemKey][0].text : "";
+                } else {
+                  itemValues[itemKey] = item[itemKey];
+                }
+              }
+              return itemValues;
+            });
+          } else {
+            recordValues[key] = [];
+          }
+        }
+      }
+
+      return recordValues;
     });
-    const recordValues = records.map((record) => Object.values(record));
+
+    console.log("records ==> ", records);
+    console.log("mappedKeys", mappedKeys);
+
+    // const sheetValues = [];
+
+    // records.forEach((record) => {
+    //   Object.entries(record).forEach(([key, value]) => {
+    //     if (Array.isArray(value)) {
+    //       // sheetValues.push(value);
+    //       if(value.length > 0){
+    //         console.log("value array", value);
+    //       } else {
+    //         sheetValues.push("");
+    //       }
+    //     } else {
+    //       // console.log("value", value)
+
+    //       sheetValues.push(value);
+    //     }
+    //   });
+    // });
+const resultArray = []
+    records.forEach((record) => {
+      const sheetValues = []
+      mappedKeys.forEach((key) => {
+        if (key.includes("__")) {
+          const [mainKey, subKey] = key.split("__");
+
+          if (
+            record[mainKey] &&
+            record[mainKey][0] &&
+            record[mainKey][0][subKey]
+          ) {
+            sheetValues.push(record[mainKey][0][subKey]);
+          } else {
+            sheetValues.push("");
+          }
+        } else {
+          sheetValues.push(record[key] || "");
+        }
+      });
+      resultArray.push(sheetValues)
+    });
+
+    console.log("sheetValues", resultArray);
 
     const recordList = {
       range: `${mappedRecord[0].sheetLabel}`,
       majorDimension: "ROWS",
-      values: [titles, ...recordValues],
+    values: [titles, ...resultArray],
     };
 
     // console.log("recordList", recordList)
@@ -2463,12 +2626,12 @@ const addGoogleSheetRecords = async (
             mappedRecord,
             accessToken,
             recordList,
-            recordValues.length,
+            resultArray.length,
             id
           );
         })
         .catch((error) => {
-          console.log("addGoogleSheetRecords error", error.response.data);
+          console.log("addGoogleSheetRecords error", error);
         });
     } catch (error) {
       console.log("addGoogleSheetRecords error => ", error);
@@ -2503,7 +2666,8 @@ const getNetsuiteData = async (
     const data = {
       resttype: "Search",
       recordtype: mappedRecord[0].recordTypeValue,
-      columns: columns,
+      // columns: columns,
+      columns: ["internalid"],
     };
     // console.log("data", data)
 
@@ -2554,9 +2718,22 @@ const getNetsuiteData = async (
       },
       data: data,
     })
-      .then((res) => {
-        // console.log("res.data", res.data)
-        return res.data;
+      .then(async (res) => {
+        // console.log("res.data", res.data);
+        const internalIds = res.data.list.map(
+          (item) => item.values.internalid[0].text
+        );
+        const uniqueIds = [...new Set(internalIds)];
+        console.log(uniqueIds);
+        const fieldValues = await getCustomeRecord(
+          credentials,
+          mappedRecord[0].recordTypeValue,
+          uniqueIds,
+          columns
+        );
+        console.log("fieldValues", fieldValues);
+        // return res.data;
+        return fieldValues;
       })
       .catch((error) => {
         console.log("getNetsuiteData error", error);
@@ -2566,6 +2743,124 @@ const getNetsuiteData = async (
     console.log("getNetsuiteData error => ", error);
     return error;
   }
+};
+
+const getCustomeRecord = async (
+  credentials,
+  recordTypeValue,
+  uniqueIds,
+  columns
+) => {
+  const result = [];
+  await Promise.all(
+    uniqueIds.map(async (internalId) => {
+      const record = {
+        resttype: "Record",
+        recordtype: recordTypeValue,
+        recordid: internalId,
+        bodyfields: [],
+        linefields: [{}],
+      };
+
+      console.log("columns", columns);
+      // columns.forEach((col) => {
+      //   if (col.includes("__")) {
+      //     const [parentField, childField] = col.split("__");
+
+      //     const lineField = record.linefields.find((lineField) => lineField[parentField]);
+
+      //     if (lineField) {
+      //       lineField[parentField].push(childField);
+      //     } else {
+      //       record.linefields.push({ [parentField]: [childField] });
+      //     }
+      //   } else {
+      //     record.bodyfields.push(col);
+      //   }
+      // });
+
+      // console.log("record", record);
+
+      columns.forEach((col) => {
+        if (col.includes("__")) {
+          const [parentField, childField] = col.split("__");
+
+          const lineField = record.linefields[0];
+
+          if (lineField.hasOwnProperty(parentField)) {
+            lineField[parentField].push(childField);
+          } else {
+            lineField[parentField] = [childField];
+          }
+        } else {
+          record.bodyfields.push(col);
+        }
+      });
+
+      console.log("record", record);
+
+      const authentication = {
+        account: credentials[0].accountId,
+        consumerKey: credentials[0].consumerKey,
+        consumerSecret: credentials[0].consumerSecretKey,
+        tokenId: credentials[0].accessToken,
+        tokenSecret: credentials[0].accessSecretToken,
+        timestamp: Math.floor(Date.now() / 1000).toString(),
+        nonce: getNonce(10),
+        http_method: "POST",
+        version: "1.0",
+        scriptDeploymentId: "1",
+        scriptId: "1529",
+        signatureMethod: "HMAC-SHA256",
+      };
+
+      const base_url =
+        "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+
+      const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+
+      const baseString = `${authentication.http_method}&${encodeURIComponent(
+        base_url
+      )}&${encodeURIComponent(concatenatedString)}`;
+
+      const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+
+      const signature = crypto
+        .createHmac("sha256", keys)
+        .update(baseString)
+        .digest("base64");
+
+      const oAuth_String = `OAuth realm="${
+        authentication.account
+      }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+        authentication.tokenId
+      }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+        authentication.timestamp
+      }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+        signature
+      )}"`;
+
+      const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+
+      try {
+        const res = await axios({
+          method: "POST",
+          url: url,
+          headers: {
+            Authorization: oAuth_String,
+            "Content-Type": "application/json",
+          },
+          data: record,
+        });
+
+        result.push(res.data);
+      } catch (error) {
+        throw error;
+      }
+    })
+  );
+  // console.log("***result", result)
+  return result;
 };
 
 const addFields = async (
