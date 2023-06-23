@@ -270,6 +270,7 @@ const getSchedules = async (req, res) => {
         mappedRecord: {
           select: {
             id: true,
+            mappedRecordName: true,
           },
         },
       },

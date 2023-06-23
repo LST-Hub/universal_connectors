@@ -25,7 +25,6 @@ const LogTable = () => {
   const [logs] = apiResults
   const { data: logsData, isLoading, error } = logs;
 
-  console.log("logsData", logsData)
   useEffect(() => {
     const id = sessionStorage.getItem("userId");
     if(id){

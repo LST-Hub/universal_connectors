@@ -103,6 +103,13 @@ const ScheduleTable = () => {
       },
     },
     {
+      Header: "Name",
+      accessor: "mappedRecordName",
+      Cell: (props) => {
+        return <>{props.row.original.mappedRecord.mappedRecordName}</>;
+      },
+    },
+    {
       Header: "Event",
       accessor: "eventType",
     },
