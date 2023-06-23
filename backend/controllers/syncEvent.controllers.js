@@ -146,7 +146,8 @@ const syncData = async (
             mappedRecord,
             credentials,
             accessToken,
-            id
+            id,
+            range
           );
           return gsResult;
 
@@ -194,16 +195,16 @@ const getAccessTokenByUserId = async (userId) => {
       //     headers, timeout: 300000
       // })
       //   console.timeEnd("time");
-
-      console.log(response.data.access_token);
+      // console.log("access_token response", response);
       return response.data.access_token;
     } catch (error) {
-      console.log("getAccessTokenByUserId error", error.response.data);
+      console.log("getAccessTokenByUserId error", error);
       // ***invalid_grant
       //   throw error;
     }
   } catch (error) {
     console.log("getAccessTokenByUserId error=>", error);
+    // ***invalid_grant
     // throw error;
   }
 };
@@ -450,7 +451,7 @@ const addNetsuiteV1Api = async (
       }
     }
 
-    console.log("data to add", resultArray);
+    // console.log("data to add", resultArray);
 
     const logs = [];
     let successCount = 0;
@@ -1029,7 +1030,8 @@ const googleSheetsOperations = async (
   mappedRecord,
   credentials,
   accessToken,
-  id
+  id,
+  range
 ) => {
   try {
     const mappedFields = await prisma.fields.findMany({
@@ -1060,17 +1062,6 @@ const googleSheetsOperations = async (
           return addRecordResult;
 
         case "update":
-          // const updateRecordResult = addGoogleSheetRecords(
-          //   accessToken,
-          //   mappedRecord,
-          //   credentials,
-          //   userId,
-          //   mappedRecordId,
-          //   integrationId,
-          //   id
-          // );
-          // return updateRecordResult;
-
           const updateRecordResult = updateGoogleSheetRecord(
             accessToken,
             mappedRecord,
@@ -1078,7 +1069,9 @@ const googleSheetsOperations = async (
             userId,
             mappedRecordId,
             integrationId,
-            id
+            id,
+            range,
+            mappedFields
           );
           return updateRecordResult;
 
@@ -1172,7 +1165,7 @@ const addGoogleSheetRecords = async (
         body: bodyData,
       })
         .then((res) => {
-          addFields(
+          appendFields(
             userId,
             mappedRecordId,
             integrationId,
@@ -1284,7 +1277,7 @@ const getNetsuiteData = async (
   }
 };
 
-const addFields = async (
+const appendFields = async (
   userId,
   mappedRecordId,
   integrationId,
@@ -1334,7 +1327,7 @@ const addFields = async (
     // addLogs(logs);
     console.log("added GS record logs =>", logs);
   } catch (error) {
-    console.log("addFields error => ", error);
+    console.log("appendFields error => ", error);
   }
 };
 
@@ -1345,159 +1338,217 @@ const updateGoogleSheetRecord = async (
   userId,
   mappedRecordId,
   integrationId,
-  id
+  id,
+  range,
+  mappedFields
 ) => {
-  // console.log("update record in google sheet");
-  // const logs = [];
-  // let updateCount = 0;
-
-  // try {
-  //   // ***filter condition
-  //   const filterData = await prisma.customFilterFields.findMany({
-  //     where: {
-  //       userId: Number(userId),
-  //       integrationId: Number(integrationId),
-  //       mappedRecordId: Number(mappedRecordId),
-  //     },
-  //   });
-
-  //   const sourceField = filterData[0].sourceFieldValue;
-  //   const destinationField = filterData[0].destinationFieldValue;
-
-  //   // ***ns data
-  //   let filterValues = [];
-  //   const result = await getNetsuiteData(
-  //     userId,
-  //     mappedRecordId,
-  //     credentials,
-  //     mappedRecord
-  //   );
-  //   result.list.map((item) => {
-  //     if (item.values.hasOwnProperty(sourceField)) {
-  //       const nsValue = item.values[sourceField];
-  //       if (Array.isArray(nsValue)) {
-  //         filterValues.push(nsValue[0].value);
-  //       } else {
-  //         filterValues.push(nsValue);
-  //       }
-  //     }
-  //   });
-
-  //   // *** gs data
-  //   const gsIds = [];
-  //   const sheetsValue = getSheetsData(
-  //     mappedRecord,
-  //     userId,
-  //     accessToken
-  //   );
-  //   sheetsValue
-  //     .then(async (res) => {
-  //       const titles = res.data.values[0];
-
-  //       if (titles.includes(destinationField)) {
-  //         const itemIndex = titles.indexOf(destinationField);
-  //         for (let i = 1; i < res.data.values.length; i++) {
-  //           const row = res.data.values[i];
-  //           gsIds.push(row[itemIndex]);
-  //         }
-  //       }
-
-  //       const filterIdsWithIndex = gsIds.reduce((acc, element, index) => {
-  //         if (filterValues.includes(element)) {
-  //           acc.push({
-  //             value: element,
-  //             startIndex: index + 1,
-  //             endIndex: index + 2,
-  //           });
-  //         }
-  //         return acc;
-  //       }, []);
-
-  //       console.log("filterIdsWithIndex", filterIdsWithIndex)
-
-  //     })
-  //     .catch((error) => {
-  //       console.log("deleteGoogleSheetRecord error => ", error);
-  //     });
-  // } catch (error) {
-  //   console.log("updateGoogleSheetRecord error ==> ", error);
-  // }
-
-  // ******
-  const logs = [];
   try {
     console.log("update record in google sheet");
 
-    const result = await getNetsuiteData(
+    const filterData = await prisma.customFilterFields.findMany({
+      where: {
+        userId: Number(userId),
+        integrationId: Number(integrationId),
+        mappedRecordId: Number(mappedRecordId),
+      },
+    });
+
+    const columns = []
+    mappedFields.map((field) => {
+columns.push(field.sourceFieldValue)
+    })
+
+    const sheetsData = await getSheetsDataByRange(
       userId,
-      mappedRecordId,
-      credentials,
-      mappedRecord
+      range,
+      mappedRecord,
+      accessToken
     );
 
-    const records = result.list.map((record) => {
-      const values = record.values;
+    const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+    const fieldIndex = sheetsValue.data.values[0].indexOf(
+      filterData[0].destinationFieldLabel
+    );
+
+    const existingRecords = []
+
+    const results = await Promise.all(
+    sheetsData.values.map(async(row) => {
+
+const authentication = {
+  account: credentials[0].accountId,
+  consumerKey: credentials[0].consumerKey,
+  consumerSecret: credentials[0].consumerSecretKey,
+  tokenId: credentials[0].accessToken,
+  tokenSecret: credentials[0].accessSecretToken,
+  timestamp: Math.floor(Date.now() / 1000).toString(),
+  nonce: getNonce(10),
+  http_method: "POST",
+  version: "1.0",
+  scriptDeploymentId: "1",
+  scriptId: "1529",
+  signatureMethod: "HMAC-SHA256",
+};
+
+const base_url =
+      "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+    const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+    const baseString = `${authentication.http_method}&${encodeURIComponent(
+      base_url
+    )}&${encodeURIComponent(concatenatedString)}`;
+    const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+    const signature = crypto
+      .createHmac("sha256", keys)
+      .update(baseString)
+      .digest("base64");
+    const oAuth_String = `OAuth realm="${
+      authentication.account
+    }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+      authentication.tokenId
+    }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+      authentication.timestamp
+    }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+      signature
+    )}"`;
+
+    const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+
+    const data = {
+      resttype: "Search",
+      recordtype: mappedRecord[0].recordTypeValue,
+      filters: [
+          [
+            filterData[0].sourceFieldValue,
+              "is",
+              row[fieldIndex]
+          ]
+      ],
+      columns: columns
+  };
+
+  existingRecords.push(row)
+
+    try {
+      const res = await axios({
+        method: "POST",
+        url: url,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: oAuth_String,
+        },
+        data: data,
+      });
+
+      return res.data;
+
+    } catch (error) {
+      console.log("updateNetsuiteV1Api error", error);
+      throw error;
+    }
+  })
+    );
+
+    addFields(accessToken, mappedRecord, range, results, userId, id, integrationId, mappedRecordId, existingRecords)
+
+  } catch (error) {
+    console.log("updateGoogleSheetRecords error=> ", error);
+    return error;
+  }
+};
+
+const addFields = async (accessToken, mappedRecord, range, result, userId, id, integrationId, mappedRecordId, existingRecords) => {
+  const logs = [];
+  let recordCount = 0;
+  const records = []
+  const recordValues = []
+
+ result.map((record, index) => {
+   console.log("***record.list", record.list.length)
+   if(record.list.length > 0) {
+      recordCount++
+      const values = record.list[0].values;
       const modifiedValues = {};
+
+      console.log("values", values)
       for (const key in values) {
         if (Array.isArray(values[key])) {
-          modifiedValues[key] = values[key][0].text;
+          modifiedValues[key] =
+            values[key].length > 0 ? values[key][0].text : "";
         } else {
           modifiedValues[key] = values[key];
         }
       }
-      return modifiedValues;
-    });
-    const recordValues = records.map((record) => Object.values(record));
+      // return modifiedValues;
+      // records.push(modifiedValues)
+      recordValues.push(Object.values(modifiedValues));
 
-    const recordList = {
-      range: `${mappedRecord[0].workBookLabel}!A2:ZZ100000`,
-      majorDimension: "ROWS",
-      values: recordValues,
-    };
-
-    const urlParams = {
-      includeValuesInResponse: true,
-      responseDateTimeRenderOption: "SERIAL_NUMBER",
-      responseValueRenderOption: "FORMATTED_VALUE",
-      valueInputOption: "USER_ENTERED",
-    };
-
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].workBookLabel}!A2:ZZ100000?includeValuesInResponse=${urlParams.includeValuesInResponse}&responseDateTimeRenderOption=${urlParams.responseDateTimeRenderOption}&responseValueRenderOption=${urlParams.responseValueRenderOption}&valueInputOption=${urlParams.valueInputOption}`;
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    };
-
-    try {
-      const request = await axios({
-        method: "PUT",
-        url: url,
-        headers: headers,
-        data: recordList,
-      });
-      console.log("output =>", request.data);
-      const summaryMessage = `Successfully updated ${request.data.updatedRows} records in Google Sheet out of ${recordValues.length}`;
-      logs.push({
+    } else {
+      recordCount++
+        const summaryMessage = `Records are not available in Netsuite`;
+        logs.push({
         userId: userId,
         scheduleId: Number(id),
         integrationId: integrationId,
         mappedRecordId: mappedRecordId,
         recordType: mappedRecord[0].recordTypeLabel,
-        status: "Success",
+        status: "Error",
         message: summaryMessage,
-      });
-    } catch (error) {
-      console.log("addGoogleSheetRecords error", error);
-      return error;
-    }
+        });
 
-    addLogs(logs);
-    console.log("added GS record logs => ", logs);
+        // console.log("not found", existingRecords[index])
+        recordValues.push(existingRecords[index])
+    }
+  });
+
+    if(recordCount > 0){
+      // const recordValues = records.map((record) => Object.values(record));
+
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  };
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}!${range}?valueInputOption=USER_ENTERED`
+
+  const recordList = {
+    range: `${mappedRecord[0].sheetLabel}!${range}`,
+    majorDimension: "ROWS",
+    values: recordValues
+  }
+
+  console.log("recordValues", recordValues)
+
+  try {
+    const request = await axios({
+      method: "PUT",
+      url: url,
+      headers: headers,
+      data: recordList,
+    });
+    console.log("request", request.data)
+
+    const summaryMessage = `Successfully updated ${request.data.updatedRows} records in Google Sheet out of ${recordCount}`;
+      if (recordCount > 0) {
+        logs.push({
+          userId: userId,
+          scheduleId: Number(id),
+          integrationId: integrationId,
+          mappedRecordId: mappedRecordId,
+          recordType: mappedRecord[0].recordTypeLabel,
+          status: "Success",
+          message: summaryMessage,
+        });
+      }
   } catch (error) {
-    console.log("addGoogleSheetRecords error=> ", error);
+    console.log("updateGoogleSheetRecords error", error);
     return error;
   }
-};
+    }
+      
+
+  // addLogs(logs);
+  console.log("updated GS record logs =>", logs);
+}
 
 const deleteGoogleSheetRecord = async (
   accessToken,
