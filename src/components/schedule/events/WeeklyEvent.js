@@ -15,11 +15,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import tkFetch from "@/utils/fetch";
 import { useRouter } from "next/router";
 import DeleteModal from "@/utils/DeleteModal";
+import TkInput from "@/globalComponents/TkInput";
 
 const schema = Yup.object({
   startDate: Yup.date().required("Start date is required"),
 
-  startTime: Yup.object().required("Start time is required"),
+  // startTime: Yup.object().required("Start time is required"),
 
   days: Yup.object().required("Day is required"),
 }).required();
@@ -120,6 +121,13 @@ const WeeklyEvent = ({ checkBoxValue, toggleComponet, eventId, syncData }) => {
       data.noEndDate = true;
       setCheckboxValue(true);
       // data.endDate = null;
+    }
+
+    if(data.startTimeInput){
+      data.startTime = {
+        label: data.startTimeInput,
+        value: data.startTimeInput,
+      }
     }
 
     if (eventId) {
@@ -267,7 +275,7 @@ const WeeklyEvent = ({ checkBoxValue, toggleComponet, eventId, syncData }) => {
         </TkRow>
 
         <TkRow>
-          <TkCol lg={4} sm={4}>
+          <TkCol lg={6} sm={6}>
             <Controller
               name="startDate"
               control={control}
@@ -293,7 +301,7 @@ const WeeklyEvent = ({ checkBoxValue, toggleComponet, eventId, syncData }) => {
             ) : null}
           </TkCol>
 
-          <TkCol lg={4} sm={4}>
+          <TkCol lg={6} sm={6}>
             <Controller
               name="startTime"
               control={control}
@@ -303,7 +311,7 @@ const WeeklyEvent = ({ checkBoxValue, toggleComponet, eventId, syncData }) => {
                   labelName="Start Time"
                   id="startTime"
                   className="mb-3"
-                  requiredStarOnLabel={true}
+                  // requiredStarOnLabel={true}
                   options={timeOptions}
                   maxMenuHeight="130px"
                 />
@@ -314,7 +322,7 @@ const WeeklyEvent = ({ checkBoxValue, toggleComponet, eventId, syncData }) => {
             ) : null}
           </TkCol>
 
-          <TkCol lg={4} sm={4}>
+          <TkCol lg={6} sm={6}>
             <Controller
               name="days"
               control={control}
@@ -332,6 +340,19 @@ const WeeklyEvent = ({ checkBoxValue, toggleComponet, eventId, syncData }) => {
             />
             {errors.days?.message ? (
               <FormErrorText>{errors.days?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={6} sm={6}>
+            <TkInput 
+            {...register("startTimeInput")}
+            labelName="Start Time"
+            id="startTimeInput"
+            className="mb-3"
+            placeholder="Enter Start Time"
+/>
+            {errors.startTimeInput?.message ? (
+              <FormErrorText>{errors.startTimeInput?.message}</FormErrorText>
             ) : null}
           </TkCol>
         </TkRow>
