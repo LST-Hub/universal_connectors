@@ -1109,18 +1109,17 @@ const addGoogleSheetRecords = async (
   try {
     console.log("add record in google sheet");
 
-    const result = await getNetsuiteData(
+    const result = await getNetsuiteDataForAllFields(
       userId,
       mappedRecordId,
       credentials,
       mappedRecord
     );
 
-    // console.log("mappedFields", mappedFields)
     const titles = mappedFields.map((field) => field.destinationFieldValue);
-    // console.log(titles);
+    console.log("titles", titles);
 
-    // console.log("result.list", result.list);
+    console.log("result.list", result);
     const records = result.list.map((record) => {
       const values = record.values;
       const modifiedValues = {};
@@ -1138,6 +1137,7 @@ const addGoogleSheetRecords = async (
       return modifiedValues;
     });
     const recordValues = records.map((record) => Object.values(record));
+    // console.log("recordValues", recordValues)
 
     const recordList = {
       range: `${mappedRecord[0].sheetLabel}`,
@@ -1183,7 +1183,7 @@ const addGoogleSheetRecords = async (
       console.log("addGoogleSheetRecords error => ", error);
     }
   } catch (error) {
-    console.log("addGoogleSheetRecords error=> ", error);
+    console.log("addGoogleSheetRecords error=> ", error.response.data);
     return error;
   }
 };
@@ -1276,6 +1276,118 @@ const getNetsuiteData = async (
     return error;
   }
 };
+
+const getNetsuiteDataForAllFields = async(
+  userId,
+  mappedRecordId,
+  credentials,
+  mappedRecord
+) => {
+  try {
+    const mappedFields = await prisma.fields.findMany({
+      where: {
+        userId: Number(userId),
+        mappedRecordId: Number(mappedRecordId),
+      },
+      select: {
+        id: true,
+        sourceFieldValue: true,
+        destinationFieldValue: true,
+      },
+    });
+
+    const columns = [];
+    mappedFields.map((field) =>{
+      // field.sourceFieldValue
+      // console.log( field.sourceFieldValue)
+      const fieldId =  field.sourceFieldValue
+      if(fieldId.includes("__")){
+        const [parentId, childId] = fieldId.split("__")
+        columns.push(childId)
+      } else {
+        columns.push(fieldId)
+      }
+    });
+    console.log("columns", columns)
+    const data = {
+      resttype: "Search",
+      recordtype: mappedRecord[0].recordTypeValue,
+    //   filters: [
+    //     [
+    //         "mainline",
+    //         "is",
+    //         "F"
+    //     ], "AND", 
+    //     // [
+    //     //   "shippingline", "is", "F"
+    //     // ], "AND", 
+    //     ["taxline", "is", "F"], "AND",
+    //     ["cogs", "is", "F"]
+    // ],
+      columns: columns,
+    };
+    // console.log("data", data)
+
+    const authentication = {
+      account: credentials[0].accountId,
+      consumerKey: credentials[0].consumerKey,
+      consumerSecret: credentials[0].consumerSecretKey,
+      tokenId: credentials[0].accessToken,
+      tokenSecret: credentials[0].accessSecretToken,
+      timestamp: Math.floor(Date.now() / 1000).toString(),
+      nonce: getNonce(10),
+      http_method: "POST",
+      version: "1.0",
+      scriptDeploymentId: "1",
+      scriptId: "1529",
+      signatureMethod: "HMAC-SHA256",
+    };
+
+    const base_url =
+      "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+    const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+    const baseString = `${authentication.http_method}&${encodeURIComponent(
+      base_url
+    )}&${encodeURIComponent(concatenatedString)}`;
+    const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+    const signature = crypto
+      .createHmac("sha256", keys)
+      .update(baseString)
+      .digest("base64");
+    const oAuth_String = `OAuth realm="${
+      authentication.account
+    }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+      authentication.tokenId
+    }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+      authentication.timestamp
+    }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+      signature
+    )}"`;
+
+    const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+
+    return axios({
+      method: "POST",
+      url: url,
+      headers: {
+        Authorization: oAuth_String,
+        "Content-Type": "application/json",
+      },
+      data: data,
+    })
+      .then((res) => {
+        // console.log("res.data", res.data)
+        return res.data;
+      })
+      .catch((error) => {
+        console.log("getNetsuiteDataForAllFields error", error);
+        throw error;
+      });
+  } catch (error) {
+    console.log("getNetsuiteDataForAllFields error => ", error);
+    return error;
+  }
+}
 
 const appendFields = async (
   userId,

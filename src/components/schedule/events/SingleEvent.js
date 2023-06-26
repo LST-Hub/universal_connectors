@@ -15,11 +15,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import tkFetch from "@/utils/fetch";
 import { useRouter } from "next/router";
 import DeleteModal from "@/utils/DeleteModal";
+import TkInput from "@/globalComponents/TkInput";
 
 const schema = Yup.object({
   startDate: Yup.date().required("Start date is required"),
 
-  startTime: Yup.object().required("Start time is required"),
+  // startTime: Yup.object().required("Start time is required"),
 }).required();
 
 const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
@@ -116,6 +117,15 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
       data.noEndDate = true;
       setEndDateCheckbox(true);
     }
+
+    if(data.startTimeInput){
+      data.startTime = {
+        label: data.startTimeInput,
+        value: data.startTimeInput,
+      }
+    }
+
+    console.log("data", data)
 
     if (eventId) {
       console.log("update single event********");
@@ -239,7 +249,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
 
       <TkForm onSubmit={handleSubmit(onSubmit)}>
         <TkRow>
-          <TkCol lg={6} sm={6}>
+          <TkCol lg={4} sm={4}>
             <Controller
               name="startDate"
               control={control}
@@ -262,7 +272,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
             ) : null}
           </TkCol>
 
-          <TkCol lg={6} sm={6}>
+          <TkCol lg={4} sm={4}>
             <Controller
               name="startTime"
               control={control}
@@ -272,7 +282,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
                   labelName="Start Time"
                   id="startTime"
                   className="mb-3"
-                  requiredStarOnLabel={true}
+                  // requiredStarOnLabel={true}
                   options={timeOptions}
                   maxMenuHeight="130px"
                 />
@@ -280,6 +290,19 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData }) => {
             />
             {errors.startTime?.message ? (
               <FormErrorText>{errors.startTime?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={4} sm={4}>
+            <TkInput 
+            {...register("startTimeInput")}
+            labelName="Start Time"
+            id="startTimeInput"
+            className="mb-3"
+            placeholder="Enter Start Time"
+/>
+            {errors.startTimeInput?.message ? (
+              <FormErrorText>{errors.startTimeInput?.message}</FormErrorText>
             ) : null}
           </TkCol>
 
