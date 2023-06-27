@@ -1,6 +1,5 @@
 const prisma = require("../lib/prisma");
 const response = require("../lib/response");
-// const schedule = require("node-schedule");
 const crypto = require("crypto");
 const axios = require("axios");
 const CryptoJS = require("crypto-js");
@@ -1039,14 +1038,6 @@ const getLogs = async (req, res) => {
   }
 };
 
-// // ***
-// // const prisma = require("../lib/prisma");
-// // const response = require("../lib/response");
-// // const schedule = require("node-schedule");
-// // const crypto = require("crypto");
-// // const axios = require("axios");
-// // const cron = require("node-cron");
-
 const syncEventData = async (
   userId,
   eventId,
@@ -1214,11 +1205,6 @@ const scheduleSingleEvent = async(
     const year = dateObj.getFullYear();
     const month = dateObj.getMonth() + 1;
     const day = dateObj.getDate();
-    // const [hour, minutes] = startTimeValue.split(":");
-    // const minute = minutes.split(" ")[0];
-    // create variable to save am/pm
-    // const ampm = minutes.split(" ")[1];
-    // console.log("ampm", ampm)
 
     let hour, minute;
     console.log("startTimeValue", startTimeValue)
@@ -1230,7 +1216,6 @@ const scheduleSingleEvent = async(
     } else {
       [hour, minute] = time.split(":");
     }
-
 
     const repeat = repeatEveryDay ? "*" : day;
 
@@ -1297,9 +1282,6 @@ const scheduleWeeklyEvent = (
     const year = dateObj.getFullYear();
     const month = dateObj.getMonth() + 1;
     const day = dateObj.getDate();
-
-    // const [hour, minutes] = startTimeValue.split(":");
-    // const minute = minutes.split(" ")[0];
 
     let hour, minute;
     console.log("startTimeValue", startTimeValue)
@@ -1465,12 +1447,7 @@ const getAccessTokenByUserId = async (userId) => {
         method: "POST",
         url: url,
         headers: headers,
-        // data: data
       });
-      // const response = await axios.post(url, JSON.stringify(data), {
-      //     headers, timeout: 300000
-      // })
-      //   console.timeEnd("time");
 
       console.log(response.data.access_token);
       return response.data.access_token;
@@ -1534,7 +1511,6 @@ const netsuiteOperations = async (
 const getSheetsData = async (mappedRecord, userId, accessToken) => {
   try {
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}!A1:ZZ100000`;
-    // const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/A1:ZZ100000`;
     const headers = {
       Authorization: `Bearer ${accessToken}`,
     };
@@ -1551,7 +1527,6 @@ const getSheetsData = async (mappedRecord, userId, accessToken) => {
     }
   } catch (error) {
     console.log("getSheetsData error=>", error);
-
     throw error;
   }
 };
@@ -1660,8 +1635,6 @@ const addNetsuiteV1Api = async (
   console.log("add record in ns");
   try {
     const headerRow = values[0];
-    // const dataRows = values.slice(1);
-    // console.log("dataRows", dataRows)
     const sheetsData = await getSheetsDataByRange(
       userId,
       range,
@@ -1669,33 +1642,8 @@ const addNetsuiteV1Api = async (
       accessToken
     );
     const dataRows = sheetsData.values;
-    // console.log("dataRows", dataRows)
-
-    // const data = {
-    //   resttype: "Add",
-    //   recordtype: mappedRecord[0].recordTypeValue,
-    //   internalid: null,
-    // };
-
-    // const resultArray = [];
-
-    // dataRows.forEach((row) => {
-    //   const obj = {};
-    //   mappedFields.forEach((field) => {
-    //     const columnIndex = headerRow.indexOf(field.destinationFieldValue);
-    //     if (columnIndex !== -1) {
-    //       obj[field.sourceFieldValue] = row[columnIndex];
-    //     }
-    //   });
-
-    //   const result = { ...data, bodyfields: { ...obj } };
-    //   resultArray.push(result);
-    // });
-    // const recordFilelds = await recordField(credentials, mappedRecord);
-    // console.log("recordFilelds", recordFilelds)
 
     const resultArray = [];
-    // console.log("dataRows", dataRows)
 
     for (const dataRow of dataRows) {
       const record = {
@@ -1739,8 +1687,6 @@ const addNetsuiteV1Api = async (
         });
       }
     }
-
-    console.log("data to add", resultArray);
 
     const logs = [];
     let successCount = 0;
@@ -1819,150 +1765,11 @@ const addNetsuiteV1Api = async (
       }
     }
 
-    // const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
-    // if(successCount > 0){
-    //   logs.unshift({
-    //     userId: userId,
-    //     scheduleId: Number(id),
-    //     integrationId: integrationId,
-    //     mappedRecordId: mappedRecord[0].id,
-    //     recordType: mappedRecord[0].recordTypeLabel,
-    //     status: "Success",
-    //     message: summaryMessage,
-    //   });
-    // }
-
     // addLogs(logs);
-    // console.log("added record logs => ", logs);
-    // return logs;
   } catch (error) {
     console.log("addNetsuiteV1Api error => ", error);
     throw error;
   }
-
-  // console.log("add record in ns");
-  // try {
-  //   const headerRow = values[0];
-  //   const dataRows = values.slice(1);
-
-  //   const data = {
-  //     resttype: "Add",
-  //     recordtype: mappedRecord[0].recordTypeValue,
-  //     internalid: null,
-  //   };
-
-  //   const resultArray = [];
-
-  //   dataRows.forEach((row) => {
-  //     const obj = {};
-  //     mappedFields.forEach((field) => {
-  //       const columnIndex = headerRow.indexOf(field.destinationFieldValue);
-  //       if (columnIndex !== -1) {
-  //         obj[field.sourceFieldValue] = row[columnIndex];
-  //       }
-  //     });
-
-  //     const result = { ...data, bodyfields: { ...obj } };
-  //     resultArray.push(result);
-  //   });
-
-  //   const logs = [];
-  //   let successCount = 0;
-  //   let errorCount = 0;
-
-  //   for (let i = 0; i < resultArray.length; i++) {
-  //     const item = resultArray[i];
-  //     const authentication = {
-  //       account: credentials[0].accountId,
-  //       consumerKey: credentials[0].consumerKey,
-  //       consumerSecret: credentials[0].consumerSecretKey,
-  //       tokenId: credentials[0].accessToken,
-  //       tokenSecret: credentials[0].accessSecretToken,
-  //       timestamp: Math.floor(Date.now() / 1000).toString(),
-  //       nonce: getNonce(10),
-  //       http_method: "POST",
-  //       version: "1.0",
-  //       scriptDeploymentId: "1",
-  //       scriptId: "1529",
-  //       signatureMethod: "HMAC-SHA256",
-  //     };
-
-  //     const base_url =
-  //       "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
-  //     const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
-  //     const baseString = `${authentication.http_method}&${encodeURIComponent(
-  //       base_url
-  //     )}&${encodeURIComponent(concatenatedString)}`;
-  //     const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
-  //     const signature = crypto
-  //       .createHmac("sha256", keys)
-  //       .update(baseString)
-  //       .digest("base64");
-  //     const oAuth_String = `OAuth realm="${
-  //       authentication.account
-  //     }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
-  //       authentication.tokenId
-  //     }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
-  //       authentication.timestamp
-  //     }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
-  //       signature
-  //     )}"`;
-
-  //     const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
-
-  //     // try {
-  //     //   const res = await axios({
-  //     //     method: "POST",
-  //     //     url: url,
-  //     //     headers: {
-  //     //       Authorization: oAuth_String,
-  //     //       "Content-Type": "application/json",
-  //     //     },
-  //     //     data: item,
-  //     //   });
-
-  //     //   // console.log("output => ", res.data);
-
-  //     //   if (res.data.add_success) {
-  //     //     successCount++;
-  //     //   } else if (res.data.add_error) {
-  //     //     errorCount++;
-  //     //     logs.push({
-  //     //       userId: userId,
-  //     //       scheduleId: id,
-  //     //       integrationId: integrationId,
-  //     //       mappedRecordId: mappedRecord[0].id,
-  //     //       recordType: mappedRecord[0].recordTypeLabel,
-  //     //       status: "Error",
-  //     //       internalid: item.bodyfields.internalid,
-  //     //       message: res.data.add_error.message,
-  //     //     });
-  //     //   }
-  //     // } catch (error) {
-  //     //   console.log("addNetsuiteV1Api error", error);
-  //     // }
-  //   }
-
-  //   // const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
-  //   // if(successCount > 0){
-  //   //   logs.unshift({
-  //   //     userId: userId,
-  //   //     scheduleId: Number(id),
-  //   //     integrationId: integrationId,
-  //   //     mappedRecordId: mappedRecord[0].id,
-  //   //     recordType: mappedRecord[0].recordTypeLabel,
-  //   //     status: "Success",
-  //   //     message: summaryMessage,
-  //   //   });
-  //   // }
-
-  //   // addLogs(logs);
-  //   // console.log("added record logs => ", logs);
-  //   return logs;
-  // } catch (error) {
-  //   console.log("addNetsuiteV1Api error => ", error);
-  //   throw error;
-  // }
 };
 
 const updateNetsuiteV1Api = async (
@@ -1998,7 +1805,7 @@ const updateNetsuiteV1Api = async (
     );
 
     const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-    // console.log("sheetsValue", sheetsValue.data)
+    
     const sheetHeader = sheetsValue.data.values[0].indexOf(
       filterData[0].destinationFieldLabel
     );
@@ -2082,10 +1889,8 @@ const updateNetsuiteV1Api = async (
           console.log("output => ", res.data);
 
           if (res.data[0].update_success) {
-            console.log("res", res.data);
             updatedCount++;
           } else if (res.data[0].update_error) {
-            console.log("updation error", res.data);
             errorCount++;
             logs.push({
               userId: userId,
@@ -2119,7 +1924,6 @@ const updateNetsuiteV1Api = async (
     }
 
     addLogs(logs);
-    console.log("updated record logs => ", logs);
     return logs;
   } catch (error) {
     console.log("Please add filter to update the record");
@@ -2135,7 +1939,6 @@ const getSheetsDataByRange = async (
   accessToken
 ) => {
   try {
-    console.log(userId, range, mappedRecord[0].workBookValue, accessToken);
 
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}!${range}`;
     const headers = {
@@ -2148,7 +1951,6 @@ const getSheetsDataByRange = async (
       headers: headers,
     })
       .then((values) => {
-        console.log("values.data", values.data);
         return values.data;
       })
       .catch((error) => {
@@ -2194,20 +1996,19 @@ const deleteNetsuiteV1Api = async (
     );
 
     const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-    // console.log("sheetsValue", sheetsValue.data)
+   
     const sheetHeader = sheetsValue.data.values[0].indexOf(
       filterData[0].destinationFieldLabel
     );
     await Promise.all(
       sheetsData.values.map(async (row) => {
-        // console.log("****************row", row);
+       
         const fieldValue = row[sheetHeader];
         const filter = [
           filterData[0].sourceFieldValue,
           filterData[0].operator,
           fieldValue,
         ];
-        // console.log("^^^^^^^^^filter", filter);
 
         const deleteRecord = {
           resttype: "Delete",
@@ -2266,8 +2067,6 @@ const deleteNetsuiteV1Api = async (
             data: deleteRecord,
           });
 
-          // console.log("output =>", res);
-
           if (res.data[0].delete_success) {
             deleteCount++;
           } else if (res.data[0].delete_error) {
@@ -2302,8 +2101,7 @@ const deleteNetsuiteV1Api = async (
         message: summaryMessage,
       });
     }
-    addLogs(logs);
-    console.log("deleted record logs => ", logs);
+    // addLogs(logs);
   } catch (error) {
     console.log("Please add filter to delete record");
     console.log("deleteNetsuiteV1Api error => ", error);
@@ -2408,17 +2206,12 @@ const addGoogleSheetRecords = async (
     );
 
     const titles = mappedFields.map((field) => field.destinationFieldValue);
-    console.log("titles", titles);
 
-    console.log("result.list", result);
     const records = result.list.map((record) => {
       const values = record.values;
       const modifiedValues = {};
       for (const key in values) {
-        // console.log("values", values);
         if (Array.isArray(values[key])) {
-          // console.log(values[key].length > 0 ? "GT" : "LT")
-          // modifiedValues[key] = values[key][0].text;
           modifiedValues[key] =
             values[key].length > 0 ? values[key][0].text : "";
         } else {
@@ -2428,15 +2221,12 @@ const addGoogleSheetRecords = async (
       return modifiedValues;
     });
     const recordValues = records.map((record) => Object.values(record));
-    // console.log("recordValues", recordValues)
 
     const recordList = {
       range: `${mappedRecord[0].sheetLabel}`,
       majorDimension: "ROWS",
       values: [titles, ...recordValues],
     };
-
-    // console.log("recordList", recordList)
 
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}!A1:ZZ100000:clear`;
     const headers = {
@@ -2501,8 +2291,6 @@ const getNetsuiteDataForAllFields = async(
 
     const columns = [];
     mappedFields.map((field) =>{
-      // field.sourceFieldValue
-      // console.log( field.sourceFieldValue)
       const fieldId =  field.sourceFieldValue
       if(fieldId.includes("__")){
         const [parentId, childId] = fieldId.split("__")
@@ -2511,7 +2299,6 @@ const getNetsuiteDataForAllFields = async(
         columns.push(fieldId)
       }
     });
-    console.log("columns", columns)
     const data = {
       resttype: "Search",
       recordtype: mappedRecord[0].recordTypeValue,
@@ -2529,7 +2316,6 @@ const getNetsuiteDataForAllFields = async(
     // ],
       columns: columns,
     };
-    // console.log("data", data)
 
     const authentication = {
       account: credentials[0].accountId,
@@ -2579,7 +2365,6 @@ const getNetsuiteDataForAllFields = async(
       data: data,
     })
       .then((res) => {
-        // console.log("res.data", res.data)
         return res.data;
       })
       .catch((error) => {
@@ -2591,264 +2376,6 @@ const getNetsuiteDataForAllFields = async(
     return error;
   }
 }
-
-// const addGoogleSheetRecords = async (
-//   accessToken,
-//   mappedRecord,
-//   credentials,
-//   userId,
-//   mappedRecordId,
-//   integrationId,
-//   id,
-//   mappedFields
-// ) => {
-//   try {
-//     console.log("add record in google sheet");
-
-//     const result = await getNetsuiteData(
-//       userId,
-//       mappedRecordId,
-//       credentials,
-//       mappedRecord
-//     );
-
-//     // console.log("mappedFields", mappedFields)
-//     const titles = mappedFields.map((field) => field.destinationFieldValue);
-//     const mappedKeys = mappedFields.map((field) => field.sourceFieldValue);
-//     // console.log(titles);
-
-//     console.log("result", result);
-//     // const records = result.map((record) => {
-//     //   const values = record.bodyValues;
-//     //   const lineValues = record.lineValues;
-
-//     //   const recordValues = [];
-//     //   // *pushn only values
-//     //   // for (const key in values) {
-//     //   //   if (Array.isArray(values[key])) {
-//     //   //     values[key].length > 0
-//     //   //       ? recordValues.push(values[key][0].text)
-//     //   //       : recordValues.push("");
-//     //   //     // recordValues.push(values[key][0].text);
-//     //   //   } else {
-//     //   //     recordValues.push(values[key]);
-//     //   //   }
-//     //   // }
-//     //   // *push both
-//     //   for (const key in values) {
-//     //     if (Array.isArray(values[key])) {
-//     //       values[key].length > 0 ?
-//     //       recordValues.push({ [key]: values[key][0].text }) :
-//     //       recordValues.push({ [key]: "" });
-//     //     } else {
-//     //       recordValues.push({ [key]: values[key] });
-//     //     }
-//     //   }
-
-//     //   // *push only values lineValues
-//     //   // console.log("lineValues", lineValues)
-//     //   // for (const key in lineValues) {
-//     //   //   if (Array.isArray(lineValues[key])) {
-//     //   //     // console.log("array is", lineValues[key])
-//     //   //     if (lineValues[key].length > 0) {
-//     //   //       lineValues[key].forEach((item) => {
-//     //   //         Object.entries(item).forEach(([keys, values]) => {
-//     //   //           // console.log(key, value);
-//     //   //           if (Array.isArray(values)) {
-//     //   //             // console.log("val", values[0].text)
-//     //   //             recordValues.push(values[0].text);
-//     //   //           } else {
-//     //   //             // console.log("val2", values)
-//     //   //             recordValues.push(values);
-//     //   //           }
-//     //   //         });
-//     //   //       });
-//     //   //     } else {
-//     //   //       // console.log("val3", lineValues[key])
-//     //   //       recordValues.push("");
-//     //   //     }
-//     //   //   }
-//     //   // }
-
-//     //   // *push both for lineValues
-//     //   for (const key in lineValues) {
-//     //     console.log("lineValues", lineValues)
-//     //     if (Array.isArray(lineValues[key])) {
-//     //       if (lineValues[key].length > 0) {
-//     //         lineValues[key].forEach((item) => {
-//     //           Object.entries(item).forEach(([itemKey, itemValue]) => {
-//     //             if (Array.isArray(itemValue)) {
-//     //               // console.log("itemValue", itemKey, itemValue[0].text)
-//     //               itemValue.length > 0 ?
-//     //               recordValues.push({ [itemKey]: itemValue[0].text }) :
-//     //               recordValues.push({[itemKey]: ""});
-//     //             } else {
-//     //               recordValues.push({ [itemKey]: itemValue });
-//     //             }
-//     //           });
-//     //         });
-//     //       } else {
-//     //         // console.log("lineValues[key]", lineValues[key])
-//     //         recordValues.push({ [key]: "" });
-//     //       }
-//     //     }
-//     //   }
-
-//     //   //## // console.log("lineValues", lineValues)
-//     //   // for (const key in lineValues) {
-//     //   //   if (Array.isArray(lineValues[key])) {
-//     //   //     console.log("line array", lineValues)
-
-//     //   //     for (const lineItem of lineValues[key]) {
-//     //   //       // lineItem[key].length > 0 ? recordValues.push(lineItem[key][0].text) : recordValues.push("");
-//     //   //       // recordValues.push(lineItem[key]);
-//     //   //       console.log("lineItem", lineItem)
-//     //   //     }
-//     //   //   }
-//     //   //  // ###// else {
-//     //   //   //   // recordValues.push(lineValues[key]);
-//     //   //   //   console.log("line", lineValues)
-
-//     //   //   // }
-//     //   // }
-
-//     //   return recordValues;
-//     // });
-
-//     const records = result.map((record) => {
-//       const values = record.bodyValues;
-//       const lineValues = record.lineValues;
-
-//       const recordValues = {};
-
-//       // Extract values from bodyValues
-//       for (const key in values) {
-//         if (Array.isArray(values[key])) {
-//           recordValues[key] = values[key].length > 0 ? values[key][0].text : "";
-//         } else {
-//           recordValues[key] = values[key];
-//         }
-//       }
-
-//       // Extract values from lineValues
-//       for (const key in lineValues) {
-//         if (Array.isArray(lineValues[key])) {
-//           if (lineValues[key].length > 0) {
-//             recordValues[key] = lineValues[key].map((item) => {
-//               const itemValues = {};
-//               for (const itemKey in item) {
-//                 if (Array.isArray(item[itemKey])) {
-//                   itemValues[itemKey] =
-//                     item[itemKey].length > 0 ? item[itemKey][0].text : "";
-//                 } else {
-//                   itemValues[itemKey] = item[itemKey];
-//                 }
-//               }
-//               return itemValues;
-//             });
-//           } else {
-//             recordValues[key] = [];
-//           }
-//         }
-//       }
-
-//       return recordValues;
-//     });
-
-//     console.log("records ==> ", records);
-//     console.log("mappedKeys", mappedKeys);
-
-//     // const sheetValues = [];
-
-//     // records.forEach((record) => {
-//     //   Object.entries(record).forEach(([key, value]) => {
-//     //     if (Array.isArray(value)) {
-//     //       // sheetValues.push(value);
-//     //       if(value.length > 0){
-//     //         console.log("value array", value);
-//     //       } else {
-//     //         sheetValues.push("");
-//     //       }
-//     //     } else {
-//     //       // console.log("value", value)
-
-//     //       sheetValues.push(value);
-//     //     }
-//     //   });
-//     // });
-// const resultArray = []
-//     records.forEach((record) => {
-//       const sheetValues = []
-//       mappedKeys.forEach((key) => {
-//         if (key.includes("__")) {
-//           const [mainKey, subKey] = key.split("__");
-
-//           if (
-//             record[mainKey] &&
-//             record[mainKey][0] &&
-//             record[mainKey][0][subKey]
-//           ) {
-//             sheetValues.push(record[mainKey][0][subKey]);
-//           } else {
-//             sheetValues.push("");
-//           }
-//         } else {
-//           sheetValues.push(record[key] || "");
-//         }
-//       });
-//       resultArray.push(sheetValues)
-//     });
-
-//     console.log("sheetValues", resultArray);
-
-//     const recordList = {
-//       range: `${mappedRecord[0].sheetLabel}`,
-//       majorDimension: "ROWS",
-//     values: [titles, ...resultArray],
-//     };
-
-//     // console.log("recordList", recordList)
-
-//     const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}/values/${mappedRecord[0].sheetLabel}!A1:ZZ100000:clear`;
-//     const headers = {
-//       "Content-Type": "application/json",
-//       Authorization: `Bearer ${accessToken}`,
-//     };
-//     const bodyData = {
-//       spreadsheetId: mappedRecord[0].workBookValue,
-//       range: `${mappedRecord[0].sheetLabel}!A2:ZZ100000`,
-//     };
-
-//     try {
-//       await axios({
-//         method: "POST",
-//         url: url,
-//         headers: headers,
-//         body: bodyData,
-//       })
-//         .then((res) => {
-//           appendFields(
-//             userId,
-//             mappedRecordId,
-//             integrationId,
-//             mappedRecord,
-//             accessToken,
-//             recordList,
-//             resultArray.length,
-//             id
-//           );
-//         })
-//         .catch((error) => {
-//           console.log("addGoogleSheetRecords error", error);
-//         });
-//     } catch (error) {
-//       console.log("addGoogleSheetRecords error => ", error);
-//     }
-//   } catch (error) {
-//     console.log("addGoogleSheetRecords error=> ", error);
-//     return error;
-//   }
-// };
 
 const getNetsuiteData = async (
   userId,
@@ -2870,14 +2397,11 @@ const getNetsuiteData = async (
     });
 
     const columns = mappedFields.map((field) => field.sourceFieldValue);
-    // console.log("columns", columns)
     const data = {
       resttype: "Search",
       recordtype: mappedRecord[0].recordTypeValue,
-      // columns: columns,
       columns: ["internalid"],
     };
-    // console.log("data", data)
 
     const authentication = {
       account: credentials[0].accountId,
@@ -2927,20 +2451,16 @@ const getNetsuiteData = async (
       data: data,
     })
       .then(async (res) => {
-        // console.log("res.data", res.data);
         const internalIds = res.data.list.map(
           (item) => item.values.internalid[0].text
         );
         const uniqueIds = [...new Set(internalIds)];
-        console.log(uniqueIds);
         const fieldValues = await getCustomeRecord(
           credentials,
           mappedRecord[0].recordTypeValue,
           uniqueIds,
           columns
         );
-        console.log("fieldValues", fieldValues);
-        // return res.data;
         return fieldValues;
       })
       .catch((error) => {
@@ -2970,25 +2490,6 @@ const getCustomeRecord = async (
         linefields: [{}],
       };
 
-      console.log("columns", columns);
-      // columns.forEach((col) => {
-      //   if (col.includes("__")) {
-      //     const [parentField, childField] = col.split("__");
-
-      //     const lineField = record.linefields.find((lineField) => lineField[parentField]);
-
-      //     if (lineField) {
-      //       lineField[parentField].push(childField);
-      //     } else {
-      //       record.linefields.push({ [parentField]: [childField] });
-      //     }
-      //   } else {
-      //     record.bodyfields.push(col);
-      //   }
-      // });
-
-      // console.log("record", record);
-
       columns.forEach((col) => {
         if (col.includes("__")) {
           const [parentField, childField] = col.split("__");
@@ -3004,8 +2505,6 @@ const getCustomeRecord = async (
           record.bodyfields.push(col);
         }
       });
-
-      console.log("record", record);
 
       const authentication = {
         account: credentials[0].accountId,
@@ -3067,7 +2566,6 @@ const getCustomeRecord = async (
       }
     })
   );
-  // console.log("***result", result)
   return result;
 };
 
@@ -3259,13 +2757,11 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
   const recordValues = []
 
  result.map((record, index) => {
-   console.log("***record.list", record.list.length)
    if(record.list.length > 0) {
       recordCount++
       const values = record.list[0].values;
       const modifiedValues = {};
 
-      console.log("values", values)
       for (const key in values) {
         if (Array.isArray(values[key])) {
           modifiedValues[key] =
@@ -3274,8 +2770,6 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
           modifiedValues[key] = values[key];
         }
       }
-      // return modifiedValues;
-      // records.push(modifiedValues)
       recordValues.push(Object.values(modifiedValues));
 
     } else {
@@ -3291,13 +2785,11 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
         message: summaryMessage,
         });
 
-        // console.log("not found", existingRecords[index])
         recordValues.push(existingRecords[index])
     }
   });
 
     if(recordCount > 0){
-      // const recordValues = records.map((record) => Object.values(record));
 
   const headers = {
     "Content-Type": "application/json",
@@ -3311,8 +2803,6 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
     majorDimension: "ROWS",
     values: recordValues
   }
-
-  console.log("recordValues", recordValues)
 
   try {
     const request = await axios({
@@ -3340,7 +2830,6 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
     return error;
   }
     }
-      
 
   // addLogs(logs);
   console.log("updated GS record logs =>", logs);
@@ -3459,8 +2948,7 @@ const base_url =
             deleteFields.push(value)  
           }
        })
-      }
-      // return res.data;     
+      }  
     } catch (error) {
       console.log("deleteGoogleSheetRecord error", error.response.data);
       throw error;
@@ -3485,8 +2973,6 @@ const deleterecord = async(userId, mappedRecord, accessToken, deleteFields, fiel
       sheetsValue.data.values.map(async(row, i) => {
 
         if(row[fieldIndex] === field){
-          console.log("*************delete row", row)
-          console.log("delete row index", i, ":", i+1)
 
           const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
 
@@ -3657,14 +3143,6 @@ const getScheduleEvent = async (
     return error;
   }
 };
-
-// // module.exports = {
-// //   syncEvent,
-// //   getAccessTokenByUserId,
-// //   //   scheduleRealTimeEvent,
-// //   //   scheduleSingleEvent,
-// //   //   scheduleWeeklyEvent,
-// // };
 
 module.exports = {
   addRealTimeEvent,
