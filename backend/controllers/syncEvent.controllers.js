@@ -5,12 +5,92 @@ const crypto = require("crypto");
 const axios = require("axios");
 const cron = require("node-cron");
 
+// const syncEvent = async (req, res) => {
+//   try {
+//     const eventIds = req.body;
+// const result = []
+
+//     await Promise.all(
+//     eventIds.map(async (ids) => {
+//       console.log("event id", ids);
+//       const scheduleData = await prisma.schedule.findMany({
+//         where: {
+//           userId: Number(ids.userId),
+//           id: Number(ids.id),
+//           integrationId: Number(ids.integrationId),
+//           mappedRecordId: Number(ids.mappedRecordId),
+//         },
+//         select: {
+//           id: true,
+//           userId: true,
+//           integrationId: true,
+//           mappedRecordId: true,
+//           eventType: true,
+//           startDate: true,
+//           endDate: true,
+//           startTimeLabel: true,
+//           startTimeValue: true,
+//           day: true,
+//           noEndDate: true,
+//           repeatEveryDay: true,
+//           operationType: true,
+//           source: true,
+//           range: true,
+//         },
+//       });
+//       console.log("scheduleData", scheduleData);
+
+//       const accessToken = await getAccessTokenByUserId(ids.userId);
+//       // console.log("accessToken", accessToken);
+//       const res = await syncData(
+//         ids.userId,
+//         ids.mappedRecordId,
+//         ids.integrationId,
+//         scheduleData[0].operationType,
+//         scheduleData[0].source,
+//         scheduleData[0].range,
+//         ids.id,
+//         accessToken
+//       );
+//       result.push(res);
+//       console.log("final res", res)
+//     })
+//     );
+
+//     response({
+//       res,
+//       success: true,
+//       status_code: 200,
+//       data: result,
+//       message: "success",
+//     });
+//     return;
+
+//     // response({
+//     //   res,
+//     //   success: true,
+//     //   status_code: 200,
+//     //   message: "success",
+//     // });
+//     // return;
+//   } catch (error) {
+//     console.log("syncEvent error", error);
+//     response({
+//       res,
+//       success: false,
+//       status_code: 400,
+//       message: "Error in sync event",
+//     });
+//     throw error;
+//   }
+// };
+
 const syncEvent = async (req, res) => {
   try {
     const eventIds = req.body;
+const result = []
 
-    // await Promise.all(
-    eventIds.map(async (ids) => {
+    const promises = eventIds.map(async (ids) => {
       console.log("event id", ids);
       const scheduleData = await prisma.schedule.findMany({
         where: {
@@ -41,7 +121,7 @@ const syncEvent = async (req, res) => {
 
       const accessToken = await getAccessTokenByUserId(ids.userId);
       // console.log("accessToken", accessToken);
-      const res = await syncData(
+      const resultItem = await syncData(
         ids.userId,
         ids.mappedRecordId,
         ids.integrationId,
@@ -51,17 +131,21 @@ const syncEvent = async (req, res) => {
         ids.id,
         accessToken
       );
-      // result.push(res);
-    });
-    // );
+      result.push(resultItem);
+    })
 
-    response({
-      res,
-      success: true,
-      status_code: 200,
-      message: "success",
-    });
-    return;
+    await Promise.all(promises);
+    console.log("final result", result)
+    // const allPromisesResolved = result.every((resultItem) => resultItem.success);
+
+    // response({
+    //   res,
+    //   success: allPromisesResolved,
+    //   status_code: 200,
+    //   data: result,
+    //   message: allPromisesResolved ? "success" : "Some promises failed",
+    // });
+    // return;
   } catch (error) {
     console.log("syncEvent error", error);
     response({
@@ -138,7 +222,7 @@ const syncData = async (
           return nsResult;
 
         case "GoogleSheet":
-          const gsResult = googleSheetsOperations(
+          const gsResult = await googleSheetsOperations(
             userId,
             mappedRecordId,
             integrationId,
@@ -149,6 +233,7 @@ const syncData = async (
             id,
             range
           );
+          // console.log("gsResult", gsResult)
           return gsResult;
 
         default:
@@ -200,12 +285,12 @@ const getAccessTokenByUserId = async (userId) => {
     } catch (error) {
       console.log("getAccessTokenByUserId error", error);
       // ***invalid_grant
-      //   throw error;
+        return error;
     }
   } catch (error) {
     console.log("getAccessTokenByUserId error=>", error);
     // ***invalid_grant
-    // throw error;
+    return error;
   }
 };
 
@@ -221,12 +306,12 @@ const netsuiteOperations = async (
   accessToken
 ) => {
   try {
-    const sheetsValue = getSheetsData(mappedRecord, userId, accessToken);
-    sheetsValue
-      .then((values) => {
-        const result = getMappedFields(
+    const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+    // sheetsValue
+    //   .then(async (values) => {
+        const result = await getMappedFields(
           credentials,
-          values.data.values,
+          sheetsValue.data.values,
           mappedRecord,
           userId,
           operationType,
@@ -235,20 +320,21 @@ const netsuiteOperations = async (
           id,
           accessToken
         );
+        return result;
 
-        result
-          .then((data) => {
-            return data;
-          })
-          .catch((error) => {
-            console.log("netsuiteOperations error", error);
-            return error;
-          });
-      })
-      .catch((error) => {
-        console.log("netsuiteOperations error=>", error.data);
-        return error;
-      });
+        // result
+        //   .then((data) => {
+        //     return data;
+        //   })
+        //   .catch((error) => {
+        //     console.log("netsuiteOperations error", error);
+        //     return error;
+        //   });
+      // })
+      // .catch((error) => {
+      //   console.log("netsuiteOperations error=>", error.data);
+      //   return error;
+      // });
   } catch (error) {
     console.log("netsuiteOperations error==>", error);
     return error;
@@ -314,7 +400,9 @@ const getMappedFields = async (
             mappedFields,
             userId,
             integrationId,
-            id
+            id,
+            range,
+            accessToken,
           );
           return result;
 
@@ -375,12 +463,23 @@ const addNetsuiteV1Api = async (
   mappedFields,
   userId,
   integrationId,
-  id
+  id,
+  range,
+  accessToken,
 ) => {
   console.log("add record in ns");
   try {
     const headerRow = values[0];
-    const dataRows = values.slice(1);
+    // const dataRows = values.slice(1);
+    const sheetsData = await getSheetsDataByRange(
+      userId,
+      range,
+      mappedRecord,
+      accessToken
+    );
+    const dataRows = sheetsData.values;
+    console.log("dataRows", dataRows)
+
 
     // const data = {
     //   resttype: "Add",
@@ -530,8 +629,8 @@ const addNetsuiteV1Api = async (
       }
     }
 
-    // const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
-    // if(successCount > 0){
+    const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
+    if(successCount > 0){
     //   logs.unshift({
     //     userId: userId,
     //     scheduleId: Number(id),
@@ -541,14 +640,27 @@ const addNetsuiteV1Api = async (
     //     status: "Success",
     //     message: summaryMessage,
     //   });
-    // }
+
+    const response = {
+      success: true,
+      data: {
+        successCount,
+        errorCount,
+        logs,
+      },
+    };
+    return response;
+    }
 
     // addLogs(logs);
     // console.log("added record logs => ", logs);
     // return logs;
   } catch (error) {
     console.log("addNetsuiteV1Api error => ", error);
-    throw error;
+    return {
+      success: false,
+      error: "error"
+    }
   }
 
   // console.log("add record in ns");
@@ -827,15 +939,25 @@ const updateNetsuiteV1Api = async (
         status: "Success",
         message: summaryMessage,
       });
+
+      const response = {
+        success: true,
+        data: {
+          updatedCount,
+          logs,
+        },
+      };
+      return response;
     }
 
-    addLogs(logs);
-    console.log("updated record logs => ", logs);
-    return logs;
+    // addLogs(logs);
   } catch (error) {
     console.log("Please add filter to update the record");
     console.log("updateNetsuiteV1Api error => ", error);
-    return error;
+    return {
+      success: false,
+      error: "error"
+    }
   }
 };
 
@@ -1012,13 +1134,24 @@ const deleteNetsuiteV1Api = async (
         status: "Success",
         message: summaryMessage,
       });
+
+      const response = {
+        success: true,
+        data: {
+          deleteCount,
+          logs,
+        },
+      };
+      return response;
     }
-    addLogs(logs);
-    console.log("deleted record logs => ", logs);
+    // addLogs(logs);
   } catch (error) {
     console.log("Please add filter to delete record");
     console.log("deleteNetsuiteV1Api error => ", error);
-    return error;
+    return {
+      success: false,
+      error: "error"
+    }
   }
 };
 
@@ -1049,7 +1182,7 @@ const googleSheetsOperations = async (
     if (mappedFields.length > 0) {
       switch (operationType) {
         case "add":
-          const addRecordResult = addGoogleSheetRecords(
+          const addRecordResult = await addGoogleSheetRecords(
             accessToken,
             mappedRecord,
             credentials,
@@ -1059,10 +1192,11 @@ const googleSheetsOperations = async (
             id,
             mappedFields
           );
+          // console.log("addRecordResult", addRecordResult)
           return addRecordResult;
 
         case "update":
-          const updateRecordResult = updateGoogleSheetRecord(
+          const updateRecordResult = await updateGoogleSheetRecord(
             accessToken,
             mappedRecord,
             credentials,
@@ -1076,7 +1210,7 @@ const googleSheetsOperations = async (
           return updateRecordResult;
 
         case "delete":
-          const deleteRecordResult = deleteGoogleSheetRecord(
+          const deleteRecordResult = await deleteGoogleSheetRecord(
             accessToken,
             mappedRecord,
             credentials,
@@ -1119,9 +1253,9 @@ const addGoogleSheetRecords = async (
     );
 
     const titles = mappedFields.map((field) => field.destinationFieldValue);
-    console.log("titles", titles);
+    // console.log("titles", titles);
 
-    console.log("result.list", result);
+    // console.log("result.list", result);
     const records = result.list.map((record) => {
       const values = record.values;
       const modifiedValues = {};
@@ -1160,14 +1294,14 @@ const addGoogleSheetRecords = async (
     };
 
     try {
-      await axios({
+      const response = await axios({
         method: "POST",
         url: url,
         headers: headers,
         body: bodyData,
-      })
-        .then((res) => {
-          appendFields(
+      });
+
+      const appendFieldsResult = await appendFields(
             userId,
             mappedRecordId,
             integrationId,
@@ -1177,10 +1311,25 @@ const addGoogleSheetRecords = async (
             recordValues.length,
             id
           );
-        })
-        .catch((error) => {
-          console.log("addGoogleSheetRecords error", error.response.data);
-        });
+
+          // console.log("appendFieldsResult", appendFieldsResult)
+          return appendFieldsResult;
+
+        // .then(async(res) => {
+        //   const appendFieldsResult = await appendFields(
+        //     userId,
+        //     mappedRecordId,
+        //     integrationId,
+        //     mappedRecord,
+        //     accessToken,
+        //     recordList,
+        //     recordValues.length,
+        //     id
+        //   );
+        // })
+        // .catch((error) => {
+        //   console.log("addGoogleSheetRecords error", error.response.data);
+        // });
     } catch (error) {
       console.log("addGoogleSheetRecords error => ", error);
     }
@@ -1310,7 +1459,7 @@ const getNetsuiteDataForAllFields = async(
         columns.push(fieldId)
       }
     });
-    console.log("columns", columns)
+    // console.log("columns", columns)
     const data = {
       resttype: "Search",
       recordtype: mappedRecord[0].recordTypeValue,
@@ -1419,7 +1568,8 @@ const appendFields = async (
         headers: headers,
         data: recordList,
       });
-      console.log("request", request.data)
+      // console.log("request", request.data)
+      // return request.data
 
       const summaryMessage = `Successfully added ${request.data.updates.updatedRows - 1} records in Google Sheet out of ${count}`;
       if (count > 0) {
@@ -1432,14 +1582,24 @@ const appendFields = async (
           status: "Success",
           message: summaryMessage,
         });
+
+        const response = {
+          success: true,
+          data: request.data,
+        };
+        return response;
       }
+
+      // addLogs(logs);
     } catch (error) {
       console.log("addGoogleSheetRecords error", error.response.data);
-      return error;
+      return {
+        success: false,
+        error: "error"
+      }
     }
 
-    // addLogs(logs);
-    console.log("added GS record logs =>", logs);
+    // console.log("added GS record logs =>", logs);
   } catch (error) {
     console.log("appendFields error => ", error);
   }
@@ -1562,11 +1722,15 @@ const base_url =
   })
     );
 
-    addFields(accessToken, mappedRecord, range, results, userId, id, integrationId, mappedRecordId, existingRecords)
+    const addFieldsResult = await addFields(accessToken, mappedRecord, range, results, userId, id, integrationId, mappedRecordId, existingRecords);
 
+    return addFieldsResult;
   } catch (error) {
     console.log("updateGoogleSheetRecords error=> ", error);
-    return error;
+    return {
+      success: false,
+      error: error,
+    };
   }
 };
 
@@ -1577,13 +1741,13 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
   const recordValues = []
 
  result.map((record, index) => {
-   console.log("***record.list", record.list.length)
+  //  console.log("***record.list", record.list.length)
    if(record.list.length > 0) {
       recordCount++
       const values = record.list[0].values;
       const modifiedValues = {};
 
-      console.log("values", values)
+      // console.log("values", values)
       for (const key in values) {
         if (Array.isArray(values[key])) {
           modifiedValues[key] =
@@ -1630,7 +1794,7 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
     values: recordValues
   }
 
-  console.log("recordValues", recordValues)
+  // console.log("recordValues", recordValues)
 
   try {
     const request = await axios({
@@ -1639,7 +1803,7 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
       headers: headers,
       data: recordList,
     });
-    console.log("request", request.data)
+    // console.log("request", request.data)
 
     const summaryMessage = `Successfully updated ${request.data.updatedRows} records in Google Sheet out of ${recordCount}`;
       if (recordCount > 0) {
@@ -1652,16 +1816,27 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
           status: "Success",
           message: summaryMessage,
         });
+
+        const response = {
+          success: true,
+          data: request.data,
+        };
+        return response;
       }
+
+      // addLogs(logs);
   } catch (error) {
     console.log("updateGoogleSheetRecords error", error);
-    return error;
+    return {
+      success: false,
+      error: error,
+    };
   }
     }
-      
-
-  // addLogs(logs);
-  console.log("updated GS record logs =>", logs);
+    return {
+      success: false,
+      message: "No records found",
+    };
 }
 
 const deleteGoogleSheetRecord = async (
@@ -1704,10 +1879,6 @@ columns.push(field.sourceFieldValue)
     const fieldIndex = sheetsValue.data.values[0].indexOf(
       filterData[0].destinationFieldLabel
     );
-
-    const sheetRange = range.split(":")
-    const [sheetCoordinatesStartChar, sheetCoordinatesStartNum] = sheetRange[0].split("")
-    const [sheetCoordinatesEndChar, sheetCoordinatesEndNum] = sheetRange[1].split("")
 
     const deleteFields = []
     const results = await Promise.all(
@@ -1789,7 +1960,8 @@ const base_url =
     }
   })
   );
-  const deleteRecordResponse = deleterecord(userId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition)
+  const deleteRecordResponse = await deleterecord(userId, id, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition);
+  return deleteRecordResponse;
 
   } catch (error) {
     console.log("deleteGoogleSheetRecord error=> ", error.response.data);
@@ -1797,79 +1969,123 @@ const base_url =
   }
 };
 
-const deleterecord = async(userId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition) => {
+// const deleterecord = async(userId, id, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition) => {
+//   try {
+//     const logs = [];
+//   let deleteCount = 0;
+//   let count = 0;
+
+//     let sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+
+//     deleteFields.map(async(field) => {
+//       const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+//       sheetsValue.data.values.map(async(row, i) => {
+
+//         if(row[fieldIndex] === field){
+//           count++
+//           console.log("*************delete row", row)
+//           console.log("delete row index", i, ":", i+1)
+
+//           const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
+
+//           const headers = {
+//             "Content-Type": "application/json",
+//             Authorization: `Bearer ${accessToken}`,
+//           };
+
+//              const data = {
+//                 requests: [
+//                 {
+//                     deleteDimension: {
+//                       range: {
+//                         sheetId: mappedRecord[0].sheetValue,
+//                         dimension: "ROWS",
+//                         startIndex: i,
+//                         endIndex: i + 1,
+//                       },
+//                     },
+//                   },
+//                 ],
+//               };
+
+//               try {
+//                         const res = await axios({
+//                         method: "POST",
+//                         url: url,
+//                         headers: headers,
+//                         data: data,
+//                       });
+                  
+//                       console.log("output => ", res.data);
+//                       deleteCount++
+//                   } catch (error) {
+//                       console.log("deleterecord error", error);
+//                   }
+//         }
+//       })
+//     })
+
+//     console.log(deleteCount)
+//     const summaryMessage = `Successfully deleted ${deleteCount} records from Google Sheet out of ${count}`;
+//     if(deleteCount > 0){
+//       logs.push({
+//         userId: userId,
+//         scheduleId: Number(id),
+//         integrationId: integrationId,
+//         mappedRecordId: mappedRecordId,
+//         recordType: mappedRecord[0].recordTypeLabel,
+//         status: "Success",
+//         message: summaryMessage,
+//       });
+
+//       const response = {
+//         success: true,
+//         data: {
+//           deleteCount,
+//           logs,
+//         },
+//       };
+//       console.log("response", response)
+//       return response;
+//     }
+
+//   } catch (error) {
+//     console.log("deleterecord error =>", error)
+//     return {
+//       success: false,
+//       error: "error"
+//     }
+//   }
+// }
+
+const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition) => {
   try {
+    const logs = [];
+    let deleteCount = 0;
+    let count = 0;
 
     let sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
 
-    // **
-    // deleteFields.map(async(field) => {
-    //   const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-    //   sheetsValue.data.values.map(async(row, i) => {
-    //     // console.log("row", row)
-    //     if(row[fieldIndex] === field){
-    //       console.log("delete row", row)
-    //       console.log("delete row index", i, ":", i+1)
+    await Promise.all(
+      deleteFields.map(async (field) => {
+        const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+        await Promise.all(
+          sheetsValue.data.values.map(async (row, i) => {
+            if (row[fieldIndex] === field) {
+              count++;
+              console.log("*************delete row", row);
+              console.log("delete row index", i, ":", i + 1);
 
-    //       const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
+              const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
 
-    //       const headers = {
-    //         "Content-Type": "application/json",
-    //         Authorization: `Bearer ${accessToken}`,
-    //       };
+              const headers = {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              };
 
-    //          const data = {
-    //             requests: [
-    //             {
-    //                 deleteDimension: {
-    //                   range: {
-    //                     sheetId: mappedRecord[0].sheetValue,
-    //                     dimension: "ROWS",
-    //                     startIndex: i,
-    //                     endIndex: i + 1,
-    //                   },
-    //                 },
-    //               },
-    //             ],
-    //           };
-
-
-    //           // try {
-    //           //           const res = await axios({
-    //           //           method: "POST",
-    //           //           url: url,
-    //           //           headers: headers,
-    //           //           data: data,
-    //           //         });
-                  
-    //           //         console.log("output => ", res.data);
-    //           //     } catch (error) {
-    //           //         console.log("deleterecord error", error);
-    //           //     }
-    //     }
-
-    //     // sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-    //   })
-    // })
-
-    deleteFields.map(async(field) => {
-      const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-      sheetsValue.data.values.map(async(row, i) => {
-
-        if(row[fieldIndex] === field){
-          console.log("*************delete row", row)
-          console.log("delete row index", i, ":", i+1)
-
-          const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
-
-          const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          };
-
-             const data = {
+              const data = {
                 requests: [
-                {
+                  {
                     deleteDimension: {
                       range: {
                         sheetId: mappedRecord[0].sheetValue,
@@ -1882,27 +2098,56 @@ const deleterecord = async(userId, mappedRecord, accessToken, deleteFields, fiel
                 ],
               };
 
-
               try {
-                        const res = await axios({
-                        method: "POST",
-                        url: url,
-                        headers: headers,
-                        data: data,
-                      });
-                  
-                      console.log("output => ", res.data);
-                  } catch (error) {
-                      console.log("deleterecord error", error);
-                  }
-        }
-      })
-    })
+                const res = await axios({
+                  method: "POST",
+                  url: url,
+                  headers: headers,
+                  data: data,
+                });
 
+                console.log("output => ", res.data);
+                deleteCount++;
+              } catch (error) {
+                console.log("deleterecord error", error);
+              }
+            }
+          })
+        );
+      })
+    );
+
+    console.log(deleteCount), deleteCount;
+    const summaryMessage = `Successfully deleted ${deleteCount} records from Google Sheet out of ${count}`;
+    if (deleteCount > 0) {
+      logs.push({
+        userId: userId,
+        scheduleId: Number(id),
+        integrationId: integrationId,
+        mappedRecordId: mappedRecordId,
+        recordType: mappedRecord[0].recordTypeLabel,
+        status: "Success",
+        message: summaryMessage,
+      });
+
+      const response = {
+        success: true,
+        data: {
+          deleteCount,
+          logs,
+        },
+      };
+      return response;
+    }
   } catch (error) {
-    console.log("deleterecord error =>", error)
+    console.log("deleterecord error =>", error);
+    return {
+      success: false,
+      error: "error",
+    };
   }
-}
+};
+
 
 const recordField = async (credentials, mappedRecord) => {
   try {

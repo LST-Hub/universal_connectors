@@ -181,7 +181,7 @@ const ScheduleTable = () => {
   const onClickSync = () => {
     syncEvent.mutate(selectedRowId, {
       onSuccess: (data) => {
-        console.log("data", data);
+        console.log("syncEvent result ==>", data);
       },
     });
   };

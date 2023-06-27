@@ -1082,20 +1082,20 @@ const syncEventData = async (
     console.log("scheduleData", scheduleData);
 
     switch (scheduleData[0].eventType) {
-      case "Realtime":
-        scheduleRealTimeEvent(
-          userId,
-          eventId,
-          integrationId,
-          mappedRecordId,
-          scheduleData[0].startDate,
-          scheduleData[0].endDate,
-          scheduleData[0].noEndDate,
-          scheduleData[0].operationType,
-          scheduleData[0].source,
-          scheduleData[0].range
-        );
-        break;
+      // case "Realtime":
+      //   scheduleRealTimeEvent(
+      //     userId,
+      //     eventId,
+      //     integrationId,
+      //     mappedRecordId,
+      //     scheduleData[0].startDate,
+      //     scheduleData[0].endDate,
+      //     scheduleData[0].noEndDate,
+      //     scheduleData[0].operationType,
+      //     scheduleData[0].source,
+      //     scheduleData[0].range
+      //   );
+      //   break;
 
       case "Single":
         scheduleSingleEvent(
@@ -1193,7 +1193,7 @@ const scheduleRealTimeEvent = async (
 };
 
 // start date, start time, repeat every day (checkbox), end date, no end date (checkbox)
-const scheduleSingleEvent = (
+const scheduleSingleEvent = async(
   userId,
   eventId,
   integrationId,
@@ -1590,7 +1590,9 @@ const getMappedFields = async (
             mappedFields,
             userId,
             integrationId,
-            id
+            id,
+            range,
+            accessToken,
           );
           return result;
 
@@ -1651,12 +1653,23 @@ const addNetsuiteV1Api = async (
   mappedFields,
   userId,
   integrationId,
-  id
+  id,
+  range,
+  accessToken,
 ) => {
   console.log("add record in ns");
   try {
     const headerRow = values[0];
-    const dataRows = values.slice(1);
+    // const dataRows = values.slice(1);
+    // console.log("dataRows", dataRows)
+    const sheetsData = await getSheetsDataByRange(
+      userId,
+      range,
+      mappedRecord,
+      accessToken
+    );
+    const dataRows = sheetsData.values;
+    // console.log("dataRows", dataRows)
 
     // const data = {
     //   resttype: "Add",
@@ -2456,6 +2469,7 @@ const addGoogleSheetRecords = async (
         })
         .catch((error) => {
           console.log("addGoogleSheetRecords error", error.response.data);
+          // access token error
         });
     } catch (error) {
       console.log("addGoogleSheetRecords error => ", error);
@@ -3373,10 +3387,6 @@ columns.push(field.sourceFieldValue)
       filterData[0].destinationFieldLabel
     );
 
-    const sheetRange = range.split(":")
-    const [sheetCoordinatesStartChar, sheetCoordinatesStartNum] = sheetRange[0].split("")
-    const [sheetCoordinatesEndChar, sheetCoordinatesEndNum] = sheetRange[1].split("")
-
     const deleteFields = []
     const results = await Promise.all(
       sheetsData.values.map(async(row) => {
@@ -3469,56 +3479,6 @@ const deleterecord = async(userId, mappedRecord, accessToken, deleteFields, fiel
   try {
 
     let sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-
-    // **
-    // deleteFields.map(async(field) => {
-    //   const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-    //   sheetsValue.data.values.map(async(row, i) => {
-    //     // console.log("row", row)
-    //     if(row[fieldIndex] === field){
-    //       console.log("delete row", row)
-    //       console.log("delete row index", i, ":", i+1)
-
-    //       const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
-
-    //       const headers = {
-    //         "Content-Type": "application/json",
-    //         Authorization: `Bearer ${accessToken}`,
-    //       };
-
-    //          const data = {
-    //             requests: [
-    //             {
-    //                 deleteDimension: {
-    //                   range: {
-    //                     sheetId: mappedRecord[0].sheetValue,
-    //                     dimension: "ROWS",
-    //                     startIndex: i,
-    //                     endIndex: i + 1,
-    //                   },
-    //                 },
-    //               },
-    //             ],
-    //           };
-
-
-    //           // try {
-    //           //           const res = await axios({
-    //           //           method: "POST",
-    //           //           url: url,
-    //           //           headers: headers,
-    //           //           data: data,
-    //           //         });
-                  
-    //           //         console.log("output => ", res.data);
-    //           //     } catch (error) {
-    //           //         console.log("deleterecord error", error);
-    //           //     }
-    //     }
-
-    //     // sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-    //   })
-    // })
 
     deleteFields.map(async(field) => {
       const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
