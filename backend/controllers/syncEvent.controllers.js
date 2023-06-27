@@ -1083,7 +1083,9 @@ const googleSheetsOperations = async (
             userId,
             mappedRecordId,
             integrationId,
-            id
+            id,
+            range,
+            mappedFields
           );
           return deleteRecordResult;
 
@@ -1669,15 +1671,13 @@ const deleteGoogleSheetRecord = async (
   userId,
   mappedRecordId,
   integrationId,
-  id
+  id,
+  range,
+  mappedFields
 ) => {
-  const logs = [];
-  let deleteCount = 0;
-  let totalRecords = 0;
   try {
-    console.log("delete record in google sheet");
+    console.log("delete record from google sheet");
 
-    // ***filter condition
     const filterData = await prisma.customFilterFields.findMany({
       where: {
         userId: Number(userId),
@@ -1686,111 +1686,223 @@ const deleteGoogleSheetRecord = async (
       },
     });
 
-    const sourceField = filterData[0].sourceFieldValue;
-    const destinationField = filterData[0].destinationFieldValue;
+    const filterCondition = filterData[0].sourceFieldValue
 
-    // ***ns data
-    let filterValues = [];
-    const result = await getNetsuiteData(
+    const columns = []
+    mappedFields.map((field) => {
+columns.push(field.sourceFieldValue)
+    })
+
+    const sheetsData = await getSheetsDataByRange(
       userId,
-      mappedRecordId,
-      credentials,
-      mappedRecord
+      range,
+      mappedRecord,
+      accessToken
     );
-    result.list.map((item) => {
-      if (item.values.hasOwnProperty(sourceField)) {
-        const nsValue = item.values[sourceField];
-        if (Array.isArray(nsValue)) {
-          filterValues.push(nsValue[0].value);
-        } else {
-          filterValues.push(nsValue);
-        }
-      }
-    });
-    // console.log("filterValues", filterValues)
 
-    // *** gs data
-    const gsIds = [];
-    const sheetsValue = getSheetsData(mappedRecord, userId, accessToken);
-    sheetsValue
-      .then(async (res) => {
-        const titles = res.data.values[0];
+    const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+    const fieldIndex = sheetsValue.data.values[0].indexOf(
+      filterData[0].destinationFieldLabel
+    );
 
-        if (titles.includes(destinationField)) {
-          const itemIndex = titles.indexOf(destinationField);
-          for (let i = 1; i < res.data.values.length; i++) {
-            const row = res.data.values[i];
-            gsIds.push(row[itemIndex]);
+    const sheetRange = range.split(":")
+    const [sheetCoordinatesStartChar, sheetCoordinatesStartNum] = sheetRange[0].split("")
+    const [sheetCoordinatesEndChar, sheetCoordinatesEndNum] = sheetRange[1].split("")
+
+    const deleteFields = []
+    const results = await Promise.all(
+      sheetsData.values.map(async(row) => {
+
+const authentication = {
+  account: credentials[0].accountId,
+  consumerKey: credentials[0].consumerKey,
+  consumerSecret: credentials[0].consumerSecretKey,
+  tokenId: credentials[0].accessToken,
+  tokenSecret: credentials[0].accessSecretToken,
+  timestamp: Math.floor(Date.now() / 1000).toString(),
+  nonce: getNonce(10),
+  http_method: "POST",
+  version: "1.0",
+  scriptDeploymentId: "1",
+  scriptId: "1529",
+  signatureMethod: "HMAC-SHA256",
+};
+
+const base_url =
+      "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+    const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+    const baseString = `${authentication.http_method}&${encodeURIComponent(
+      base_url
+    )}&${encodeURIComponent(concatenatedString)}`;
+    const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+    const signature = crypto
+      .createHmac("sha256", keys)
+      .update(baseString)
+      .digest("base64");
+    const oAuth_String = `OAuth realm="${
+      authentication.account
+    }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+      authentication.tokenId
+    }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+      authentication.timestamp
+    }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+      signature
+    )}"`;
+
+    const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+
+    const data = {
+      resttype: "Search",
+      recordtype: mappedRecord[0].recordTypeValue,
+      filters: [
+          [
+            filterData[0].sourceFieldValue,
+              "is",
+              row[fieldIndex]
+          ]
+      ],
+      columns: columns
+  };
+
+    try {
+      const res = await axios({
+        method: "POST",
+        url: url,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: oAuth_String,
+        },
+        data: data,
+      });
+
+      if(res.data.total > 0){
+        Object.entries(res.data.list[0].values).map(([key, value]) => {
+          if(key === filterCondition) {
+            deleteFields.push(value)  
           }
-        }
+       })
+      }
+      // return res.data;     
+    } catch (error) {
+      console.log("deleteGoogleSheetRecord error", error.response.data);
+      throw error;
+    }
+  })
+  );
+  const deleteRecordResponse = deleterecord(userId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition)
 
-        // console.log("gsIds", gsIds)
-        await Promise.all(
-          gsIds.map(async (element, index) => {
-            if (!filterValues.includes(element)) {
-              totalRecords++;
+  } catch (error) {
+    console.log("deleteGoogleSheetRecord error=> ", error.response.data);
+    return error;
+  }
+};
 
-              const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
-              const headers = {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-              };
+const deleterecord = async(userId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition) => {
+  try {
 
-              const data = {
+    let sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+
+    // **
+    // deleteFields.map(async(field) => {
+    //   const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+    //   sheetsValue.data.values.map(async(row, i) => {
+    //     // console.log("row", row)
+    //     if(row[fieldIndex] === field){
+    //       console.log("delete row", row)
+    //       console.log("delete row index", i, ":", i+1)
+
+    //       const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
+
+    //       const headers = {
+    //         "Content-Type": "application/json",
+    //         Authorization: `Bearer ${accessToken}`,
+    //       };
+
+    //          const data = {
+    //             requests: [
+    //             {
+    //                 deleteDimension: {
+    //                   range: {
+    //                     sheetId: mappedRecord[0].sheetValue,
+    //                     dimension: "ROWS",
+    //                     startIndex: i,
+    //                     endIndex: i + 1,
+    //                   },
+    //                 },
+    //               },
+    //             ],
+    //           };
+
+
+    //           // try {
+    //           //           const res = await axios({
+    //           //           method: "POST",
+    //           //           url: url,
+    //           //           headers: headers,
+    //           //           data: data,
+    //           //         });
+                  
+    //           //         console.log("output => ", res.data);
+    //           //     } catch (error) {
+    //           //         console.log("deleterecord error", error);
+    //           //     }
+    //     }
+
+    //     // sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+    //   })
+    // })
+
+    deleteFields.map(async(field) => {
+      const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+      sheetsValue.data.values.map(async(row, i) => {
+
+        if(row[fieldIndex] === field){
+          console.log("*************delete row", row)
+          console.log("delete row index", i, ":", i+1)
+
+          const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
+
+          const headers = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          };
+
+             const data = {
                 requests: [
-                  {
+                {
                     deleteDimension: {
                       range: {
                         sheetId: mappedRecord[0].sheetValue,
                         dimension: "ROWS",
-                        startIndex: index + 1,
-                        endIndex: index + 2,
+                        startIndex: i,
+                        endIndex: i + 1,
                       },
                     },
                   },
                 ],
               };
 
+
               try {
-                const res = await axios({
-                  method: "POST",
-                  url: url,
-                  headers: headers,
-                  data: data,
-                });
-
-                // console.log("output => ", res.data);
-                deleteCount++;
-              } catch (error) {
-                console.log("deleteGoogleSheetRecord error", error);
-              }
-            }
-          })
-        );
-        const summaryMessage = `Successfully deleted ${deleteCount} records in Google Sheet out of ${totalRecords}`;
-        if (deleteCount > 0) {
-          logs.push({
-            userId: userId,
-            scheduleId: Number(id),
-            integrationId: integrationId,
-            mappedRecordId: mappedRecordId,
-            recordType: mappedRecord[0].recordTypeLabel,
-            status: "Success",
-            message: summaryMessage,
-          });
+                        const res = await axios({
+                        method: "POST",
+                        url: url,
+                        headers: headers,
+                        data: data,
+                      });
+                  
+                      console.log("output => ", res.data);
+                  } catch (error) {
+                      console.log("deleterecord error", error);
+                  }
         }
-
-        addLogs(logs);
-        console.log("deleted GS record logs => ", logs);
       })
-      .catch((err) => {
-        console.log("getSheetsData error", err);
-      });
+    })
+
   } catch (error) {
-    console.log("deleteGoogleSheetRecord error=> ", error);
-    return error;
+    console.log("deleterecord error =>", error)
   }
-};
+}
 
 const recordField = async (credentials, mappedRecord) => {
   try {

@@ -3452,7 +3452,7 @@ const base_url =
       }
       // return res.data;     
     } catch (error) {
-      console.log("deleteGoogleSheetRecord error", error);
+      console.log("deleteGoogleSheetRecord error", error.response.data);
       throw error;
     }
   })
@@ -3460,7 +3460,7 @@ const base_url =
   const deleteRecordResponse = deleterecord(userId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition)
 
   } catch (error) {
-    console.log("deleteGoogleSheetRecord error=> ", error);
+    console.log("deleteGoogleSheetRecord error=> ", error.response.data);
     return error;
   }
 };
