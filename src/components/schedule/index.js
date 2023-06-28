@@ -11,6 +11,7 @@ import { Tooltip } from "@nextui-org/react";
 import DeleteModal from "@/utils/DeleteModal";
 import TkButton from "@/globalComponents/TkButton";
 import { TkCol } from "@/globalComponents/TkRow";
+import useFullPageLoader from "@/globalComponents/useFullPageLoader";
 
 const ScheduleTable = () => {
   let deleteEventId = useRef(null);
@@ -22,6 +23,7 @@ const ScheduleTable = () => {
   const [data, setData] = useState([]);
   const [deleteModal, setDeleteModal] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState([]);
+  const [loader, showLoader, hideLoader] = useFullPageLoader();
 
   const { data: scheduleData, isLoading } = useQuery({
     queryKey: ["schedule", userId],
@@ -179,10 +181,14 @@ const ScheduleTable = () => {
   ];
 
   const onClickSync = () => {
+    showLoader();
     syncEvent.mutate(selectedRowId, {
       onSuccess: (data) => {
         console.log("syncEvent result ==>", data);
-      },
+        hideLoader();
+      }, onError: () => {
+        hideLoader();
+      }
     });
   };
 
@@ -224,6 +230,7 @@ const ScheduleTable = () => {
       ) : (
         <TkNoData />
       )}
+      {loader}
     </>
   );
 };

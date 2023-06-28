@@ -1206,16 +1206,34 @@ const scheduleSingleEvent = async(
     const month = dateObj.getMonth() + 1;
     const day = dateObj.getDate();
 
+    // let hour, minute;
+    // console.log("startTimeValue", startTimeValue)
+    // const [time, ampm] = startTimeValue.split(" ");
+    // console.log("time", time, "ampm", ampm)
+    // if(ampm === "pm" || ampm === "PM"){
+    //   [hour, minute] = time.split(":");
+    //   hour = parseInt(time) + 12;
+    // } else {
+    //   [hour, minute] = time.split(":");
+    // }
+
     let hour, minute;
-    console.log("startTimeValue", startTimeValue)
-    const [time, ampm] = startTimeValue.split(" ");
-    console.log("time", time, "ampm", ampm)
-    if(ampm === "pm" || ampm === "PM"){
-      [hour, minute] = time.split(":");
-      hour = parseInt(time) + 12;
-    } else {
-      [hour, minute] = time.split(":");
-    }
+console.log("startTimeValue", startTimeValue);
+const [time, ampm] = startTimeValue.split(" ");
+console.log("time", time, "ampm", ampm);
+if (ampm === "pm" || ampm === "PM") {
+  [hour, minute] = time.split(":");
+  hour = parseInt(hour, 10);  // Parse hour as an integer
+  if (hour !== 12) {
+    hour += 12;  // Add 12 to hour if it's not already 12 pm
+  }
+} else if (ampm === "am" || ampm === "AM") {
+  [hour, minute] = time.split(":");
+  hour = parseInt(hour, 10);  // Parse hour as an integer
+  if (hour === 12) {
+    hour = 0;  // Set hour to 0 if it's 12 am
+  }
+}
 
     const repeat = repeatEveryDay ? "*" : day;
 

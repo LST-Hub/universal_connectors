@@ -500,15 +500,16 @@ const addNetsuiteV1Api = async (
 
     const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
     if(successCount > 0){
-    //   logs.unshift({
-    //     userId: userId,
-    //     scheduleId: Number(id),
-    //     integrationId: integrationId,
-    //     mappedRecordId: mappedRecord[0].id,
-    //     recordType: mappedRecord[0].recordTypeLabel,
-    //     status: "Success",
-    //     message: summaryMessage,
-    //   });
+      logs.unshift({
+        userId: userId,
+        scheduleId: Number(id),
+        integrationId: integrationId,
+        mappedRecordId: mappedRecord[0].id,
+        recordType: mappedRecord[0].recordTypeLabel,
+        status: "Success",
+        message: summaryMessage,
+      });
+    }
 
     const response = {
       success: true,
@@ -518,15 +519,14 @@ const addNetsuiteV1Api = async (
         logs,
       },
     };
-    return response;
-    }
-
     // addLogs(logs);
+    return response;
+
   } catch (error) {
     console.log("addNetsuiteV1Api error => ", error);
     return {
       success: false,
-      error: "error"
+      error: "Error for add records in NetSuite."
     }
   }
 };
@@ -680,24 +680,25 @@ const updateNetsuiteV1Api = async (
         status: "Success",
         message: summaryMessage,
       });
-
-      const response = {
-        success: true,
-        data: {
-          updatedCount,
-          logs,
-        },
-      };
-      return response;
     }
 
+    const response = {
+      success: true,
+      data: {
+        updatedCount,
+        errorCount,
+        logs,
+      },
+    };
     // addLogs(logs);
+    return response;
+
   } catch (error) {
     console.log("Please add filter to update the record");
     console.log("updateNetsuiteV1Api error => ", error);
     return {
       success: false,
-      error: "error"
+      error: "Error for update records in Netsuite."
     }
   }
 };
@@ -870,24 +871,26 @@ const deleteNetsuiteV1Api = async (
         status: "Success",
         message: summaryMessage,
       });
-
-      const response = {
-        success: true,
-        data: {
-          deleteCount,
-          logs,
-        },
-      };
-      return response;
     }
+
+    const response = {
+      success: true,
+      data: {
+        deleteCount,
+        errorCount,
+        logs,
+      },
+    };
     // addLogs(logs);
+    return response;
+
   } catch (error) {
     console.log("Please add filter to delete record");
     console.log("deleteNetsuiteV1Api error => ", error);
     return {
       success: false,
-      error: "error"
-    }
+      error: "Error for delete recordes from NetSuite."
+    } 
   }
 };
 
@@ -1286,20 +1289,20 @@ const appendFields = async (
           status: "Success",
           message: summaryMessage,
         });
-
-        const response = {
-          success: true,
-          data: request.data,
-        };
-        return response;
       }
 
+      const response = {
+        success: true,
+        data: request.data,
+      };
       // addLogs(logs);
+      return response;
+      
     } catch (error) {
       console.log("addGoogleSheetRecords error", error.response.data);
       return {
         success: false,
-        error: "error"
+        error: "Error for add records in Google Sheet."
       }
     }
 
@@ -1430,10 +1433,11 @@ const base_url =
     return addFieldsResult;
   } catch (error) {
     console.log("updateGoogleSheetRecords error=> ", error);
-    return {
-      success: false,
-      error: error,
-    };
+    return error;
+    // return {
+    //   success: false,
+    //   error: "Error for update records in Google Sheet.",
+    // };
   }
 };
 
@@ -1510,20 +1514,20 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
           status: "Success",
           message: summaryMessage,
         });
-
-        const response = {
-          success: true,
-          data: request.data,
-        };
-        return response;
       }
 
+      const response = {
+        success: true,
+        data: request.data,
+      };
       // addLogs(logs);
+      return response;
+
   } catch (error) {
     console.log("updateGoogleSheetRecords error", error);
     return {
       success: false,
-      error: error,
+      error: "Error for update records in Google Sheet.",
     };
   }
     }
@@ -1667,6 +1671,7 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
     const logs = [];
     let deleteCount = 0;
     let count = 0;
+    let errorCount = 0;
 
     let sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
 
@@ -1711,6 +1716,7 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
                 console.log("output => ", res.data);
                 deleteCount++;
               } catch (error) {
+                errorCount++;
                 console.log("deleterecord error", error);
               }
             }
@@ -1730,21 +1736,24 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
         status: "Success",
         message: summaryMessage,
       });
-
-      const response = {
-        success: true,
-        data: {
-          deleteCount,
-          logs,
-        },
-      };
-      return response;
     }
+
+    const response = {
+      success: true,
+      data: {
+        deleteCount,
+        errorCount,
+        logs,
+      },
+    };
+    // addLogs(logs);
+    return response;
+
   } catch (error) {
     console.log("deleterecord error =>", error);
     return {
       success: false,
-      error: "error",
+      error: "Error for delete records from Google Sheet.",
     };
   }
 };

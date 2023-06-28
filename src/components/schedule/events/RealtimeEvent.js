@@ -148,12 +148,12 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         updateRealTimeEvent.mutate(realtimeEventData, {
           onSuccess: (res) => {
             console.log("updateRealTimeEvent res", res);
+            router.push("/schedule");
           },
           onError: (err) => {
             console.log("err", err);
           },
         });
-        router.push("/schedule");
       }
 
       // ***
@@ -208,12 +208,12 @@ const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
         addEvent.mutate(eventData, {
           onSuccess: (res) => {
             console.log("realtime event data", res);
+            router.push("/schedule");
           },
           onError: (err) => {
             console.log("err", err);
           },
         });
-        router.push("/schedule");
       }
 
       // ***
