@@ -145,7 +145,7 @@ v1Router.get(
 
 // *** routes to sync event
 v1Router.post("/syncEvent", syncControllers.syncEvent);
-v1Router.post("/getAccessTokenByUserId", syncControllers.getAccessTokenByUserId);
+// v1Router.post("/getAccessTokenByUserId", syncControllers.getAccessTokenByUserId);
 
 // const https = require('https');
 // const querystring = require('querystring');

@@ -1,14 +1,14 @@
 const prisma = require("../lib/prisma");
 const response = require("../lib/response");
-const schedule = require("node-schedule");
+// const schedule = require("node-schedule");
 const crypto = require("crypto");
 const axios = require("axios");
-const cron = require("node-cron");
+// const cron = require("node-cron");
 
 const syncEvent = async (req, res) => {
   try {
     const eventIds = req.body;
-const result = []
+    const result = []
 
     const promises = eventIds.map(async (ids) => {
       console.log("event id", ids);
@@ -73,7 +73,8 @@ const result = []
       status_code: 400,
       message: "Error in sync event",
     });
-    throw error;
+    // throw error;
+    return;
   }
 };
 
@@ -162,7 +163,11 @@ const syncData = async (
     }
   } catch (error) {
     console.log("syncData error", error);
-    return error;
+    return {
+      success: false,
+      error: "Error for syncing events."
+    }
+    // return error;
   }
 };
 
@@ -197,12 +202,20 @@ const getAccessTokenByUserId = async (userId) => {
     } catch (error) {
       console.log("getAccessTokenByUserId error", error);
       // ***invalid_grant
-        return error;
+        // return error;
+        return {
+          success: false,
+          error: "invalid_grant type error."
+        }
     }
   } catch (error) {
     console.log("getAccessTokenByUserId error=>", error);
     // ***invalid_grant
-    return error;
+    // return error;
+    return {
+      success: false,
+      error: "Error while fetching access token."
+    }
   }
 };
 
@@ -220,22 +233,96 @@ const netsuiteOperations = async (
   try {
     const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
    
-        const result = await getMappedFields(
-          credentials,
-          sheetsValue.data.values,
-          mappedRecord,
-          userId,
-          operationType,
-          integrationId,
-          range,
-          id,
-          accessToken
-        );
-        return result;
+        // const result = await getMappedFields(
+        //   credentials,
+        //   sheetsValue.data.values,
+        //   mappedRecord,
+        //   userId,
+        //   operationType,
+        //   integrationId,
+        //   range,
+        //   id,
+        //   accessToken
+        // );
+        // return result;
+        const values = sheetsValue.data.values;
+
+          const mappedFields = await prisma.fields.findMany({
+            where: {
+              userId: Number(userId),
+              mappedRecordId: Number(mappedRecord[0].id),
+            },
+            select: {
+              id: true,
+              sourceFieldValue: true,
+              destinationFieldValue: true,
+            },
+          });
+      
+          if (mappedFields.length > 0 && values.length > 1) {
+            switch (operationType) {
+              case "add":
+                const result = await addNetsuiteV1Api(
+                  credentials,
+                  values,
+                  mappedRecord,
+                  mappedFields,
+                  userId,
+                  integrationId,
+                  id,
+                  range,
+                  accessToken,
+                );
+                return result;
+      
+              case "update":
+                const updateResult = await updateNetsuiteV1Api(
+                  credentials,
+                  values,
+                  mappedRecord,
+                  mappedFields,
+                  userId,
+                  integrationId,
+                  range,
+                  accessToken,
+                  id
+                );
+                return updateResult;
+      
+              case "delete":
+                const deleteResult = await deleteNetsuiteV1Api(
+                  credentials,
+                  values,
+                  mappedRecord,
+                  mappedFields,
+                  userId,
+                  integrationId,
+                  range,
+                  accessToken,
+                  id
+                );
+                return deleteResult;
+      
+              default:
+                console.log("operationType not matched");
+                throw error;
+            }
+          } else {
+            console.log("fields not mapped");
+            // throw error;
+            return {
+              success: false,
+              error: "Fields not mapped"
+            }
+          }
 
   } catch (error) {
     console.log("netsuiteOperations error==>", error);
-    return error;
+    // return error;
+    return {
+      success: false,
+      error: "Error for NetSuite operations."
+    }
   }
 };
 
@@ -254,96 +341,103 @@ const getSheetsData = async (mappedRecord, userId, accessToken) => {
       return res;
     } catch (error) {
       console.log("getSheetsData error", error);
-      throw error;
+      // throw error;
+      return {
+        success: false,
+        error: "Sheets data not fetched."
+      }
     }
   } catch (error) {
     console.log("getSheetsData error=>", error);
-
-    throw error;
-  }
-};
-
-const getMappedFields = async (
-  credentials,
-  values,
-  mappedRecord,
-  userId,
-  operationType,
-  integrationId,
-  range,
-  id,
-  accessToken
-) => {
-  try {
-    const mappedFields = await prisma.fields.findMany({
-      where: {
-        userId: Number(userId),
-        mappedRecordId: Number(mappedRecord[0].id),
-      },
-      select: {
-        id: true,
-        sourceFieldValue: true,
-        destinationFieldValue: true,
-      },
-    });
-
-    if (mappedFields.length > 0 && values.length > 1) {
-      switch (operationType) {
-        case "add":
-          const result = await addNetsuiteV1Api(
-            credentials,
-            values,
-            mappedRecord,
-            mappedFields,
-            userId,
-            integrationId,
-            id,
-            range,
-            accessToken,
-          );
-          return result;
-
-        case "update":
-          const updateResult = await updateNetsuiteV1Api(
-            credentials,
-            values,
-            mappedRecord,
-            mappedFields,
-            userId,
-            integrationId,
-            range,
-            accessToken,
-            id
-          );
-          return updateResult;
-
-        case "delete":
-          const deleteResult = await deleteNetsuiteV1Api(
-            credentials,
-            values,
-            mappedRecord,
-            mappedFields,
-            userId,
-            integrationId,
-            range,
-            accessToken,
-            id
-          );
-          return deleteResult;
-
-        default:
-          console.log("operationType not matched");
-          throw error;
-      }
-    } else {
-      console.log("fields not mapped");
-      throw error;
+    // throw error;
+    return {
+      success: false,
+      error: "Error while fetching sheets data."
     }
-  } catch (error) {
-    console.log("getMappedFields error", error);
-    throw error;
   }
 };
+
+// const getMappedFields = async (
+//   credentials,
+//   values,
+//   mappedRecord,
+//   userId,
+//   operationType,
+//   integrationId,
+//   range,
+//   id,
+//   accessToken
+// ) => {
+//   try {
+//     const mappedFields = await prisma.fields.findMany({
+//       where: {
+//         userId: Number(userId),
+//         mappedRecordId: Number(mappedRecord[0].id),
+//       },
+//       select: {
+//         id: true,
+//         sourceFieldValue: true,
+//         destinationFieldValue: true,
+//       },
+//     });
+
+//     if (mappedFields.length > 0 && values.length > 1) {
+//       switch (operationType) {
+//         case "add":
+//           const result = await addNetsuiteV1Api(
+//             credentials,
+//             values,
+//             mappedRecord,
+//             mappedFields,
+//             userId,
+//             integrationId,
+//             id,
+//             range,
+//             accessToken,
+//           );
+//           return result;
+
+//         case "update":
+//           const updateResult = await updateNetsuiteV1Api(
+//             credentials,
+//             values,
+//             mappedRecord,
+//             mappedFields,
+//             userId,
+//             integrationId,
+//             range,
+//             accessToken,
+//             id
+//           );
+//           return updateResult;
+
+//         case "delete":
+//           const deleteResult = await deleteNetsuiteV1Api(
+//             credentials,
+//             values,
+//             mappedRecord,
+//             mappedFields,
+//             userId,
+//             integrationId,
+//             range,
+//             accessToken,
+//             id
+//           );
+//           return deleteResult;
+
+//         default:
+//           console.log("operationType not matched");
+//           throw error;
+//       }
+//     } else {
+//       console.log("fields not mapped");
+//       throw error;
+//     }
+//   } catch (error) {
+//     console.log("getMappedFields error", error);
+//     throw error;
+//   }
+// };
 
 function getNonce(length) {
   const alphabet =
@@ -495,6 +589,10 @@ const addNetsuiteV1Api = async (
         }
       } catch (error) {
         console.log("addNetsuiteV1Api error", error.response.data);
+        return {
+          success: false,
+          error: "Error while adding data in NetSuite."
+        }
       }
     }
 
@@ -664,7 +762,11 @@ const updateNetsuiteV1Api = async (
           }
         } catch (error) {
           console.log("updateNetsuiteV1Api error", error);
-          throw error;
+          // throw error;
+          return {
+            success: false,
+            error: "Error while updating NetSuite data."
+          }
         }
       })
     );
@@ -726,11 +828,19 @@ const getSheetsDataByRange = async (
       })
       .catch((error) => {
         console.log("getSheetsDataByRange error =>", error.response.data);
-        return error;
+        // return error;
+        return {
+          success: false,
+          error: "Error for fetching sheets data."
+        }
       });
   } catch (error) {
     console.log("getSheetsDataByRange error", error);
-    throw error;
+    // throw error;
+    return {
+      success: false,
+      error: "Error while fetching sheets data using range."
+    }
   }
 };
 
@@ -855,7 +965,11 @@ const deleteNetsuiteV1Api = async (
           }
         } catch (error) {
           console.log("deleteNetsuiteV1Api error", error);
-          return error;
+          // return error;
+          return {
+            success: false,
+            error: "Error while deleting records from NetSuite."
+          }
         }
       })
     );
@@ -966,7 +1080,11 @@ const googleSheetsOperations = async (
     }
   } catch (error) {
     console.log("googleSheetsOperations error", error);
-    return error;
+    // return error;
+    return {
+      success: false,
+      error: "Error while performing operations with Google Sheet."
+    }
   }
 };
 
@@ -1026,7 +1144,7 @@ const addGoogleSheetRecords = async (
     };
 
     try {
-      const response = await axios({
+      await axios({
         method: "POST",
         url: url,
         headers: headers,
@@ -1048,99 +1166,115 @@ const addGoogleSheetRecords = async (
 
     } catch (error) {
       console.log("addGoogleSheetRecords error => ", error);
+      return {
+        success: false,
+        error: "Error while adding records in Google Sheets."
+      }
     }
   } catch (error) {
     console.log("addGoogleSheetRecords error=> ", error.response.data);
-    return error;
+    // return error;
+    return {
+      success: false,
+      error: "Error for add records in Google Sheet."
+    }
   }
 };
 
-const getNetsuiteData = async (
-  userId,
-  mappedRecordId,
-  credentials,
-  mappedRecord
-) => {
-  try {
-    const mappedFields = await prisma.fields.findMany({
-      where: {
-        userId: Number(userId),
-        mappedRecordId: Number(mappedRecordId),
-      },
-      select: {
-        id: true,
-        sourceFieldValue: true,
-        destinationFieldValue: true,
-      },
-    });
+// const getNetsuiteData = async (
+//   userId,
+//   mappedRecordId,
+//   credentials,
+//   mappedRecord
+// ) => {
+//   try {
+//     const mappedFields = await prisma.fields.findMany({
+//       where: {
+//         userId: Number(userId),
+//         mappedRecordId: Number(mappedRecordId),
+//       },
+//       select: {
+//         id: true,
+//         sourceFieldValue: true,
+//         destinationFieldValue: true,
+//       },
+//     });
 
-    const columns = mappedFields.map((field) => field.sourceFieldValue);
+//     const columns = mappedFields.map((field) => field.sourceFieldValue);
     
-    const data = {
-      resttype: "Search",
-      recordtype: mappedRecord[0].recordTypeValue,
-      columns: columns,
-    };
+//     const data = {
+//       resttype: "Search",
+//       recordtype: mappedRecord[0].recordTypeValue,
+//       columns: columns,
+//     };
 
-    const authentication = {
-      account: credentials[0].accountId,
-      consumerKey: credentials[0].consumerKey,
-      consumerSecret: credentials[0].consumerSecretKey,
-      tokenId: credentials[0].accessToken,
-      tokenSecret: credentials[0].accessSecretToken,
-      timestamp: Math.floor(Date.now() / 1000).toString(),
-      nonce: getNonce(10),
-      http_method: "POST",
-      version: "1.0",
-      scriptDeploymentId: "1",
-      scriptId: "1529",
-      signatureMethod: "HMAC-SHA256",
-    };
+//     const authentication = {
+//       account: credentials[0].accountId,
+//       consumerKey: credentials[0].consumerKey,
+//       consumerSecret: credentials[0].consumerSecretKey,
+//       tokenId: credentials[0].accessToken,
+//       tokenSecret: credentials[0].accessSecretToken,
+//       timestamp: Math.floor(Date.now() / 1000).toString(),
+//       nonce: getNonce(10),
+//       http_method: "POST",
+//       version: "1.0",
+//       scriptDeploymentId: "1",
+//       scriptId: "1529",
+//       signatureMethod: "HMAC-SHA256",
+//     };
 
-    const base_url =
-      "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
-    const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
-    const baseString = `${authentication.http_method}&${encodeURIComponent(
-      base_url
-    )}&${encodeURIComponent(concatenatedString)}`;
-    const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
-    const signature = crypto
-      .createHmac("sha256", keys)
-      .update(baseString)
-      .digest("base64");
-    const oAuth_String = `OAuth realm="${
-      authentication.account
-    }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
-      authentication.tokenId
-    }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
-      authentication.timestamp
-    }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
-      signature
-    )}"`;
+//     const base_url =
+//       "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+//     const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+//     const baseString = `${authentication.http_method}&${encodeURIComponent(
+//       base_url
+//     )}&${encodeURIComponent(concatenatedString)}`;
+//     const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+//     const signature = crypto
+//       .createHmac("sha256", keys)
+//       .update(baseString)
+//       .digest("base64");
+//     const oAuth_String = `OAuth realm="${
+//       authentication.account
+//     }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+//       authentication.tokenId
+//     }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+//       authentication.timestamp
+//     }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+//       signature
+//     )}"`;
 
-    const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+//     const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
 
-    return axios({
-      method: "POST",
-      url: url,
-      headers: {
-        Authorization: oAuth_String,
-        "Content-Type": "application/json",
-      },
-      data: data,
-    })
-      .then((res) => {
-        return res.data;
-      })
-      .catch((error) => {
-        console.log("getNetsuiteData error", error);
-        throw error;
-      });
-  } catch (error) {
-    console.log("getNetsuiteData error => ", error);
-    return error;
-  }
-};
+//     return axios({
+//       method: "POST",
+//       url: url,
+//       headers: {
+//         Authorization: oAuth_String,
+//         "Content-Type": "application/json",
+//       },
+//       data: data,
+//     })
+//       .then((res) => {
+//         return res.data;
+//       })
+//       .catch((error) => {
+//         console.log("getNetsuiteData error", error);
+//         // throw error;
+//         return {
+//           success: false,
+//           error: "Error to fetch NetSuite data."
+//         }
+//       });
+//   } catch (error) {
+//     console.log("getNetsuiteData error => ", error);
+//     // return error;
+//     return {
+//       success: false,
+//       error: "Error while fetching data from NetSuite."
+//     }
+//   }
+// };
 
 const getNetsuiteDataForAllFields = async(
   userId,
@@ -1241,11 +1375,19 @@ const getNetsuiteDataForAllFields = async(
       })
       .catch((error) => {
         console.log("getNetsuiteDataForAllFields error", error);
-        throw error;
+        // throw error;
+        return {
+          success: false,
+          error: "Error while fetching data."
+        }
       });
   } catch (error) {
     console.log("getNetsuiteDataForAllFields error => ", error);
-    return error;
+    // return error;
+    return {
+      success: false,
+      error: "Error while fetching data."
+    }
   }
 }
 
@@ -1308,6 +1450,10 @@ const appendFields = async (
 
   } catch (error) {
     console.log("appendFields error => ", error);
+    return {
+      success: false,
+      error: "Error while append data in google sheet."
+    }
   }
 };
 
@@ -1423,21 +1569,25 @@ const base_url =
 
     } catch (error) {
       console.log("updateNetsuiteV1Api error", error);
-      throw error;
+      // throw error;
+      return {
+        success: false,
+        error: "Error for updating records in Google sheet."
+      }
     }
   })
     );
 
     const addFieldsResult = await addFields(accessToken, mappedRecord, range, results, userId, id, integrationId, mappedRecordId, existingRecords);
-
     return addFieldsResult;
+
   } catch (error) {
     console.log("updateGoogleSheetRecords error=> ", error);
-    return error;
-    // return {
-    //   success: false,
-    //   error: "Error for update records in Google Sheet.",
-    // };
+    // return error;
+    return {
+      success: false,
+      error: "Error for update records in Google Sheet.",
+    };
   }
 };
 
@@ -1531,10 +1681,6 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
     };
   }
     }
-    return {
-      success: false,
-      message: "No records found",
-    };
 }
 
 const deleteGoogleSheetRecord = async (
@@ -1547,7 +1693,9 @@ const deleteGoogleSheetRecord = async (
   id,
   range,
   mappedFields
-) => {
+) => {  
+  let deleteCount = 0;
+
   try {
     console.log("delete record from google sheet");
 
@@ -1572,11 +1720,13 @@ columns.push(field.sourceFieldValue)
       mappedRecord,
       accessToken
     );
+    console.log("sheetsData by range", sheetsData)
 
     const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
     const fieldIndex = sheetsValue.data.values[0].indexOf(
       filterData[0].destinationFieldLabel
     );
+    console.log("fieldIndex", fieldIndex)
 
     const deleteFields = []
     const results = await Promise.all(
@@ -1644,26 +1794,48 @@ const base_url =
         data: data,
       });
 
-      if(res.data.total > 0){
-        Object.entries(res.data.list[0].values).map(([key, value]) => {
-          if(key === filterCondition) {
-            deleteFields.push(value)  
-          }
-       })
+      if(res.data.total === 0){
+      //   Object.entries(res.data.list[0].values).map(([key, value]) => {
+      //     if(key === filterCondition) {
+      //       deleteFields.push(value)  
+      //     }
+      //  })
+      deleteFields.push(row[fieldIndex])
       }   
     } catch (error) {
       console.log("deleteGoogleSheetRecord error", error.response.data);
-      throw error;
+      // throw error;
+      return {
+        success: false,
+        error: "Error for delete records from Google sheet."
+      }
     }
   })
   );
+  // console.log("deleteFields", deleteFields)
   const deleteRecordResponse = await deleterecord(userId, id, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition);
+  // console.log("deleteRecordResponse", deleteRecordResponse)
   return deleteRecordResponse;
 
   } catch (error) {
     console.log("deleteGoogleSheetRecord error=> ", error.response.data);
-    return error;
+    deleteCount++;
+    // return error;
+    return {
+      success: false,
+      error: "Error for delete records from Google sheet."
+    }
   }
+
+  // const response = {
+  //     success: true,
+  //     data: {
+  //       deleteRecordResponse[0],
+  //       deleteRecordResponse[1] + deleteCount,
+  //       deleteRecordResponse[2],
+  //     },
+  //   };
+  //   return response;
 };
 
 const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition) => {
@@ -1673,14 +1845,13 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
     let count = 0;
     let errorCount = 0;
 
-    let sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-
     await Promise.all(
       deleteFields.map(async (field) => {
-        const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+        let sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
         await Promise.all(
           sheetsValue.data.values.map(async (row, i) => {
             if (row[fieldIndex] === field) {
+              console.log("row to delete", row)
               count++;
 
               const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
@@ -1689,6 +1860,8 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${accessToken}`,
               };
+
+              // console.log("start", i, "end", i+1)
 
               const data = {
                 requests: [
@@ -1704,7 +1877,6 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
                   },
                 ],
               };
-
               try {
                 const res = await axios({
                   method: "POST",
@@ -1715,10 +1887,12 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
 
                 console.log("output => ", res.data);
                 deleteCount++;
+                console.log("start", i, "end", i+1)
               } catch (error) {
                 errorCount++;
                 console.log("deleterecord error", error);
               }
+              sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
             }
           })
         );
@@ -1746,6 +1920,7 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
         logs,
       },
     };
+  //  const response = [deleteCount, errorCount, logs]
     // addLogs(logs);
     return response;
 
@@ -1758,69 +1933,69 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
   }
 };
 
-const recordField = async (credentials, mappedRecord) => {
-  try {
-    const authentication = {
-      account: credentials[0].accountId,
-      consumerKey: credentials[0].consumerKey,
-      consumerSecret: credentials[0].consumerSecretKey,
-      tokenId: credentials[0].accessToken,
-      tokenSecret: credentials[0].accessSecretToken,
-      timestamp: Math.floor(Date.now() / 1000).toString(),
-      nonce: getNonce(10),
-      http_method: "POST",
-      version: "1.0",
-      scriptDeploymentId: "1",
-      scriptId: "1529",
-      signatureMethod: "HMAC-SHA256",
-    };
+// const recordField = async (credentials, mappedRecord) => {
+//   try {
+//     const authentication = {
+//       account: credentials[0].accountId,
+//       consumerKey: credentials[0].consumerKey,
+//       consumerSecret: credentials[0].consumerSecretKey,
+//       tokenId: credentials[0].accessToken,
+//       tokenSecret: credentials[0].accessSecretToken,
+//       timestamp: Math.floor(Date.now() / 1000).toString(),
+//       nonce: getNonce(10),
+//       http_method: "POST",
+//       version: "1.0",
+//       scriptDeploymentId: "1",
+//       scriptId: "1529",
+//       signatureMethod: "HMAC-SHA256",
+//     };
 
-    const base_url =
-      "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
-    const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
-    const baseString = `${authentication.http_method}&${encodeURIComponent(
-      base_url
-    )}&${encodeURIComponent(concatenatedString)}`;
-    const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
-    const signature = crypto
-      .createHmac("sha256", keys)
-      .update(baseString)
-      .digest("base64");
-    const oAuth_String = `OAuth realm="${
-      authentication.account
-    }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
-      authentication.tokenId
-    }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
-      authentication.timestamp
-    }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
-      signature
-    )}"`;
+//     const base_url =
+//       "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+//     const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+//     const baseString = `${authentication.http_method}&${encodeURIComponent(
+//       base_url
+//     )}&${encodeURIComponent(concatenatedString)}`;
+//     const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+//     const signature = crypto
+//       .createHmac("sha256", keys)
+//       .update(baseString)
+//       .digest("base64");
+//     const oAuth_String = `OAuth realm="${
+//       authentication.account
+//     }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+//       authentication.tokenId
+//     }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+//       authentication.timestamp
+//     }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+//       signature
+//     )}"`;
 
-    const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+//     const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
 
-    const data = {
-      resttype: "ListOfRecordField",
-      recordtype: mappedRecord[0].recordTypeValue,
-    };
+//     const data = {
+//       resttype: "ListOfRecordField",
+//       recordtype: mappedRecord[0].recordTypeValue,
+//     };
 
-    const payload = JSON.stringify(data);
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: oAuth_String,
-    };
+//     const payload = JSON.stringify(data);
+//     const headers = {
+//       "Content-Type": "application/json",
+//       Authorization: oAuth_String,
+//     };
 
-    const res = await axios({
-      method: "POST",
-      url: url,
-      headers: headers,
-      data: payload,
-    });
-    return res.data;
-  } catch (error) {
-    console.log("recordField error => ", error);
-    return error;
-  }
-};
+//     const res = await axios({
+//       method: "POST",
+//       url: url,
+//       headers: headers,
+//       data: payload,
+//     });
+//     return res.data;
+//   } catch (error) {
+//     console.log("recordField error => ", error);
+//     return error;
+//   }
+// };
 
 const addLogs = async (values) => {
   try {
@@ -1852,39 +2027,39 @@ const addLogs = async (values) => {
   }
 };
 
-const getScheduleEvent = async (
-  userId,
-  eventId,
-  integrationId,
-  mappedRecordId
-) => {
-  try {
-    const eventData = await prisma.schedule.findMany({
-      where: {
-        userId: Number(userId),
-        id: Number(eventId),
-        integrationId: Number(integrationId),
-        mappedRecordId: Number(mappedRecordId),
-      },
-      select: {
-        eventType: true,
-        startDate: true,
-        endDate: true,
-        startTime: true,
-        day: true,
-        noEndDate: true,
-        repeatEveryDay: true,
-      },
-    });
+// const getScheduleEvent = async (
+//   userId,
+//   eventId,
+//   integrationId,
+//   mappedRecordId
+// ) => {
+//   try {
+//     const eventData = await prisma.schedule.findMany({
+//       where: {
+//         userId: Number(userId),
+//         id: Number(eventId),
+//         integrationId: Number(integrationId),
+//         mappedRecordId: Number(mappedRecordId),
+//       },
+//       select: {
+//         eventType: true,
+//         startDate: true,
+//         endDate: true,
+//         startTime: true,
+//         day: true,
+//         noEndDate: true,
+//         repeatEveryDay: true,
+//       },
+//     });
 
-    return eventData;
-  } catch (error) {
-    console.log("getScheduleEvent error", error);
-    return error;
-  }
-};
+//     return eventData;
+//   } catch (error) {
+//     console.log("getScheduleEvent error", error);
+//     return error;
+//   }
+// };
 
 module.exports = {
   syncEvent,
-  getAccessTokenByUserId,
+  // getAccessTokenByUserId,
 };

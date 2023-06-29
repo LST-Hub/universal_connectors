@@ -18,6 +18,8 @@ import * as Yup from "yup";
 
 const schema = Yup.object({
   startDate: Yup.date().nullable().required("Start date is required"),
+  // integrationName: Yup.object().nullable().required("Integration is required."),
+  // mappedRecords: Yup.object().nullable().required("Mapped record is required."),
 }).required();
 
 const RealtimeEvent = ({ checkBoxValue, eventId, syncData }) => {
