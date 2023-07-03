@@ -300,7 +300,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
         );
       }
     }
-  }, [integrationId, mappedRecordData, setValue]);
+  }, [integrationId, mappedRecordData, queryClient, setValue]);
 
   // get config data
   useEffect(() => {
@@ -495,17 +495,20 @@ if (shouldLogData) {
         operationType: data.operationType,
         source: data.source.label,
         range: data.range,
+        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
+        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
+
       };
 
-        realtimeEventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-        realtimeEventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+        // realtimeEventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+        // realtimeEventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
       // ***API call to update event
 
       console.log("realtimeEventData", realtimeEventData)
       if (
         data.operationType === "add" &&
-        data.source === "Google Sheet"
+        data.source.label === "Google Sheet"
       ) {
         toggleDeleteModel(realtimeEventData);
       } else {
@@ -533,22 +536,25 @@ if (shouldLogData) {
         operationType: data.operationType,
         source: data.source.label,
         range: data.range,
+        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
+        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
+
       };
 
-      if (data.savedSearches) {
-        eventData.savedSearchLabel = data.savedSearches.label;
-        eventData.savedSearchValue = data.savedSearches.value;
-      } else {
-        eventData.savedSearchLabel = null;
-        eventData.savedSearchValue = null;
-      }
+      // if (data.savedSearches) {
+      //   eventData.savedSearchLabel = data.savedSearches.label;
+      //   eventData.savedSearchValue = data.savedSearches.value;
+      // } else {
+      //   eventData.savedSearchLabel = null;
+      //   eventData.savedSearchValue = null;
+      // }
 
       console.log("eventData", eventData);
 
       // ***API call to add event
       if (
         data.operationType === "add" &&
-        data.source === "Google Sheet"
+        data.source.label === "Google Sheet"
       ) {
         toggleDeleteModel(eventData);
       } else {

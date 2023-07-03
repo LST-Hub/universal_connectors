@@ -37,7 +37,7 @@ const DeleteModal = ({
           `}</style>
           <div className="mt-4 pt-2 fs-15 mx-4 mx-sm-5">
             <h4>Are you sure ?</h4>
-            <p className="text-muted mx-4 mb-0">{label}</p>
+            <p className="text-muted mx-1 mb-0">{label}</p>
           </div>
         </div>
         <div className="d-flex gap-2 justify-content-center mt-4 mb-2">
@@ -52,7 +52,7 @@ const DeleteModal = ({
           </TkButton>
           <TkButton
             type="button"
-            className="btn w-sm btn-danger "
+            className="btn w-sm btn-danger"
             id="delete-record"
             onClick={onDeleteClick}
             loading={loading}

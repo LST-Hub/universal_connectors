@@ -17,6 +17,7 @@ import { useRouter } from "next/router";
 import DeleteModal from "@/utils/DeleteModal";
 import TkInput from "@/globalComponents/TkInput";
 import TkRadioButton from "@/globalComponents/TkRadioButton";
+import AlertBoxModal from "@/utils/AlertBoxModal";
 
 const schema = Yup.object({
   startDate: Yup.date().required("Start date is required"),
@@ -60,6 +61,8 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   const [integrationId, setIntegrationId] = useState(null);
   const [integrationRecordId, setIntegrationRecordId] = useState(null);
   const [configurationData, setConfigurationData] = useState(null);
+  const [alertBoxModal, setAlertBoxModal] = useState(false);
+  const [alertBoxLabel, setAlertBoxLabel] = useState();
 
   const sourceOptions = [
     {
@@ -244,7 +247,6 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
 
   // get Integretion data and check length
   useEffect(() => {
-
     if (userId.current) {
   queryClient.invalidateQueries({
     queryKey: ["integrationData"]
@@ -300,7 +302,7 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         );
       }
     }
-  }, [integrationId, mappedRecordData, setValue]);
+  }, [integrationId, mappedRecordData, queryClient, setValue]);
 
   // get config data
   useEffect(() => {
@@ -434,11 +436,14 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
           switch (data.operationType) {
             case "update":
               if (data.range === "") {
-
-                alert("add range");
+                // alert("add range");
+                const alertMsg = "Please select range."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to update records in Google Sheet."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
@@ -507,15 +512,18 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         operationType: data.operationType,
         source: data.source.label,
         range: data.range,
+        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label ,
+        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
+
       };
 
-      eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-      eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+      // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+      // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
       // ***API call
       if (
         data.operationType === "add" &&
-        data.source === "Google Sheet"
+        data.source.label === "Google Sheet"
       ) {
         toggleDeleteModel(eventData);
       } else {
@@ -547,15 +555,18 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         operationType: data.operationType,
         source: data.source.label,
         range: data.range,
+        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
+        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
+
       };
 
-      eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-      eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+      // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+      // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
       // API call
       if (
         data.operationType === "add" &&
-        data.source === "Google Sheet"
+        data.source.label === "Google Sheet"
       ) {
         toggleDeleteModel(eventData);
       } else {
@@ -607,6 +618,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   const toggleDeleteModel = (eventData) => {
     scheduleEventData.current = eventData;
     setDeleteModal(true);
+  };
+
+  const toggleAlertBoxModel = (alertMsg) => {
+    setAlertBoxLabel(alertMsg)
+    setAlertBoxModal(true);
   };
 
   return (
@@ -935,6 +951,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         onCloseClick={() => setDeleteModal(false)}
         label="This will erase all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
         image={false}
+      />
+      <AlertBoxModal
+      show={alertBoxModal}
+      onCloseClick={() => {setAlertBoxModal(false)}}
+      label={alertBoxLabel}
       />
     </>
   );

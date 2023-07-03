@@ -303,7 +303,7 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
         );
       }
     }
-  }, [integrationId, mappedRecordData, setValue]);
+  }, [integrationId, mappedRecordData, queryClient, setValue]);
 
   // get config data
   useEffect(() => {
@@ -513,15 +513,18 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
         operationType: data.operationType,
         source: data.source.label,
         range: data.range,
+        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
+        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
+  
       };
 
-      eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-      eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+      // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+      // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
   
       // ***API call to update event
       if (
-        eventData.operationType === "add" &&
-        eventData.source === "Google Sheet"
+        data.operationType === "add" &&
+        data.source.label === "Google Sheet"
       ) {
         toggleDeleteModel(eventData);
       } else {
@@ -553,15 +556,17 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
         operationType: data.operationType,
         source: data.source.label,
         range: data.range,
+        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
+        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
       };
 
-      eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-      eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+      // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+      // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
       // ***API call to add event
       if (
-        eventData.operationType === "add" &&
-        eventData.source === "Google Sheet"
+        data.operationType === "add" &&
+        data.source.label === "Google Sheet"
       ) {
         console.log("if")
         toggleDeleteModel(eventData);
