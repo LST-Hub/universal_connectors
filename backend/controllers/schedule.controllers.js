@@ -56,7 +56,7 @@ const addRealTimeEvent = async (req, res) => {
 
     // const result = await syncEventData(
     //   userId,
-    //   schedule[0].id,
+    //   schedule.id,
     //   integrationId,
     //   mappedRecordId
     // );
@@ -136,9 +136,11 @@ const addSingleEvent = async (req, res) => {
       }),
     ]);
 
+    console.log("schedule", schedule.id)
+
     const result = await syncEventData(
       userId,
-      schedule[0].id,
+      schedule.id,
       integrationId,
       mappedRecordId
     );
@@ -213,7 +215,7 @@ const addWeeklyEvent = async (req, res) => {
 
     const result = await syncEventData(
       userId,
-      schedule[0].id,
+      schedule.id,
       integrationId,
       mappedRecordId
     );
@@ -291,7 +293,6 @@ const getSchedules = async (req, res) => {
 
 const getScheduleEventById = async (req, res) => {
   const { id, userId, integrationId, mappedRecordId, eventType } = req.query;
-
   try {
     const scheduleData = await prisma.schedule.findMany({
       where: {
@@ -374,6 +375,8 @@ const updateRealTimeEvent = async (req, res) => {
     source,
     range,
   } = req.body;
+
+  console.log(req.body)
 
   try {
     const scheduleData = await prisma.schedule.updateMany({
@@ -536,14 +539,32 @@ const updateWeeklyEvent = async (req, res) => {
       },
     });
 
-    const result = await syncEventData(
+    const result = syncEventData(
       userId,
       id,
       integrationId,
       mappedRecordId
     );
     console.log("update weekly event final result", result);
-    return result;
+    // return result;
+
+response({
+  res,
+  success: true,
+  status_code: 200,
+  data: [result],
+  message: "success"
+});
+return;
+
+
+
+// res.status(200).json({
+//   success: true,
+//   status_code: 200,
+//   data: [result],
+//   message: 'success'
+// });
   } catch (error) {
     response({
       res,
@@ -557,7 +578,6 @@ const updateWeeklyEvent = async (req, res) => {
 
 const deleteScheduleEvent = async (req, res) => {
   const { id, integrationId } = req.params;
-  console.log("req.params", req.params);
 
   try {
     const deleteCount = await prisma.logs.deleteMany({
@@ -1069,7 +1089,8 @@ const syncEventData = async (
   mappedRecordId
 ) => {
   try {
-    const scheduleData = await prisma.schedule.findMany({
+    const [scheduleData, mappedRecord] = await prisma.$transaction([
+    prisma.schedule.findMany({
       where: {
         userId: Number(userId),
         id: Number(eventId),
@@ -1093,9 +1114,22 @@ const syncEventData = async (
         source: true,
         range: true,
       },
-    });
+    }),
+    prisma.mappedRecords.findMany({
+      where: {
+        id: Number(mappedRecordId),
+        userId: Number(userId),
+        integrationId: Number(integrationId),
+      },
+      select: {
+        status: true,
+        sheetLabel: true,
+      },
+    }),
+  ]);
     console.log("scheduleData", scheduleData);
 
+    if (mappedRecord[0].status) {
     switch (scheduleData[0].eventType) {
       // case "Realtime":
       //   scheduleRealTimeEvent(
@@ -1154,6 +1188,13 @@ const syncEventData = async (
 
       default:
         console.log("event not found");
+    }
+     } else {
+      console.log("****status false", mappedRecord[0].sheetLabel);
+      return {
+        success: false,
+        error: "Error: mapped record status is false."
+      }
     }
 
     // const res = {
@@ -1483,7 +1524,7 @@ const syncData = async (
       }),
     ]);
 
-    if (mappedRecord[0].status) {
+    // if (mappedRecord[0].status) {
       switch (source) {
         case "NetSuite":
           const nsResult = await netsuiteOperations(
@@ -1499,7 +1540,7 @@ const syncData = async (
           );
           return nsResult;
 
-        case "GoogleSheet":
+        case "Google Sheet":
           const gsResult = await googleSheetsOperations(
             userId,
             mappedRecordId,
@@ -1517,9 +1558,13 @@ const syncData = async (
         default:
           console.log("source not matched");
       }
-    } else {
-      console.log("****status false", mappedRecord[0].sheetLabel);
-    }
+    // } else {
+    //   console.log("****status false", mappedRecord[0].sheetLabel);
+    //   return {
+    //     success: false,
+    //     error: "Error: mapped record status is false."
+    //   }
+    // }
   } catch (error) {
     console.log("syncData error", error);
     // return error;
@@ -3538,6 +3583,37 @@ const getScheduleEvent = async (
   }
 };
 
+const getFilterDataById = async (req, res) => {
+  try{
+    const { id, integrationId, mappedRecordId } = req.query;
+
+    const filterResult = await prisma.customFilterFields.findMany({
+      where: {
+        userId: Number(id),
+        mappedRecordId: Number(mappedRecordId),
+        integrationId: Number(integrationId)
+      }
+    })
+
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      data: filterResult,
+      message: "Successfully get filter fields."
+    })
+  } catch(error) {
+    console.log("getFilterDataById error", error)
+    response({
+      res,
+      success: false,
+      status_code: 400,
+      data: [],
+      message: "Error iwhile fetching fielter fields."
+    })
+  }
+}
+
 module.exports = {
   addRealTimeEvent,
   addSingleEvent,
@@ -3557,4 +3633,5 @@ module.exports = {
   getNetsuiteFiledsByRecordId,
   getFields,
   getLogs,
+  getFilterDataById
 };

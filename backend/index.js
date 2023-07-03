@@ -142,6 +142,7 @@ v1Router.get(
   "/getLogs/:id",
   scheduleController.getLogs
 );
+v1Router.get("/getFilterDataById", scheduleController.getFilterDataById)
 
 // *** routes to sync event
 v1Router.post("/syncEvent", syncControllers.syncEvent);

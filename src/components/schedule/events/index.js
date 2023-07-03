@@ -421,8 +421,7 @@ const EventSchedule = ({ eventId }) => {
 
   return (
     <>
-      {/* <TkForm onSubmit={handleSubmit(onSubmit)}> */}
-      <TkRow className="my-1">
+      {/* <TkRow className="my-1">
         <TkCol lg={4}>
           <Controller
             name="integrationName"
@@ -514,32 +513,6 @@ const EventSchedule = ({ eventId }) => {
             )}
           />
         </TkCol>
-        {/* <TkCol lg={4} className="d-flex align-items-end">
-          <TkLabel>Saved Search Type :</TkLabel>
-          <TkRadioButton
-            type="radio"
-            name="savedSearchType"
-            label="Saved Search"
-            value="public"
-            className="mb-2 mx-1"
-            checked={searchType.current === "public"}
-            onChange={onOptionChange}
-          >
-            Public
-          </TkRadioButton>
-
-          <TkRadioButton
-            type="radio"
-            name="savedSearchType"
-            label="Saved Search"
-            value="private"
-            className="mb-2 mx-1"
-            checked={searchType.current === "private"}
-            onChange={onOptionChange}
-          >
-            Private
-          </TkRadioButton>
-        </TkCol> */}
 
         <TkCol lg={4}>
           <Controller
@@ -561,34 +534,7 @@ const EventSchedule = ({ eventId }) => {
           />
         </TkCol>
 
-        {/* <TkCol lg={4}>
-          <TkLabel htmlFor="destinationFilter" requiredStarOnLabel={true}>
-            How can we find existing records ({destination.current})
-          </TkLabel>
-
-          <div className="d-flex">
-            <TkInput
-              {...register("destinationFilter")}
-              id="destinationFilter"
-              type="text"
-              disabled={true}
-            />
-            <TkButton
-              className="btn btn-light"
-              type="button"
-              onClick={handleSubmit(() => onClickSourceFilter(destination.current))}
-            >
-              <i className="ri-filter-2-fill" />
-            </TkButton>
-          </div>
-        </TkCol> */}
-        
-
-        {/* <TkButton className="btn btn-primary mt-3" type="submit">
-            Perform
-          </TkButton> */}
       </TkRow>
-      {/* </TkForm> */}
 
       <TkRow className="mt-3">
         <TkCol lg={1}>
@@ -668,7 +614,7 @@ const EventSchedule = ({ eventId }) => {
           />
         </TkCol>
       </TkRow>
-      <hr />
+      <hr /> */}
 
       <Event eventId={eventId} syncData={data} />
     </>

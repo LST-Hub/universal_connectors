@@ -95,7 +95,7 @@ const Event = ({ eventId, syncData }) => {
 
   return (
     <>
-      <TkRow className="mt-2">
+      <TkRow className="mt-1 ms-1">
         <TkCol lg={4}>
           <TkCheckBox
             {...register("realtime")}
@@ -110,7 +110,7 @@ const Event = ({ eventId, syncData }) => {
         </TkCol>
       </TkRow>
 
-      <TkContainer className="my-5">
+      <TkContainer className="my-3">
         <TkRow>
           <TkCol lg={3} sm={3}>
             <TkRadioButton
@@ -159,12 +159,14 @@ const Event = ({ eventId, syncData }) => {
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
                 syncData={syncData}
+                eventType="realtimeEvent"
               />
             ) : showComponent === "singleEvent" ? (
               <SingleEvent
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
                 syncData={syncData}
+                eventType="singleEvent"
               />
             ) : showComponent === "weeklyEvent" ? (
               <WeeklyEvent
@@ -172,6 +174,7 @@ const Event = ({ eventId, syncData }) => {
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
                 syncData={syncData}
+                eventType="weeklyEvent"
               />
             ) : (
               <SingleEvent />

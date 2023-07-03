@@ -170,12 +170,13 @@ const getMappedRecordById = async (req, res) => {
 };
 
 const deleteMappedRecordByID = async (req, res) => {
-  // console.log("req.params", req.params)
 
   try {
+    await deleteScheduleEvent(req.params.id, req.params.integrationId);
+
     const [deleteRecordMapping, updateIntegrations] = await prisma.$transaction(
       [
-        prisma.mappedRecords.delete({
+        prisma.mappedRecords.deleteMany({
           where: {
             id: Number(req.params.id),
           },
@@ -210,6 +211,48 @@ const deleteMappedRecordByID = async (req, res) => {
     });
     console.log("error", error);
     return;
+  }
+};
+
+const deleteScheduleEvent = async (id, integrationId) => {
+  try {
+    const deleteCount = await prisma.logs.deleteMany({
+      where: {
+        // scheduleId: Number(id),
+        mappedRecordId: Number(id),
+        integrationId: Number(integrationId),
+      },
+    });
+
+    const [deleteScheduleEvent, updateIntegrations] = await prisma.$transaction(
+      [
+        prisma.schedule.deleteMany({
+          where: {
+            // id: Number(id),
+              mappedRecordId: Number(id),
+
+          },
+        }),
+        prisma.integrations.updateMany({
+          where: {
+            id: Number(integrationId),
+          },
+          data: {
+            schedule: false,
+          },
+        }),
+      ]
+    );
+
+    return {
+      success: true,
+      error: "Schedule deleted successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: "Error in deleting schedule",
+    };
   }
 };
 

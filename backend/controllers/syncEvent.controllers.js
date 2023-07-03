@@ -55,14 +55,22 @@ const syncEvent = async (req, res) => {
 
     await Promise.all(promises);
     console.log("final result", result)
-    const allPromisesResolved = result.every((resultItem) => resultItem.success);
+    // const allPromisesResolved = result.every((resultItem) => resultItem.success);
+
+    // response({
+    //   res,
+    //   success: allPromisesResolved,
+    //   status_code: 200,
+    //   data: result,
+    //   message: allPromisesResolved ? "success" : "Some promises failed",
+    // });
 
     response({
       res,
-      success: allPromisesResolved,
+      success: true,
       status_code: 200,
       data: result,
-      message: allPromisesResolved ? "success" : "Some promises failed",
+      message: "success"
     });
     return;
   } catch (error) {
@@ -141,7 +149,7 @@ const syncData = async (
           );
           return nsResult;
 
-        case "GoogleSheet":
+        case "Google Sheet":
           const gsResult = await googleSheetsOperations(
             userId,
             mappedRecordId,
@@ -160,6 +168,10 @@ const syncData = async (
       }
     } else {
       console.log("****status false", mappedRecord[0].sheetLabel);
+      return {
+        success: false,
+        error: "Error: mapped record status is false."
+      }
     }
   } catch (error) {
     console.log("syncData error", error);
