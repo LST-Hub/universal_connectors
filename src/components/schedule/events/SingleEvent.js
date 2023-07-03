@@ -435,25 +435,29 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         case "Google Sheet":
           switch (data.operationType) {
             case "update":
-              if (data.range === "") {
+              if (data.range === "" || data.range === null) {
                 // alert("add range");
-                const alertMsg = "Please select range."
+                const alertMsg = "Please select range to update records."
                 toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
                 // alert("add filter");
-                const alertMsg = "Please add filter to update records in Google Sheet."
+                const alertMsg = "Please add filter to update records."
                 toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
       
             case "delete":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
@@ -463,28 +467,38 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         case "NetSuite":
           switch (data.operationType) {
             case "add":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to add records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
       
             case "update":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
       
             case "delete":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;

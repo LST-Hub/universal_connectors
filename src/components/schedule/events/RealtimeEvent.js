@@ -17,6 +17,7 @@ import { useRouter } from "next/router";
 import React, { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import * as Yup from "yup";
+import AlertBoxModal from "@/utils/AlertBoxModal";
 
 const schema = Yup.object({
   startDate: Yup.date().nullable().required("Start date is required"),
@@ -59,6 +60,8 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
   const [integrationRecordId, setIntegrationRecordId] = useState(null);
   const [integrationId, setIntegrationId] = useState(null);
   const [configurationData, setConfigurationData] = useState(null);
+  const [alertBoxModal, setAlertBoxModal] = useState(false);
+  const [alertBoxLabel, setAlertBoxLabel] = useState();
 
   const sourceOptions = [
     {
@@ -425,21 +428,29 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
         case "Google Sheet":
           switch (data.operationType) {
             case "update":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
       
             case "delete":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
@@ -449,28 +460,38 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
         case "NetSuite":
           switch (data.operationType) {
             case "add":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to add records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
       
             case "update":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
       
             case "delete":
-              if (data.range === "") {
-                alert("add range");
+              if (data.range === "" || data.range === null) {
+                // alert("add range");
+                const alertMsg = "Please select range to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
@@ -607,6 +628,11 @@ if (shouldLogData) {
   const toggleDeleteModel = (eventData) => {
     scheduleEventData.current = eventData;
     setDeleteModal(true);
+  };
+
+  const toggleAlertBoxModel = (alertMsg) => {
+    setAlertBoxLabel(alertMsg)
+    setAlertBoxModal(true);
   };
 
   return (
@@ -887,6 +913,12 @@ if (shouldLogData) {
         onCloseClick={() => setDeleteModal(false)}
         label="This will erase all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
         image={false}
+      />
+
+<AlertBoxModal
+      show={alertBoxModal}
+      onCloseClick={() => {setAlertBoxModal(false)}}
+      label={alertBoxLabel}
       />
     </>
   );

@@ -17,6 +17,7 @@ import { useRouter } from "next/router";
 import DeleteModal from "@/utils/DeleteModal";
 import TkInput from "@/globalComponents/TkInput";
 import TkRadioButton from "@/globalComponents/TkRadioButton";
+import AlertBoxModal from "@/utils/AlertBoxModal";
 
 const schema = Yup.object({
   startDate: Yup.date().required("Start date is required"),
@@ -62,6 +63,8 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
   const [integrationRecordId, setIntegrationRecordId] = useState(null);
   const [configurationData, setConfigurationData] = useState(null);
   const [mappedRecordId, setMappedRecordId] = useState(null);
+  const [alertBoxModal, setAlertBoxModal] = useState(false);
+  const [alertBoxLabel, setAlertBoxLabel] = useState();
 
   const sourceOptions = [
     {
@@ -439,11 +442,15 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
           switch (data.operationType) {
             case "update":
               if (data.range === "" || data.range === null) {
-                alert("add range");
+                // alert("add range");
+                const alertMsg = "Please select range to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
                 return
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
                 return
               }
@@ -451,10 +458,14 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
       
             case "delete":
               if (data.range === "" || data.range === null) {
-                alert("add range");
+                // alert("add range");
+                const alertMsg = "Please select range to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
@@ -465,27 +476,37 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
           switch (data.operationType) {
             case "add":
               if (data.range === "" || data.range === null) {
-                alert("add range");
+                // alert("add range");
+                const alertMsg = "Please select range to add records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
       
             case "update":
               if (data.range === "" || data.range === null) {
-                alert("add range");
+                // alert("add range");
+                const alertMsg = "Please select range to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to update records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
       
             case "delete":
               if (data.range === "" || data.range === null) {
-                alert("add range");
+                // alert("add range");
+                const alertMsg = "Please select range to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               } else if (!filterFields.length > 0) {
-                alert("add filter");
+                // alert("add filter");
+                const alertMsg = "Please add filter to delete records."
+                toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
               }
               break;
@@ -622,6 +643,11 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
   const toggleDeleteModel = (eventData) => {
     scheduleEventData.current = eventData;
     setDeleteModal(true);
+  };
+
+  const toggleAlertBoxModel = (alertMsg) => {
+    setAlertBoxLabel(alertMsg)
+    setAlertBoxModal(true);
   };
 
   return (
@@ -963,6 +989,12 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
         onCloseClick={() => setDeleteModal(false)}
         label="This will erase all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
         image={false}
+      />
+
+<AlertBoxModal
+      show={alertBoxModal}
+      onCloseClick={() => {setAlertBoxModal(false)}}
+      label={alertBoxLabel}
       />
     </>
   );
