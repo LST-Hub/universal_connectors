@@ -55,7 +55,7 @@ const syncEvent = async (req, res) => {
 
     await Promise.all(promises);
     console.log("final result", result)
-    // const allPromisesResolved = result.every((resultItem) => resultItem.success);
+    const allPromisesResolved = result.every((resultItem) => resultItem.success);
 
     // response({
     //   res,

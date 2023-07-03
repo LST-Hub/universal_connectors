@@ -148,46 +148,6 @@ v1Router.get("/getFilterDataById", scheduleController.getFilterDataById)
 v1Router.post("/syncEvent", syncControllers.syncEvent);
 // v1Router.post("/getAccessTokenByUserId", syncControllers.getAccessTokenByUserId);
 
-// const https = require('https');
-// const querystring = require('querystring');
-
-// const data = {
-//   refresh_token: '1//0g5VjSbgWY_phCgYIARAAGBASNwF-L9IrQbc1MhRFf9oXGgMi8_HIwV_-5Brcd2FPejfK89MMUWpb4GxlwCTQom70p1hthZPOeTs',
-//   grant_type: 'refresh_token',
-//   client_id: '350110252536-v0id00m9oaathq39hv7o8i1nmj584et1.apps.googleusercontent.com',
-//   client_secret: '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'
-// };
-
-// const postData = querystring.stringify(data);
-// const options = {
-//   method: 'POST',
-//   headers: {
-//     'Content-Type': 'application/x-www-form-urlencoded',
-//     'Content-Length': Buffer.byteLength(postData)
-//   }
-// };
-
-// const url = 'https://oauth2.googleapis.com/token?refresh_token';
-
-// const request = https.request(url, options, (response) => {
-//   let responseData = '';
-
-//   response.on('data', (chunk) => {
-//     responseData += chunk;
-//   });
-
-//   response.on('end', () => {
-//     console.log(responseData);
-//   });
-// });
-
-// request.on('error', (error) => {
-//   console.error(error);
-// });
-
-// request.write(postData);
-// request.end();
-
 
 app.listen(port, () => {
   console.log("Server is running on port " + port);
