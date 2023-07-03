@@ -10,10 +10,9 @@ import TkRow, { TkCol } from "@/globalComponents/TkRow";
 import TkSelect from "@/globalComponents/TkSelect";
 import { API_BASE_URL } from "@/utils/Constants";
 import DeleteModal from "@/utils/DeleteModal";
-import { formatDate } from "@/utils/date";
 import tkFetch from "@/utils/fetch";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useMutation, useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import React, { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
@@ -26,14 +25,12 @@ const schema = Yup.object({
   source: Yup.object().nullable().required("Operation is required."),
 }).required();
 
-const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
+const RealtimeEvent = ({ checkBoxValue, eventId }) => {
   let userId = useRef(null);
   let scheduleEventData = useRef(null);
   let id = useRef(null);
   let source = useRef(null);
   let destination = useRef(null);
-  // let searchType = useRef(null);
-  // let recordId = useRef(null);
 
   const {
     control,
@@ -55,14 +52,12 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
   const [addValue, setAddValue] = useState(false);
   const [updateValue, setUpdateValue] = useState(false);
   const [deleteValue, setDeleteValue] = useState(false);
-  // const [inputValue, setInputValue] = useState('');
   const [integrationOptions, setIntegrationOptions] = useState([]);
   const [mappedRecordOptions, setMappedRecordOptions] = useState([]);
   const [savedSearchOptions, setSavedSearchOptions] = useState([]);
   const [mappedRecordId, setMappedRecordId] = useState(null);
   const [integrationRecordId, setIntegrationRecordId] = useState(null);
   const [integrationId, setIntegrationId] = useState(null);
-  // const [data, setData] = useState([]);
   const [configurationData, setConfigurationData] = useState(null);
 
   const sourceOptions = [
@@ -195,10 +190,10 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
     }
   }, [eventId]);
 
+   // set existing data
   useEffect(() => {
     if (eventData) {
       if (eventData[0]?.eventType === "Realtime") {
-        // console.log("eventData", eventData)
         id.current={
           id: userId.current,
           mappedRecordId: eventData[0].mappedRecordId,
@@ -248,17 +243,13 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
     }
   }, [eventData, setValue]);
 
-  // get Integretion data
+  // get Integretion data and check length
   useEffect(() => {
-    // const userID = sessionStorage.getItem("userId");
-
     if (userId.current) {
-      console.log("**********",userId.current, "=", eventType)
-      console.log("integrationData", integrationsData)
-      // setData((prev) => ({ ...prev, userId: JSON.parse(userId.current) }));
-      // setUserId(JSON.parse(userID));
-      if (integrationsData && eventType === "realtimeEvent") {
-        console.log("if condition")
+      queryClient.invalidateQueries({
+        queryKey: ["integrationData"]
+      })
+      if (integrationsData) {
         source.current = integrationsData[0].sourceName;
         destination.current = integrationsData[0].destinationName;
         if (integrationsData.length === 1) {
@@ -272,10 +263,6 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
             integrationId: integrationsData[0].id,
           });
           setIntegrationId(integrationsData[0].id);
-          // setData((prev) => ({
-          //   ...prev,
-          //   integrationId: integrationsData[0].id,
-          // }));
         }
         setIntegrationOptions(
           integrationsData.map((item) => ({
@@ -285,13 +272,14 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
         );
       }
     }
-  }, [eventType, integrationsData, setValue]);
+  }, [integrationsData, queryClient, setValue]);
 
-   // Mapped record options
+   // Mapped record options and check length
    useEffect(() => {
-    // console.log("mappedRecordData", mappedRecordData)
-    if (mappedRecordData && eventType === "realtimeEvent") {
-      // console.log("mappedRecordData==>", mappedRecordData);
+    queryClient.invalidateQueries({
+      queryKey: ["mappedRecordData"]
+    })
+    if (mappedRecordData) {
       if (mappedRecordData.length === 1) {
         setValue("mappedRecords", {
           label: mappedRecordData[0].mappedRecordName,
@@ -303,7 +291,6 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
           mappedRecordId: mappedRecordData[0].id,
           integrationId: integrationId,
         };
-        // setData((prev) => ({ ...prev, mappedRecordId: mappedRecordData[0].id }));
       } else {
         setMappedRecordOptions(
           mappedRecordData?.map((item) => ({
@@ -313,7 +300,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
         );
       }
     }
-  }, [eventType, integrationId, mappedRecordData, setValue]);
+  }, [integrationId, mappedRecordData, setValue]);
 
   // get config data
   useEffect(() => {
@@ -335,7 +322,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
     }
   }, [configData]);
 
-   // saved search list
+   // saved search list options
    useEffect(() => {
     if (savedSearchData) {
       setSavedSearchOptions(
@@ -347,6 +334,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
     }
   }, [savedSearchData]);
 
+  // endDate handler
   const handleOnChange = (dates) => {
     if (dates) {
       setCheckboxValue(false);
@@ -355,6 +343,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
     }
   };
 
+  // noEndDate checkbox handler
   const handleOnChangeCheckbox = (e) => {
     if (e.target.checked) {
       setCheckboxValue(true);
@@ -365,7 +354,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
     }
   };
 
-  // integrations dropdown
+  // integrations dropdown handler
   const onChangeIntegration = (e) => {
     queryClient.invalidateQueries({
       queryKey: ["mappedRecordData", ids],
@@ -377,13 +366,11 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
         integrationId: e.value,
       });
       setIntegrationId(e.value);
-      // setData((prev) => ({ ...prev, integrationId: e.value }));
     }
   };
 
-   // mapped record dropdown
+    // mapped record dropdown handler
    const onChangeMappedRecord = (e) => {
-    // setValue("filter", null);
     if (e) {
       setMappedRecordId(e.value);
       id.current = {
@@ -391,75 +378,34 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
         mappedRecordId: e.value,
         integrationId: integrationId,
       };
-      // setData((prev) => ({ ...prev, mappedRecordId: e.value }));
     }
   };
 
-  // move to filter page
+ // move to filter page
   const onClickSourceFilter = () => {
     if(mappedRecordId){
       router.push(`/schedule/${mappedRecordId}`);
     }
   };
 
-  // perform dropdown
+  // perform dropdown handler
   const onClickPerform = (e) => {
     if (e) {
       setOperationsValue(e.value === "export" ? true : false);
-      // setData((prev) => ({ ...prev, perform: e.label }));
 
       if(e.value === "export"){
         setAddValue(false);
         setUpdateValue(false);
         setDeleteValue(false);
-        // setData((prev) => ({
-        //   ...prev,
-        //   operationType: null,
-        // }));
       }
     }
   };
-
-  // // saved searches dropdown
-  // const onChangeSavedSearch = (e) => {
-  //   if (e) {
-  //     console.log("e", e)
-  //     // setData((prev) => ({
-  //     //   ...prev,
-  //     //   savedSearchLabel: e.label,
-  //     //   savedSearchValue: e.value,
-  //     // }));
-  //   } else {
-  //     // setData((prev) => ({
-  //     //   ...prev,
-  //     //   savedSearchLabel: null,
-  //     //   savedSearchValue: null,
-  //     // }));
-  //   }
-  // };
-
-  // // operations dropdown
-  // const onChangeOption = (e) => {
-  //   if (e) {
-  //     // setData((prev) => ({ ...prev, source: e.value }));
-  //   }
-  // };
-
-  // // range field
-  // const handleInputChange = (event) => {
-  //   // setInputValue(event.target.value);
-  //   // setData((prev) => ({ ...prev, range: event.target.value }));
-  // };
 
   // radio button for operations
   const toggleComponet = (value) => {
     setAddValue(value === "add" ? true : false);
     setUpdateValue(value === "update" ? true : false);
     setDeleteValue(value === "delete" ? true : false);
-    // setData((prev) => ({
-    //   ...prev,
-    //   operationType: value,
-    // }));
   };
 
   const onSubmit = (data) => {
@@ -533,10 +479,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId, eventType }) => {
         }
     }
 
-    // console.log("data", data)
-
 if (shouldLogData) {
-  // console.log("submitted data", data);
   if (eventId) {
       console.log("update realtime Event**********");
       const realtimeEventData = {
@@ -554,15 +497,10 @@ if (shouldLogData) {
         range: data.range,
       };
 
-      // if (data.savedSearches) {
         realtimeEventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
         realtimeEventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
-      // } else {
-      //   realtimeEventData.savedSearchLabel = null;
-      //   realtimeEventData.savedSearchValue = null;
-      // }
 
-      // ***API call
+      // ***API call to update event
 
       console.log("realtimeEventData", realtimeEventData)
       if (
@@ -607,7 +545,7 @@ if (shouldLogData) {
 
       console.log("eventData", eventData);
 
-      // API call
+      // ***API call to add event
       if (
         data.operationType === "add" &&
         data.source === "Google Sheet"
@@ -625,7 +563,6 @@ if (shouldLogData) {
         });
       }
     }
-    // router.push("/schedule");
 }
   };
 
@@ -633,6 +570,7 @@ if (shouldLogData) {
     history.back();
   };
 
+   // alert modal
   const onClickDelete = () => {
     console.log("scheduleEventData", scheduleEventData.current);
 
@@ -659,6 +597,7 @@ if (shouldLogData) {
     router.push("/schedule");
   };
 
+  // modal state
   const toggleDeleteModel = (eventData) => {
     scheduleEventData.current = eventData;
     setDeleteModal(true);
@@ -771,10 +710,6 @@ if (shouldLogData) {
                 id="savedSearches"
                 maxMenuHeight="120px"
                 options={savedSearchOptions}
-                // onChange={(e) => {
-                //   field.onChange(e);
-                //   onChangeSavedSearch(e);
-                // }}
               />
             )}
           />
@@ -787,8 +722,6 @@ if (shouldLogData) {
             type="text"
             labelName="Range"
             placeholder="Range"
-            // value={inputValue}
-            // onChange={handleInputChange}
           />
         </TkCol>
       </TkRow>
@@ -806,10 +739,6 @@ if (shouldLogData) {
                 maxMenuHeight="120px"
                 options={sourceOptions}
                 requiredStarOnLabel={true}
-                // onChange={(e) => {
-                //   field.onChange(e);
-                //   onChangeOption(e);
-                // }}
               />
             )}
           />
@@ -879,9 +808,6 @@ if (shouldLogData) {
                   className="mb-3"
                   requiredStarOnLabel={true}
                   options={{
-                    // minDate: "today",
-                    // altInput: true,
-                    // altFormat: "d M, Y",
                     dateFormat: "d M, Y",
                   }}
                 />
@@ -910,9 +836,6 @@ if (shouldLogData) {
                     field.onChange(e);
                   }}
                   options={{
-                    // minDate: "today",
-                    // altInput: true,
-                    // altFormat: "d M, Y",
                     dateFormat: "d M, Y",
                   }}
                 />
@@ -925,7 +848,6 @@ if (shouldLogData) {
               type="checkbox"
               id="noEndDate"
               checked={checkboxValue}
-              // disabled={checkboxValue ? false : true}
               onChange={handleOnChangeCheckbox}
             />
             <TkLabel className="form-check-label mx-2 mb-3" id="noEndDate">

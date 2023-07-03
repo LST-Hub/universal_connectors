@@ -11,7 +11,7 @@ import React, { useEffect, useRef, useState } from "react";
 import * as Yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import FormErrorText from "@/globalComponents/ErrorText";
-import { useMutation, useQueries } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import tkFetch from "@/utils/fetch";
 import { useRouter } from "next/router";
 import DeleteModal from "@/utils/DeleteModal";
@@ -28,12 +28,14 @@ const schema = Yup.object({
   days: Yup.object().required("Day is required"),
 }).required();
 
-const WeeklyEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
+const WeeklyEvent = ({ checkBoxValue, eventId }) => {
   let userId = useRef(null);
   let scheduleEventData = useRef(null);
   let id = useRef(null);
   let source = useRef(null);
   let destination = useRef(null);
+
+  const queryClient = useQueryClient();
 
   const {
     control,
@@ -246,10 +248,11 @@ const WeeklyEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
 
   // get Integretion data and check length
   useEffect(() => {
-
     if (userId.current) {
-  console.log("**********", eventType)
-      if (integrationsData && eventType === "weeklyEvent") {
+  queryClient.invalidateQueries({
+    queryKey: ["integrationData"]
+  })
+      if (integrationsData) {
         source.current = integrationsData[0].sourceName;
         destination.current = integrationsData[0].destinationName;
         if (integrationsData.length === 1) {
@@ -272,11 +275,14 @@ const WeeklyEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
         );
       }
     }
-  }, [eventType, integrationsData, setValue]);
+  }, [integrationsData, queryClient, setValue]);
 
    // Mapped record options and check length
    useEffect(() => {
-    if (mappedRecordData && eventType === "weeklyEvent") {
+    queryClient.invalidateQueries({
+      queryKey: ["mappedRecordData"]
+    })
+    if (mappedRecordData) {
       if (mappedRecordData.length === 1) {
         setValue("mappedRecords", {
           label: mappedRecordData[0].mappedRecordName,
@@ -297,7 +303,7 @@ const WeeklyEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
         );
       }
     }
-  }, [eventType, integrationId, mappedRecordData, setValue]);
+  }, [integrationId, mappedRecordData, setValue]);
 
   // get config data
   useEffect(() => {
@@ -552,7 +558,7 @@ const WeeklyEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
       eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
       eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
-      // API call to add event
+      // ***API call to add event
       if (
         eventData.operationType === "add" &&
         eventData.source === "Google Sheet"

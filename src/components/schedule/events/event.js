@@ -158,23 +158,17 @@ const Event = ({ eventId, syncData }) => {
               <RealtimeEvent
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
-                syncData={syncData}
-                eventType="realtimeEvent"
               />
             ) : showComponent === "singleEvent" ? (
               <SingleEvent
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
-                syncData={syncData}
-                eventType="singleEvent"
               />
             ) : showComponent === "weeklyEvent" ? (
               <WeeklyEvent
-                toggleComponet={toggleComponet}
+                // toggleComponet={toggleComponet}
                 checkBoxValue={checkBoxValue}
                 eventId={eventId}
-                syncData={syncData}
-                eventType="weeklyEvent"
               />
             ) : (
               <SingleEvent />

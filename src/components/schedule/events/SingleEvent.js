@@ -11,7 +11,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import * as Yup from "yup";
 import FormErrorText from "@/globalComponents/ErrorText";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import tkFetch from "@/utils/fetch";
 import { useRouter } from "next/router";
 import DeleteModal from "@/utils/DeleteModal";
@@ -25,7 +25,7 @@ const schema = Yup.object({
   // startTime: Yup.object().required("Start time is required"),
 }).required();
 
-const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
+const SingleEvent = ({ checkBoxValue, eventId }) => {
   const userId = useRef(null);
   let scheduleEventData = useRef(null);
   let id = useRef(null);
@@ -183,6 +183,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     }
   }, [eventId]);
 
+  // set existing data
   useEffect(() => {
     if (eventData) {
       if (eventData[0]?.eventType === "Single") {
@@ -241,13 +242,14 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     }
   }, [eventData, setValue]);
 
-  // get Integretion data
+  // get Integretion data and check length
   useEffect(() => {
 
     if (userId.current) {
-  console.log("********** in single", userId.current, "=", eventType)
-  console.log("integrationsData in single event", integrationsData)
-      if (integrationsData && eventType === "singleEvent") {
+  queryClient.invalidateQueries({
+    queryKey: ["integrationData"]
+  })
+      if (integrationsData) {
         source.current = integrationsData[0].sourceName;
         destination.current = integrationsData[0].destinationName;
         if (integrationsData.length === 1) {
@@ -270,11 +272,14 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
         );
       }
     }
-  }, [eventType, integrationsData, setValue]);
+  }, [integrationsData, queryClient, setValue]);
 
-   // Mapped record options
+   // Mapped record options and check length
    useEffect(() => {
-    if (mappedRecordData && eventType === "singleEvent") {
+    queryClient.invalidateQueries({
+      queryKey: ["mappedRecordData"]
+    })
+    if (mappedRecordData) {
       if (mappedRecordData.length === 1) {
         setValue("mappedRecords", {
           label: mappedRecordData[0].mappedRecordName,
@@ -295,7 +300,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
         );
       }
     }
-  }, [eventType, integrationId, mappedRecordData, setValue]);
+  }, [integrationId, mappedRecordData, setValue]);
 
   // get config data
   useEffect(() => {
@@ -317,7 +322,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     }
   }, [configData]);
 
-  // saved search list
+  // saved search list options
   useEffect(() => {
     if (savedSearchData) {
       setSavedSearchOptions(
@@ -329,6 +334,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     }
   }, [savedSearchData]);
 
+  // endDate handler
   const handleOnChange = (dates) => {
     if (dates) {
       setEndDateCheckbox(false);
@@ -337,6 +343,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     }
   };
 
+  // noEndDate checkbox handler
   const handleOnChangeCheckbox = (e) => {
     if (e.target.checked) {
       setEndDateCheckbox(true);
@@ -347,7 +354,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     }
   };
 
-  // integrations dropdown
+  // integrations dropdown handler
   const onChangeIntegration = (e) => {
     queryClient.invalidateQueries({
       queryKey: ["mappedRecordData", ids],
@@ -362,7 +369,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     }
   };
 
-   // mapped record dropdown
+   // mapped record dropdown handler
    const onChangeMappedRecord = (e) => {
     if (e) {
       setMappedRecordId(e.value);
@@ -381,7 +388,7 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     }
   };
 
-  // perform dropdown
+  // perform dropdown handler
   const onClickPerform = (e) => {
     if (e) {
       setOperationsValue(e.value === "export" ? true : false);
@@ -399,10 +406,6 @@ const SingleEvent = ({ checkBoxValue, eventId, syncData, eventType }) => {
     setAddValue(value === "add" ? true : false);
     setUpdateValue(value === "update" ? true : false);
     setDeleteValue(value === "delete" ? true : false);
-    // setData((prev) => ({
-    //   ...prev,
-    //   operationType: value,
-    // }));
   };
 
   const onSubmit = (data) => {
