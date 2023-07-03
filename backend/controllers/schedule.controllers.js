@@ -136,7 +136,7 @@ const addSingleEvent = async (req, res) => {
       }),
     ]);
 
-    console.log("schedule", schedule.id)
+    // console.log("schedule", schedule.id)
 
     const result = await syncEventData(
       userId,
@@ -376,7 +376,7 @@ const updateRealTimeEvent = async (req, res) => {
     range,
   } = req.body;
 
-  console.log(req.body)
+  // console.log(req.body)
 
   try {
     const scheduleData = await prisma.schedule.updateMany({
@@ -480,7 +480,7 @@ const updateSingleEvent = async (req, res) => {
       integrationId,
       mappedRecordId
     );
-    console.log("update single event final result", result);
+    console.log("final result", result);
     return result;
   } catch (error) {
     response({
@@ -545,8 +545,8 @@ const updateWeeklyEvent = async (req, res) => {
       integrationId,
       mappedRecordId
     );
-    console.log("update weekly event final result", result);
-    // return result;
+    console.log("final result", result);
+    return result;
 
 response({
   res,
@@ -797,9 +797,59 @@ const getCustomFilterFields = async (req, res) => {
   }
 };
 
+const updateFilterFieldsById = async (req, res) => {
+  try {
+const { id } = req.params;
+const {
+  userId,
+  mappedRecordId,
+  integrationId,
+  sourceFieldValue,
+  sourceFieldLabel,
+  destinationFieldValue,
+  destinationFieldLabel,
+  operator
+} = req.body;
+
+const filterData = await prisma.customFilterFields.updateMany({
+  where: {
+    id:  Number(id),
+    userId: Number(userId),
+    integrationId: Number(integrationId),
+    mappedRecordId: Number(mappedRecordId)
+  },
+  data: {
+    sourceFieldValue: sourceFieldValue,
+    sourceFieldLabel: sourceFieldLabel,
+    destinationFieldValue: destinationFieldValue,
+    destinationFieldLabel: destinationFieldLabel,
+    operator: operator,
+    modificationDate: new Date(),
+  }
+})
+
+response({
+  res,
+  success: true,
+  status_code: 200,
+  message: "Fielter fields updated successfully."
+})
+return;
+
+  } catch (error) {
+    console.log("fielterData error", error)
+    response({
+      res,
+      success: false,
+      status_code: 400,
+      message: "Error while updating records."
+    })
+  }
+}
+
 // Pending
 const scheduleTask = async (req, res) => {
-  console.log("req.date", req.body.date);
+  // console.log("req.date", req.body.date);
   try {
     // schedule the job to a requested date and end date
     // const date = new Date(req.body.date);
@@ -811,7 +861,7 @@ const scheduleTask = async (req, res) => {
     rule.hour = 0;
 
     schedule.scheduleJob(rule, function () {
-      console.log("starting...", new Date());
+      // console.log("starting...", new Date());
 
       // if(new Date() == endDate){
       //     job.cancel();
@@ -1001,7 +1051,7 @@ const getFields = async (req, res) => {
       data: payload,
     })
       .then((values) => {
-        console.log(values.data);
+        // console.log(values.data);
         response({
           res,
           success: true,
@@ -1162,7 +1212,7 @@ const syncEventData = async (
           scheduleData[0].source,
           scheduleData[0].range
         );
-        console.log("singleEventResult", singleEventResult)
+        // console.log("singleEventResult", singleEventResult)
         return singleEventResult;
         break;
 
@@ -1182,7 +1232,7 @@ const syncEventData = async (
           scheduleData[0].source,
           scheduleData[0].range
         );
-        console.log("weeklyEventResult", weeklyEventResult)
+        // console.log("weeklyEventResult", weeklyEventResult)
         return weeklyEventResult;
         break;
 
@@ -1232,10 +1282,10 @@ const scheduleRealTimeEvent = async (
     const month = dateObj.getMonth() + 1;
     const day = dateObj.getDate();
 
-    console.log(`date * * ${day} ${month} *`);
+    console.log(`date => * * ${day} ${month} *`);
 
     // cron.schedule(`* * ${day} ${month} *`, async function () {
-      console.log("schedule RealTime Event", new Date());
+      // console.log("schedule RealTime Event", new Date());
 
       const accessToken = await getAccessTokenByUserId(userId);
       // console.log("accessToken", accessToken);
@@ -1291,9 +1341,9 @@ const scheduleSingleEvent = async(
     // }
 
     let hour, minute;
-console.log("startTimeValue", startTimeValue);
+// console.log("startTimeValue", startTimeValue);
 const [time, ampm] = startTimeValue.split(" ");
-console.log("time", time, "ampm", ampm);
+// console.log("time", time, "ampm", ampm);
 if (ampm === "pm" || ampm === "PM") {
   [hour, minute] = time.split(":");
   hour = parseInt(hour, 10);  // Parse hour as an integer
@@ -1318,13 +1368,13 @@ if (ampm === "pm" || ampm === "PM") {
     const todaysHour = date.getHours();
     const todaysMinute = date.getMinutes();
 
-    console.log(`date ${minute} ${hour} ${repeat} ${month} *`);
+    console.log(`date => ${minute} ${hour} ${repeat} ${month} *`);
 
     if (todaysYear === year && TodaysMonth === month && TodaysDate === day) {
       cron.schedule(
         `${minute} ${hour} ${repeat} ${month} *`,
         async function () {
-          console.log("schedule Single Event", new Date());
+          // console.log("schedule Single Event", new Date());
           // const now = new Date();
           // const options = { timeZone: "Asia/Kolkata" };
           // const indianDate = now.toLocaleString("en-IN", options);
@@ -1344,7 +1394,7 @@ if (ampm === "pm" || ampm === "PM") {
             accessToken
           );
           // result.push(res);
-          console.log("res", res)
+          // console.log("res", res)
           return res;
         }
       );
@@ -1398,9 +1448,9 @@ const scheduleWeeklyEvent = (
     // }
 
     let hour, minute;
-console.log("startTimeValue", startTimeValue);
+// console.log("startTimeValue", startTimeValue);
 const [time, ampm] = startTimeValue.split(" ");
-console.log("time", time, "ampm", ampm);
+// console.log("time", time, "ampm", ampm);
 if (ampm === "pm" || ampm === "PM") {
   [hour, minute] = time.split(":");
   hour = parseInt(hour, 10);  // Parse hour as an integer
@@ -1425,7 +1475,7 @@ if (ampm === "pm" || ampm === "PM") {
       "Saturday",
     ];
     const dayIndex = weekDays.indexOf(dayOfWeek);
-    console.log(dayOfWeek);
+    // console.log(dayOfWeek);
 
     // ***todays date and time
     const date = new Date();
@@ -1436,13 +1486,15 @@ if (ampm === "pm" || ampm === "PM") {
     const todaysMinute = date.getMinutes();
 
 
-    console.log("date", minute, hour, day, month, dayIndex);
+    // console.log("date", minute, hour, day, month, dayIndex);
+    console.log(`date => ${minute} ${hour} ${day} ${month} ${dayIndex}`);
+
 
     if (todaysYear === year && TodaysMonth === month && TodaysDate === day) {
     cron.schedule(
       `${minute} ${hour} ${day} ${month} ${dayIndex}`,
       async function () {
-        console.log("schedule Weekly Event", new Date());
+        // console.log("schedule Weekly Event", new Date());
         const accessToken = await getAccessTokenByUserId(userId);
 
         const res = await syncData(
@@ -1456,7 +1508,7 @@ if (ampm === "pm" || ampm === "PM") {
           accessToken
         );
         // result.push(res);
-        console.log("res",res)
+        // console.log("res",res)
         return res;
       }
     );
@@ -1552,7 +1604,7 @@ const syncData = async (
             id,
             range
           );
-          console.log("gsResult", gsResult)
+          // console.log("gsResult", gsResult)
           return gsResult;
 
         default:
@@ -1988,7 +2040,7 @@ const addNetsuiteV1Api = async (
           data: item,
         });
 
-        console.log("output => ", res.data);
+        // console.log("output => ", res.data);
 
         if (res.data.add_success) {
           successCount++;
@@ -2161,7 +2213,7 @@ const updateNetsuiteV1Api = async (
             data: result,
           });
 
-          console.log("output => ", res.data);
+          // console.log("output => ", res.data);
 
           if (res.data[0].update_success) {
             updatedCount++;
@@ -2464,7 +2516,7 @@ const googleSheetsOperations = async (
             id,
             mappedFields
           );
-          console.log("addRecordResult", addRecordResult)
+          // console.log("addRecordResult", addRecordResult)
           return addRecordResult;
 
         case "update":
@@ -2579,7 +2631,7 @@ const addGoogleSheetRecords = async (
             recordValues.length,
             id
           );
-          console.log("appendRecordResult", appendRecordResult)
+          // console.log("appendRecordResult", appendRecordResult)
           return appendRecordResult;
 
         // })
@@ -2939,7 +2991,7 @@ const appendFields = async (
         headers: headers,
         data: recordList,
       });
-      console.log("request", request.data);
+      // console.log("request", request.data);
 
       const summaryMessage = `Successfully added ${
         request.data.updates.updatedRows - 1
@@ -3174,7 +3226,7 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
       headers: headers,
       data: recordList,
     });
-    console.log("request", request.data)
+    // console.log("request", request.data)
 
     const summaryMessage = `Successfully updated ${request.data.updatedRows} records in Google Sheet out of ${recordCount}`;
       if (recordCount > 0) {
@@ -3244,13 +3296,13 @@ columns.push(field.sourceFieldValue)
       mappedRecord,
       accessToken
     );
-    console.log("sheetsData by range", sheetsData)
+    // console.log("sheetsData by range", sheetsData)
 
     const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
     const fieldIndex = sheetsValue.data.values[0].indexOf(
       filterData[0].destinationFieldLabel
     );
-    console.log("fieldIndex", fieldIndex)
+    // console.log("fieldIndex", fieldIndex)
 
     const deleteFields = []
     const results = await Promise.all(
@@ -3375,7 +3427,7 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
         await Promise.all(
           sheetsValue.data.values.map(async (row, i) => {
             if (row[fieldIndex] === field) {
-              console.log("row to delete", row)
+              // console.log("row to delete", row)
               count++;
 
               const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
@@ -3409,9 +3461,9 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
                   data: data,
                 });
 
-                console.log("output => ", res.data);
+                // console.log("output => ", res.data);
                 deleteCount++;
-                console.log("start", i, "end", i+1)
+                // console.log("start", i, "end", i+1)
               } catch (error) {
                 errorCount++;
                 console.log("deleterecord error", error);
@@ -3542,7 +3594,7 @@ const addLogs = async (values) => {
       message: "Added logs",
       data: logResult,
     };
-    console.log("logResult", result);
+    // console.log("logResult", result);
 
     return result;
   } catch (error) {
@@ -3628,6 +3680,7 @@ module.exports = {
   getMappedField,
   addCustomFilterFields,
   getCustomFilterFields,
+  updateFilterFieldsById,
   scheduleTask,
   getMappedRecordByIntegrationId,
   getNetsuiteFiledsByRecordId,

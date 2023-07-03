@@ -11,7 +11,7 @@ const syncEvent = async (req, res) => {
     const result = []
 
     const promises = eventIds.map(async (ids) => {
-      console.log("event id", ids);
+      // console.log("event id", ids);
       const scheduleData = await prisma.schedule.findMany({
         where: {
           userId: Number(ids.userId),
@@ -582,7 +582,7 @@ const addNetsuiteV1Api = async (
           data: item,
         });
 
-        console.log("output => ", res.data);
+        // console.log("output => ", res.data);
 
         if (res.data.add_success) {
           successCount++;
@@ -755,7 +755,7 @@ const updateNetsuiteV1Api = async (
             data: result,
           });
 
-          console.log("output => ", res.data);
+          // console.log("output => ", res.data);
 
           if (res.data[0].update_success) {
             updatedCount++;
@@ -1732,13 +1732,13 @@ columns.push(field.sourceFieldValue)
       mappedRecord,
       accessToken
     );
-    console.log("sheetsData by range", sheetsData)
+    // console.log("sheetsData by range", sheetsData)
 
     const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
     const fieldIndex = sheetsValue.data.values[0].indexOf(
       filterData[0].destinationFieldLabel
     );
-    console.log("fieldIndex", fieldIndex)
+    // console.log("fieldIndex", fieldIndex)
 
     const deleteFields = []
     const results = await Promise.all(
@@ -1863,7 +1863,7 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
         await Promise.all(
           sheetsValue.data.values.map(async (row, i) => {
             if (row[fieldIndex] === field) {
-              console.log("row to delete", row)
+              // console.log("row to delete", row)
               count++;
 
               const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
@@ -1897,9 +1897,9 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
                   data: data,
                 });
 
-                console.log("output => ", res.data);
+                // console.log("output => ", res.data);
                 deleteCount++;
-                console.log("start", i, "end", i+1)
+                // console.log("start", i, "end", i+1)
               } catch (error) {
                 errorCount++;
                 console.log("deleterecord error", error);
@@ -2030,7 +2030,7 @@ const addLogs = async (values) => {
       message: "Added logs",
       data: logResult,
     };
-    console.log("logResult", result);
+    // console.log("logResult", result);
 
     return result;
   } catch (error) {

@@ -17,7 +17,7 @@ import tkFetch from "@/utils/fetch";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useMutation, useQueries } from "@tanstack/react-query";
 import { set } from "date-fns";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as Yup from "yup";
 
@@ -54,6 +54,10 @@ const Field = ({ mappedRecordId }) => {
   const addCustomFilterFields = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/addCustomFilterFields`),
   });
+
+  const updateFilterFieldsById = useMutation({
+    mutationFn: tkFetch.putWithIdInUrl(`${API_BASE_URL}/updateFilterFieldsById`)
+  })
 
   const apiResults = useQueries({
     queries: [
@@ -244,7 +248,6 @@ const Field = ({ mappedRecordId }) => {
       setRows(customFilterFieldsData);
       // return;
     } else {
-      console.log("else")
       setValue(`netsuiteFields`, {
         label: null,
         value: null,
@@ -283,34 +286,41 @@ const Field = ({ mappedRecordId }) => {
   };
 
   const onSubmit = (data) => {
-    console.log("data", data);
-    // const fiterItem = data.googleSheetFields.map((item, index) => {
-    //   return {
-    //     userId: userId,
-    //     mappedRecordId: JSON.parse(mappedRecordId),
-    //     integrationId: configurationData[0].integrationId,
-    //     sourceFieldValue: data.netsuiteFields[index].value,
-    //     sourceFieldLabel: data.netsuiteFields[index].label,
-    //     destinationFieldValue: item.value,
-    //     destinationFieldLabel: item.label,
-    //     operator: data.operator[index].label,
-    //   };
-    // });
-    // console.log("fiterItem", fiterItem);
+    if(customFilterFieldsData?.length > 0){
+      console.log("*** update filter data")
+      const fiterItem = {
+        id: customFilterFieldsData[0].id,
+        userId: userId,
+        mappedRecordId: JSON.parse(mappedRecordId),
+        integrationId: configurationData[0].integrationId,
+        sourceFieldValue: data.netsuiteFields[0].value,
+        sourceFieldLabel: data.netsuiteFields[0].label,
+        destinationFieldValue: data.googleSheetFields[0].value,
+        destinationFieldLabel: data.googleSheetFields[0].label,
+        operator: data.operator[0].label,
+      }
 
-    const fiterItem = {
-      userId: userId,
-      mappedRecordId: JSON.parse(mappedRecordId),
-      integrationId: configurationData[0].integrationId,
-      sourceFieldValue: data.netsuiteFields[0].value,
-      sourceFieldLabel: data.netsuiteFields[0].label,
-      destinationFieldValue: data.googleSheetFields[0].value,
-      destinationFieldLabel: data.googleSheetFields[0].label,
-      operator: data.operator[0].label,
-    }
+      updateFilterFieldsById.mutate(fiterItem, {
+        onSuccess: (data) => {
+          console.log("updated filter fields", data)
+        }, onError: (error) => {
+          console.log(error)
+        }
+      })
+    } else {
+      console.log("*** add filter data")
+      const fiterItem = {
+        userId: userId,
+        mappedRecordId: JSON.parse(mappedRecordId),
+        integrationId: configurationData[0].integrationId,
+        sourceFieldValue: data.netsuiteFields[0].value,
+        sourceFieldLabel: data.netsuiteFields[0].label,
+        destinationFieldValue: data.googleSheetFields[0].value,
+        destinationFieldLabel: data.googleSheetFields[0].label,
+        operator: data.operator[0].label,
+      }
 
-    console.log("fiterItem", fiterItem)
-    addCustomFilterFields.mutate(fiterItem, {
+      addCustomFilterFields.mutate(fiterItem, {
       onSuccess: (data) => {
         console.log(data);
       },
@@ -318,6 +328,7 @@ const Field = ({ mappedRecordId }) => {
         console.log(error);
       },
     });
+    }
     history.back();
   };
 
