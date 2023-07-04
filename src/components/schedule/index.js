@@ -12,6 +12,7 @@ import DeleteModal from "@/utils/DeleteModal";
 import TkButton from "@/globalComponents/TkButton";
 import { TkCol } from "@/globalComponents/TkRow";
 import useFullPageLoader from "@/globalComponents/useFullPageLoader";
+import { TkToastError, TkToastSuccess } from "@/globalComponents/TkToastContainer";
 
 const ScheduleTable = () => {
   let deleteEventId = useRef(null);
@@ -186,12 +187,14 @@ const ScheduleTable = () => {
       onSuccess: (data) => {
         console.log("syncEvent result ==>", data);
         hideLoader();
+
+        data[0].success ? TkToastSuccess("Synced Successfully") :TkToastError(`Synced Failed: ${data[0].error}`);
       }, onError: () => {
         hideLoader();
       }
     });
   };
-
+  
   return (
     <>
       {isLoading ? (

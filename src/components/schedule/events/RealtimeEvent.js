@@ -18,6 +18,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import * as Yup from "yup";
 import AlertBoxModal from "@/utils/AlertBoxModal";
+import TkLoader from "@/globalComponents/TkLoader";
 
 const schema = Yup.object({
   startDate: Yup.date().nullable().required("Start date is required"),
@@ -101,9 +102,11 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
     mutationFn: tkFetch.post(`${API_BASE_URL}/addNetsuiteFields`),
   });
 
+let temp = null;
+
   const apiResults = useQueries({
     queries: [
-{
+  {
     queryKey: ["eventData", ids],
     queryFn: tkFetch.get(`${API_BASE_URL}/getScheduleEventById`, {
       params: ids,
@@ -146,12 +149,12 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
 ],
   });
 
-  const [scheduleEvent, integrations, getMappedRecordData, config, restletAPI, fielterData] = apiResults;
+  const [scheduleEvent, integrations, getMappedRecordData, config, restletAPI, filterData] = apiResults;
 
   const {
     data: eventData,
-    isLoading: isScheduleEventLoading,
-    error: scheduleEventError,
+    isLoading: isEventDataLoading,
+    error: eventDataError,
   } = scheduleEvent;
   const {
     isLoading: isIntegrationsLoading,
@@ -179,9 +182,9 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
   } = restletAPI;
   const {
     data: filterFields,
-    isLoading: fielterFieldsLoading,
-    error: fielterFieldsError
-  } = fielterData;
+    isLoading: filterFieldsLoading,
+    error: filterFieldsError
+  } = filterData;
 
   useEffect(() => {
     userId.current = sessionStorage.getItem("userId");
@@ -364,7 +367,11 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
     });
     setValue("mappedRecords", null);
     if (e) {
-      setIds({
+      // setIds({
+        //   id: userId.current,
+      //   integrationId: e.value,
+      // });
+      setIntegrationRecordId({
         id: userId.current,
         integrationId: e.value,
       });
@@ -635,8 +642,14 @@ if (shouldLogData) {
     setAlertBoxModal(true);
   };
 
+  // console.log("ids", ids)
+  // console.log("isEventDataLoading", isEventDataLoading)
+  // console.log("isIntegrationsLoading", isIntegrationsLoading)
   return (
     <>
+    {/* {isEventDataLoading ? (
+      <TkLoader />
+    ) : ( */}
       <TkForm className="mb-4" onSubmit={handleSubmit(onSubmit)}>
       <TkRow className="my-1">
         <TkCol lg={4}>
@@ -906,6 +919,7 @@ if (shouldLogData) {
           </TkCol>
         </TkRow>
       </TkForm>
+        {/* )} */}
 
       <DeleteModal
         show={deleteModal}

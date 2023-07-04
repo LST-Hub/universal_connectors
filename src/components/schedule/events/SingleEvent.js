@@ -14,7 +14,7 @@ import FormErrorText from "@/globalComponents/ErrorText";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import tkFetch from "@/utils/fetch";
 import { useRouter } from "next/router";
-import DeleteModal from "@/utils/DeleteModal";
+import ConfirmBoxModal from "@/utils/DeleteModal";
 import TkInput from "@/globalComponents/TkInput";
 import TkRadioButton from "@/globalComponents/TkRadioButton";
 import AlertBoxModal from "@/utils/AlertBoxModal";
@@ -23,7 +23,31 @@ const schema = Yup.object({
   startDate: Yup.date().required("Start date is required"),
   integrationName: Yup.object().nullable().required("Integration is required."),
   mappedRecords: Yup.object().nullable().required("Mapped record is required."),
-  // startTime: Yup.object().required("Start time is required"),
+
+  // startTimeInput: Yup.string().test('time-format', 'Please enter time in 12-hour format.\n(00:00 AM/PM)', function(value) {
+  //   // Check if startTimeInput is provided and not empty
+  //   if (value && !/^(0?[1-9]|1[0-2]):[0-5][0-9] [APap][mM]$/.test(value)) {
+  //     return this.createError({
+  //       message: 'Please enter time in 12-hour format.\n(00:00 AM/PM)',
+  //       path: 'startTimeInput'
+  //     });
+  //   }
+  //   return true;
+  // })
+
+  startTime: Yup.object().nullable().test('start-time', 'Please enter a start time.', function (value) {
+    const startTimeInput = this.parent.startTimeInput;
+    return value || startTimeInput;
+  }),
+  startTimeInput: Yup.string().test('start-time-input', 'Please enter a start time.', function (value) {
+    if (value && !/^(0?[1-9]|1[0-2]):[0-5][0-9] [APap][mM]$/.test(value)) {
+      return this.createError({
+        message: 'Please enter time in 12-hour format.\n(00:00 AM/PM)',
+        path: 'startTimeInput'
+      });
+    }
+    return true;
+  }),
 }).required();
 
 const SingleEvent = ({ checkBoxValue, eventId }) => {
@@ -49,7 +73,7 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   const [endDateCheckbox, setEndDateCheckbox] = useState(false);
   const [repeatEveryDay, setRepeatEveryDay] = useState(true);
   const [ids, setIds] = useState(null);
-  const [deleteModal, setDeleteModal] = useState(false);
+  const [confirmBoxModal, setConfirmBoxModal] = useState(false);
   const [operationsValue, setOperationsValue] = useState(false);
   const [addValue, setAddValue] = useState(false);
   const [updateValue, setUpdateValue] = useState(false);
@@ -139,7 +163,7 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
 ],
   })
 
-  const [scheduleEvent, integrations, getMappedRecordData, config, restletAPI, fielterData] = apiResults;
+  const [scheduleEvent, integrations, getMappedRecordData, config, restletAPI, filterData] = apiResults;
 
   const {
     data: eventData,
@@ -172,9 +196,9 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   } = restletAPI;
   const {
     data: filterFields,
-    isLoading: fielterFieldsLoading,
-    error: fielterFieldsError
-  } = fielterData;
+    isLoading: filterFieldsLoading,
+    error: filterFieldsError
+  } = filterData;
 
   useEffect(() => {
     userId.current = sessionStorage.getItem("userId");
@@ -363,7 +387,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     });
     setValue("mappedRecords", null);
     if (e) {
-      setIds({
+      // setIds({
+      //   id: userId.current,
+      //   integrationId: e.value,
+      // });
+      setIntegrationRecordId({
         id: userId.current,
         integrationId: e.value,
       });
@@ -419,16 +447,46 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
       setEndDateCheckbox(true);
     }
 
+    let shouldLogData = true;
+
     if(data.startTimeInput){
       data.startTime = {
         label: data.startTimeInput,
         value: data.startTimeInput,
       }
-    }
+    } 
+    // else if(data.startTime === null) {
+    //   const alertMsg = `Please enter time in 12 hour format. \n (00:00 AM/PM)`
+    //       toggleAlertBoxModel(alertMsg)
+    //       shouldLogData = false;
+    // }
+
+    // if(data.startTimeInput){
+    //     const regex = /^(0?[1-9]|1[0-2]):[0-5][0-9] [APap][mM]$/;
+    //     const time = regex.test(data.startTimeInput);
+    //     console.log("time",time)
+    //     if(time === false) {
+    //       const alertMsg = `Please enter time in 12 hour format. \n (00:00 AM/PM)`
+    //       toggleAlertBoxModel(alertMsg)
+    //       shouldLogData = false;
+    //      } else{
+    //       data.startTime = {
+    //         label: data.startTimeInput,
+    //         value: data.startTimeInput,
+    //       }
+    //      }
+    // } else if(data.startTime) {
+    //   data.startTime = {
+    //     label: data.startTime.label,
+    //     value: data.startTime.value,
+    //   }
+    // } else {
+    //   const alertMsg = `Please enter time in 12 hour format. \n (00:00 AM/PM)`
+    //   toggleAlertBoxModel(alertMsg)
+    //   shouldLogData = false;
+    // }
 
     addValue ? (data.operationType = "add") : updateValue ? (data.operationType = "update") : deleteValue ? (data.operationType = "delete") : data.operationType = null;
-
-    let shouldLogData = true;
 
     if(data.perform.label === "Import"){
       switch (data.source.label) {
@@ -531,6 +589,8 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
 
       };
 
+      // console.log("eventData", eventData)
+
       // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
       // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
@@ -539,17 +599,20 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         data.operationType === "add" &&
         data.source.label === "Google Sheet"
       ) {
-        toggleDeleteModel(eventData);
+        toggleConfirmBoxModal(eventData);
       } else {
         updateSingleEvent.mutate(eventData, {
           onSuccess: (data) => {
             console.log("update single event res", data)
+          data[0].success ? 
+            router.push("/schedule") : 
+            toggleAlertBoxModel(data[0].error) 
           },
           onError: (error) => {
             console.log(error);
           },
         });
-        router.push("/schedule");
+        // router.push("/schedule");
       }
     } else {
       console.log("add single event*********");
@@ -577,22 +640,25 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
       // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
       // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
-      // API call
+      // ***API call
       if (
         data.operationType === "add" &&
         data.source.label === "Google Sheet"
       ) {
-        toggleDeleteModel(eventData);
+        toggleConfirmBoxModal(eventData);
       } else {
         addEvent.mutate(eventData, {
           onSuccess: (data) => {
             console.log("add single event res", data)
+          data[0].success ? 
+            router.push("/schedule") : 
+            toggleAlertBoxModel(data[0].error) 
           },
           onError: (error) => {
             console.log(error);
           },
         });
-        router.push("/schedule");
+        // router.push("/schedule");
       }
     }
 
@@ -603,13 +669,16 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     history.back();
   };
 
-  const onClickDelete = () => {
-    console.log("scheduleEventData", scheduleEventData.current);
+  const onClickModal = () => {
+    // console.log("scheduleEventData", scheduleEventData.current);
 
     if (scheduleEventData.current.id) {
       updateSingleEvent.mutate(scheduleEventData.current, {
         onSuccess: (data) => {
           console.log("update single event res", data)
+          data[0].success ? 
+            router.push("/schedule") : 
+            toggleAlertBoxModel(data[0].error) 
         },
         onError: (error) => {
           console.log(error);
@@ -619,19 +688,22 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
       addEvent.mutate(scheduleEventData.current, {
         onSuccess: (data) => {
           console.log("add single event res", data)
+          data[0].success ? 
+            router.push("/schedule") : 
+            toggleAlertBoxModel(data[0].error) 
         },
         onError: (error) => {
           console.log(error);
         },
       });
     }
-    setDeleteModal(false);
-    router.push("/schedule");
+    setConfirmBoxModal(false);
+    // router.push("/schedule");
   };
 
-  const toggleDeleteModel = (eventData) => {
+  const toggleConfirmBoxModal = (eventData) => {
     scheduleEventData.current = eventData;
-    setDeleteModal(true);
+    setConfirmBoxModal(true);
   };
 
   const toggleAlertBoxModel = (alertMsg) => {
@@ -882,7 +954,7 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
             id="startTimeInput"
             className="mb-3"
             placeholder="Enter Start Time"
-/>
+          />
             {errors.startTimeInput?.message ? (
               <FormErrorText>{errors.startTimeInput?.message}</FormErrorText>
             ) : null}
@@ -959,10 +1031,10 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         </TkRow>
       </TkForm>
 
-      <DeleteModal
-        show={deleteModal}
-        onDeleteClick={onClickDelete}
-        onCloseClick={() => setDeleteModal(false)}
+      <ConfirmBoxModal
+        show={confirmBoxModal}
+        onDeleteClick={onClickModal}
+        onCloseClick={() => setConfirmBoxModal(false)}
         label="This will erase all the data from Google Sheet and it will add new data from Netsuite. Are you sure you want to continue?"
         image={false}
       />

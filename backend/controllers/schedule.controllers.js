@@ -138,6 +138,9 @@ const addSingleEvent = async (req, res) => {
 
     // console.log("schedule", schedule.id)
 
+    const accessToken = await getAccessTokenByUserId(userId);
+
+if (accessToken.success) {
     const result = await syncEventData(
       userId,
       schedule.id,
@@ -145,7 +148,24 @@ const addSingleEvent = async (req, res) => {
       mappedRecordId
     );
     console.log("final result", result);
-    return result; 
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      data: [result],
+      message: "Successfully schedule"
+    })
+    return; 
+  } else {
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      data: [accessToken],
+      message: "Access token error"
+    })
+    return;
+  }
 
   } catch (error) {
     response({
@@ -213,6 +233,9 @@ const addWeeklyEvent = async (req, res) => {
       }),
     ]);
 
+    const accessToken = await getAccessTokenByUserId(userId);
+
+if (accessToken.success) {
     const result = await syncEventData(
       userId,
       schedule.id,
@@ -220,7 +243,24 @@ const addWeeklyEvent = async (req, res) => {
       mappedRecordId
     );
     console.log("final result", result);
-    return result;
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      data: [result],
+      message: "Successfully schedule"
+    })
+    return;
+  } else {
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      data: [accessToken],
+      message: "Access token error"
+    })
+    return;
+  }
 
   } catch (error) {
     response({
@@ -474,14 +514,35 @@ const updateSingleEvent = async (req, res) => {
       },
     });
 
-    const result = await syncEventData(
-      userId,
-      id,
-      integrationId,
-      mappedRecordId
-    );
-    console.log("final result", result);
-    return result;
+    const accessToken = await getAccessTokenByUserId(userId);
+
+if (accessToken.success) {
+   const result = await syncEventData(
+        userId,
+        id,
+        integrationId,
+        mappedRecordId
+      );
+      console.log("final result", result);
+      response({
+        res,
+        success: true,
+        status_code: 200,
+        data: [result],
+        message: "Successfully schedule"
+      })
+      return;
+    } else {
+      response({
+        res,
+        success: true,
+        status_code: 200,
+        data: [accessToken],
+        message: "Access token error"
+      })
+      return;
+    }
+
   } catch (error) {
     response({
       res,
@@ -539,41 +600,44 @@ const updateWeeklyEvent = async (req, res) => {
       },
     });
 
-    const result = syncEventData(
+    const accessToken = await getAccessTokenByUserId(userId);
+
+    if (accessToken.success) {
+    const result = await syncEventData(
       userId,
       id,
       integrationId,
       mappedRecordId
     );
     console.log("final result", result);
-    return result;
-
-response({
-  res,
-  success: true,
-  status_code: 200,
-  data: [result],
-  message: "success"
-});
-return;
-
-
-
-// res.status(200).json({
-//   success: true,
-//   status_code: 200,
-//   data: [result],
-//   message: 'success'
-// });
-  } catch (error) {
     response({
       res,
-      success: false,
-      status_code: 400,
-      message: "Error in updating schedule",
-    });
-    console.log("error", error);
+      success: true,
+      status_code: 200,
+      data: [result],
+      message: "Successfully schedule"
+    })
+    return;
+  } else {
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      data: [accessToken],
+      message: "Access token error"
+    })
+    return;
   }
+
+} catch (error) {
+  response({
+    res,
+    success: false,
+    status_code: 400,
+    message: "Error in updating schedule",
+  });
+  console.log("error", error);
+}
 };
 
 const deleteScheduleEvent = async (req, res) => {
@@ -832,12 +896,12 @@ response({
   res,
   success: true,
   status_code: 200,
-  message: "Fielter fields updated successfully."
+  message: "Filter fields updated successfully."
 })
 return;
 
   } catch (error) {
-    console.log("fielterData error", error)
+    console.log("filterData error", error)
     response({
       res,
       success: false,
@@ -1243,7 +1307,7 @@ const syncEventData = async (
       console.log("****status false", mappedRecord[0].sheetLabel);
       return {
         success: false,
-        error: "Error: mapped record status is false."
+        error: `Please active mapped record status for ${mappedRecord[0].sheetLabel} sheet.`
       }
     }
 
@@ -1297,7 +1361,7 @@ const scheduleRealTimeEvent = async (
         source,
         range,
         eventId,
-        accessToken
+        accessToken.data
       );
       // result.push(res);
     // });
@@ -1391,7 +1455,7 @@ if (ampm === "pm" || ampm === "PM") {
             source,
             range,
             eventId,
-            accessToken
+            accessToken.data
           );
           // result.push(res);
           // console.log("res", res)
@@ -1505,7 +1569,7 @@ if (ampm === "pm" || ampm === "PM") {
           source,
           range,
           eventId,
-          accessToken
+          accessToken.data
         );
         // result.push(res);
         // console.log("res",res)
@@ -1656,14 +1720,18 @@ const getAccessTokenByUserId = async (userId) => {
       });
 
       console.log(response.data.access_token);
-      return response.data.access_token;
+      // return response.data.access_token;
+      return {
+        success: true,
+        data: response.data.access_token
+      }
     } catch (error) {
       console.log("getAccessTokenByUserId error", error.response.data);
       // ***invalid_grant
       //   throw error;
       return {
         success: false,
-        error: "invalid_grant type error."
+        error: error.response.data.error_description
       }
     }
   } catch (error) {
@@ -3661,7 +3729,7 @@ const getFilterDataById = async (req, res) => {
       success: false,
       status_code: 400,
       data: [],
-      message: "Error iwhile fetching fielter fields."
+      message: "Error iwhile fetching filter fields."
     })
   }
 }

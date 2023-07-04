@@ -9,6 +9,9 @@ const syncEvent = async (req, res) => {
   try {
     const eventIds = req.body;
     const result = []
+    console.log(eventIds)
+    const accessToken = await getAccessTokenByUserId(eventIds[0].userId);
+    if(accessToken.success){
 
     const promises = eventIds.map(async (ids) => {
       // console.log("event id", ids);
@@ -37,8 +40,7 @@ const syncEvent = async (req, res) => {
           range: true,
         },
       });
-
-      const accessToken = await getAccessTokenByUserId(ids.userId);
+        
 
       const resultItem = await syncData(
         ids.userId,
@@ -48,7 +50,7 @@ const syncEvent = async (req, res) => {
         scheduleData[0].source,
         scheduleData[0].range,
         ids.id,
-        accessToken
+        accessToken.data
       );
       result.push(resultItem);
     })
@@ -73,6 +75,16 @@ const syncEvent = async (req, res) => {
       message: "success"
     });
     return;
+  } else {
+    response({
+      res,
+      success: true,
+      status_code: 200,
+      data: [accessToken],
+      message: "Access token error"
+    });
+    return;
+  }
   } catch (error) {
     console.log("syncEvent error", error);
     response({
@@ -210,14 +222,18 @@ const getAccessTokenByUserId = async (userId) => {
         url: url,
         headers: headers,
       });
-      return response.data.access_token;
+      // return response.data.access_token;
+      return {
+        success: true,
+        data: response.data.access_token
+      }
     } catch (error) {
-      console.log("getAccessTokenByUserId error", error);
+      console.log("getAccessTokenByUserId error", error.response.data);
       // ***invalid_grant
         // return error;
         return {
           success: false,
-          error: "invalid_grant type error."
+          error: error.response.data.error_description
         }
     }
   } catch (error) {
