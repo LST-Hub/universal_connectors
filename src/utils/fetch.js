@@ -113,16 +113,18 @@ const tkFetch = {
 
   deleteWithIdsInUrl(url, options) {
     return async (data) => {
+      console.log("data", data)
       if (!data.id) {
         throw new Error("Id is required, for delete with ID function");
       }
       try {
-        const res = await axios.delete(url + `/${data.id}/${data.integrationId}`, options);
+        const res = await axios.delete(url + `/${data.id}/${data.integrationId}/${data.userId}/${data.mappedRecord}`, options);
         if (!res.data.success) {
           throw new Error(res.data.message);
         }
         return res.data.data;
       } catch (err) {
+        console.log("err", err)
         // status code is not between 200 and 300 , then axiois throws an error, we catch it and throw our message that we have returned from the server
         const resData = err.response?.data;
         if (resData && resData.message) {

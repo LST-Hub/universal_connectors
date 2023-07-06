@@ -172,74 +172,79 @@ const getMappedRecordById = async (req, res) => {
 const deleteMappedRecordByID = async (req, res) => {
 console.log(req.params)
   try {
-    await deleteScheduleEvent(req.params.id, req.params.integrationId);
+    const deleteResult =  await deleteScheduleEvent(req.params.id, req.params.integrationId, req.params.userId);
+console.log("deleteResult", deleteResult)
+    if(deleteResult.success){
+      console.log("deleteResult status", deleteResult)
+      const [deleteFilterField, deleteRecordMapping] = await prisma.$transaction(
+        [
+          prisma.customFilterFields.deleteMany({
+            where: {
+              mappedRecordId: Number(req.params.id),
+              userId: Number(req.params.userId),
+              integrationId: Number(req.params.integrationId),
+            }
+          }),
+          prisma.mappedRecords.deleteMany({
+            where: {
+              id: Number(req.params.id),
+              userId: Number(req.params.userId),
+              integrationId: Number(req.params.integrationId),
+            },
+          }),
+        ]
+      );
 
-    const [deleteRecordMapping, updateIntegrations] = await prisma.$transaction(
-      [
-        prisma.mappedRecords.deleteMany({
-          where: {
-            id: Number(req.params.id),
-          },
-        }),
-        prisma.integrations.updateMany({
-          where: {
-            id: Number(req.params.integrationId),
-          },
-          data: {
-            fieldMapping: false,
-          },
-        }),
-      ]
-    );
-    // console.log("deleteRecordMapping", deleteRecordMapping)
-    if (deleteRecordMapping) {
+        response({
+          res,
+          success: true,
+          status_code: 200,
+          data: [deleteRecordMapping],
+          message: "Mapped record deleted successfully",
+        });
+        return;
+    } else {
       response({
         res,
-        success: true,
-        status_code: 200,
-        data: [deleteRecordMapping],
-        message: "Mapped record deleted successfully",
+        success: false,
+        status_code: 400,
+        message: "Mapped record not deleted",
       });
       return;
     }
+      
   } catch (error) {
     response({
       res,
       success: false,
       status_code: 400,
-      message: "Error in deleting Mapped record",
+      message: "Error while deleting Mapped record",
     });
     console.log("error", error);
     return;
   }
 };
 
-const deleteScheduleEvent = async (id, integrationId) => {
+const deleteScheduleEvent = async (id, integrationId, userId) => {
   try {
     console.log("delete schedule")
-    const deleteCount = await prisma.logs.deleteMany({
-      where: {
-        // scheduleId: Number(id),
-        mappedRecordId: Number(id),
-        integrationId: Number(integrationId),
-      },
-    });
 
-    const [deleteScheduleEvent, updateIntegrations] = await prisma.$transaction(
+    const [deleteLogs, deleteScheduleEvent] = await prisma.$transaction(
       [
+        prisma.logs.deleteMany({
+          where: {
+            mappedRecordId: Number(id),
+            // scheduleId: Number(id),
+            userId: Number(userId),
+            integrationId: Number(integrationId),
+          },
+        }),
         prisma.schedule.deleteMany({
           where: {
             // id: Number(id),
               mappedRecordId: Number(id),
-
-          },
-        }),
-        prisma.integrations.updateMany({
-          where: {
-            id: Number(integrationId),
-          },
-          data: {
-            schedule: false,
+              userId: Number(userId),
+              integrationId: Number(integrationId),
           },
         }),
       ]

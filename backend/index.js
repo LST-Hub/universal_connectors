@@ -91,7 +91,7 @@ v1Router.get(
   fieldMappingController.getMappedRecordById
 );
 v1Router.delete(
-  "/deleteMappedRecordByID/:id/:integrationId",
+  "/deleteMappedRecordByID/:id/:integrationId/:userId",
   fieldMappingController.deleteMappedRecordByID
 );
 v1Router.get(
@@ -117,7 +117,7 @@ v1Router.put(
 v1Router.put("/updateSingleEvent/:id", scheduleController.updateSingleEvent);
 v1Router.put("/updateWeeklyEvent/:id", scheduleController.updateWeeklyEvent);
 v1Router.delete(
-  "/deleteScheduleEvent/:id/:integrationId",
+  "/deleteScheduleEvent/:id/:integrationId/:userId/:mappedRecord",
   scheduleController.deleteScheduleEvent
 );
 v1Router.post(

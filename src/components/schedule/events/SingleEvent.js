@@ -20,9 +20,21 @@ import TkRadioButton from "@/globalComponents/TkRadioButton";
 import AlertBoxModal from "@/utils/AlertBoxModal";
 
 const schema = Yup.object({
-  startDate: Yup.date().required("Start date is required"),
+  startDate: Yup.date().nullable().required("Start date is required"),
   integrationName: Yup.object().nullable().required("Integration is required."),
   mappedRecords: Yup.object().nullable().required("Mapped record is required."),
+  source: Yup.object().nullable().required("Operation is required."),
+  perform: Yup.object().nullable().required("Select way to perform."),
+
+  range: Yup.string().test('start-range', 'Please enter a range.', function (value) {
+    if (value && !/^[A-Z]{1}[0-9]+:[A-Z]{1}[0-9]+$/.test(value)) {
+      return this.createError({
+        message: 'Please enter time range like A2:B22',
+        path: 'range'
+      });
+    }
+    return true;
+  }),
 
   // startTimeInput: Yup.string().test('time-format', 'Please enter time in 12-hour format.\n(00:00 AM/PM)', function(value) {
   //   // Check if startTimeInput is provided and not empty
@@ -806,6 +818,9 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
               />
             )}
           />
+          {errors.perform?.message ? (
+            <FormErrorText>{errors.perform?.message}</FormErrorText>
+          ) : null}
         </TkCol>
 
         <TkCol lg={4}>
@@ -832,7 +847,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
             labelName="Range"
             placeholder="Range"
           />
+          {errors.range?.message ? (
+            <FormErrorText>{errors.range?.message}</FormErrorText>
+          ) : null}
         </TkCol>
+        
       </TkRow>
 
       <TkRow className="mt-3">

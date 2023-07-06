@@ -25,6 +25,7 @@ const schema = Yup.object({
   integrationName: Yup.object().nullable().required("Integration is required."),
   mappedRecords: Yup.object().nullable().required("Mapped record is required."),
   source: Yup.object().nullable().required("Operation is required."),
+  perform: Yup.object().nullable().required("Select way to perform."),
   
   range: Yup.string().test('start-range', 'Please enter a range.', function (value) {
     if (value && !/^[A-Z]{1}[0-9]+:[A-Z]{1}[0-9]+$/.test(value)) {
@@ -757,6 +758,9 @@ if (shouldLogData) {
               />
             )}
           />
+          {errors.perform?.message ? (
+            <FormErrorText>{errors.perform?.message}</FormErrorText>
+          ) : null}
         </TkCol>
 
         <TkCol lg={4}>

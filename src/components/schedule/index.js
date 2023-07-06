@@ -71,14 +71,18 @@ const ScheduleTable = () => {
     // setSelectedRowId(ids);
   };
 
-  const toggleDeleteModel = (eventId, integrationId) => {
+  const toggleDeleteModel = (eventId, integrationId, userId, mappedRecord) => {
     // console.log("eventId", eventId)
     deleteEventId.current = {
       id: eventId,
       integrationId: integrationId,
+      userId: userId,
+      mappedRecord: mappedRecord,
     };
     setDeleteModal(true);
   };
+  console.log("deleteEventId.current", deleteEventId.current)
+
 
   const onClickDelete = () => {
     deleteScheduleEvent.mutate(deleteEventId.current, {
@@ -157,6 +161,7 @@ const ScheduleTable = () => {
       Header: "Action",
       accessor: "action",
       Cell: (props) => {
+        // console.log("props", props)
         return (
           <>
             <i
@@ -164,7 +169,9 @@ const ScheduleTable = () => {
               onClick={() => {
                 toggleDeleteModel(
                   props.row.original?.id,
-                  props.row.original?.integrationId
+                  props.row.original?.integrationId,
+                  props.row.original?.userId,
+                  props.row.original?.mappedRecord.id,
                 );
               }}
             />

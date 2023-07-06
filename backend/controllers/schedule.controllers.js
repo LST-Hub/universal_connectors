@@ -641,29 +641,26 @@ const updateWeeklyEvent = async (req, res) => {
 };
 
 const deleteScheduleEvent = async (req, res) => {
-  const { id, integrationId } = req.params;
-
+  const { id, integrationId, userId, mappedRecord } = req.params;
   try {
-    const deleteCount = await prisma.logs.deleteMany({
-      where: {
-        scheduleId: Number(id),
-        integrationId: Number(integrationId),
-      },
-    });
+const filterResult = await deleteCustomFilterField(mappedRecord, integrationId, userId)
 
-    const [deleteScheduleEvent, updateIntegrations] = await prisma.$transaction(
+    const [deleteLogs, deleteScheduleEvent] = await prisma.$transaction(
       [
+        prisma.logs.deleteMany({
+          where: {
+            scheduleId: Number(id),
+            userId: Number(userId),
+            integrationId: Number(integrationId),
+            // mappedRecordId: Number(mappedRecordId),
+          },
+        }),
         prisma.schedule.deleteMany({
           where: {
             id: Number(id),
-          },
-        }),
-        prisma.integrations.updateMany({
-          where: {
-            id: Number(integrationId),
-          },
-          data: {
-            schedule: false,
+            userId: Number(userId),
+            integrationId: Number(integrationId),
+            // mappedRecordId: Number(mappedRecordId)
           },
         }),
       ]
@@ -683,6 +680,74 @@ const deleteScheduleEvent = async (req, res) => {
       message: "Error in deleting schedule",
     });
     console.log("error", error);
+  }
+
+  // try {
+  //   const deleteCount = await prisma.logs.deleteMany({
+  //     where: {
+  //       scheduleId: Number(id),
+  //       integrationId: Number(integrationId),
+  //       userId: Number(userId)
+  //     },
+  //   });
+
+  //   const [deleteScheduleEvent, updateIntegrations] = await prisma.$transaction(
+  //     [
+  //       prisma.schedule.deleteMany({
+  //         where: {
+  //           id: Number(id),
+  //           userId: Number(userId)
+  //         },
+  //       }),
+  //       prisma.integrations.updateMany({
+  //         where: {
+  //           id: Number(integrationId),
+  //           userId: Number(userId)
+  //         },
+  //         data: {
+  //           schedule: false,
+  //         },
+  //       }),
+  //     ]
+  //   );
+
+  //   response({
+  //     res,
+  //     success: true,
+  //     status_code: 200,
+  //     message: "Schedule deleted successfully",
+  //   });
+  // } catch (error) {
+  //   response({
+  //     res,
+  //     success: false,
+  //     status_code: 400,
+  //     message: "Error in deleting schedule",
+  //   });
+  //   console.log("error", error);
+  // }
+};
+
+const deleteCustomFilterField = async (mappedRecordId, integrationId, userId) => {
+  try {
+    const deleteFilterResult = await prisma.customFilterFields.deleteMany({
+      where: {
+        userId: Number(userId),
+        mappedRecordId: Number(mappedRecordId),
+        integrationId: Number(integrationId)
+      }
+    })
+
+    return {
+      success: true,
+      error: "filter field deleted successfully",
+    };
+  } catch (error) {
+    console.log("error => ", error)
+    return {
+      success: false,
+      error: "Error in deleting filter condition",
+    };
   }
 };
 
@@ -2184,6 +2249,7 @@ console.log("line", item.linefields)
         logs,
       },
     };
+    console.log("logs", logs)
     // addLogs(logs);
     return response;
   } catch (error) {
@@ -2359,6 +2425,7 @@ const updateNetsuiteV1Api = async (
         logs,
       },
     };
+    console.log("logs", logs)
     // addLogs(logs);
     return response;
   } catch (error) {
@@ -2562,6 +2629,7 @@ const deleteNetsuiteV1Api = async (
         logs,
       },
     };
+    console.log("logs", logs)
     // addLogs(logs);
     return response;
 
@@ -3088,7 +3156,7 @@ const appendFields = async (
         headers: headers,
         data: recordList,
       });
-      // console.log("request", request.data);
+      console.log("request", request.data);
 
       const summaryMessage = `Successfully added ${
         request.data.updates.updatedRows - 1
@@ -3109,7 +3177,8 @@ const appendFields = async (
         success: true,
         data: request.data,
       };
-      // addLogs(logs);
+      console.log("logs", logs)
+      addLogs(logs);
       return response;
     } catch (error) {
       console.log("addGoogleSheetRecords error", error.response.data);
@@ -3353,6 +3422,7 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
         success: true,
         data: request.data,
       };
+      console.log("logs", logs)
       // addLogs(logs);
       return response;
 
@@ -3605,6 +3675,7 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
       },
     };
   //  const response = [deleteCount, errorCount, logs]
+  console.log("logs", logs)
     // addLogs(logs);
     return response;
 

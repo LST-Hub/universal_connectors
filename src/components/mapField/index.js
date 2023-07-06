@@ -170,6 +170,7 @@ const FieldMappingTable = () => {
       Header: "Action",
       accessor: "action",
       Cell: (props) => {
+        // console.log("props", props.row.original)
         return (
           <>
             <i
@@ -177,7 +178,8 @@ const FieldMappingTable = () => {
               onClick={() =>
                 toggleDeleteModel(
                   props.row.original.id,
-                  props.row.original.integrationId
+                  props.row.original.integrationId,
+                  props.row.original.userId
                 )
               }
             />
@@ -190,10 +192,11 @@ const FieldMappingTable = () => {
     },
   ];
 
-  const toggleDeleteModel = (fieldId, integrationId) => {
+  const toggleDeleteModel = (fieldId, integrationId, userId) => {
     deleteFieldId = {
       id: fieldId,
       integrationId: integrationId,
+      userId: userId
     };
     setDeleteModal(true);
   };
