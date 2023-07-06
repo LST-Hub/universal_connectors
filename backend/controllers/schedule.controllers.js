@@ -2015,8 +2015,32 @@ const addNetsuiteV1Api = async (
         resttype: "Add",
         recordtype: mappedRecord[0].recordTypeValue,
         bodyfields: {},
-        linefields: {},
+        linefields: [{}],
       };
+
+      // for (const field of mappedFields) {
+      //   const sourceField = field.sourceFieldValue;
+      //   const destinationField = field.destinationFieldValue;
+      //   const fieldValue = dataRow[mappedFields.indexOf(field)];
+
+      //   if (sourceField.includes("__")) {
+      //     const [parentField, childField] = sourceField.split("__");
+      //     if (!record.linefields[parentField]) {
+      //       record.linefields[parentField] = [];
+      //     }
+      //     const lineFieldObject = record.linefields[parentField].find(
+      //       (lineField) => Object.keys(lineField)[0] === childField
+      //     );
+      //     if (lineFieldObject) {
+      //       lineFieldObject[childField] = fieldValue;
+      //     } else {
+      //       const newLineField = { [childField]: fieldValue };
+      //       record.linefields[parentField].push(newLineField);
+      //     }
+      //   } else {
+      //     record.bodyfields[sourceField] = fieldValue;
+      //   }
+      // }
 
       for (const field of mappedFields) {
         const sourceField = field.sourceFieldValue;
@@ -2041,6 +2065,7 @@ const addNetsuiteV1Api = async (
           record.bodyfields[sourceField] = fieldValue;
         }
       }
+
       if (Object.keys(record.linefields).length > 0) {
         resultArray.push(record);
       } else {
@@ -2049,9 +2074,11 @@ const addNetsuiteV1Api = async (
           resttype: "Add",
           recordtype: mappedRecord[0].recordTypeValue,
           bodyfields: record.bodyfields,
+          // linefields: record.linefields
         });
       }
     }
+    // console.log("resultArray", resultArray[0].linefields)
 
     const logs = [];
     let successCount = 0;
@@ -2096,42 +2123,44 @@ const addNetsuiteV1Api = async (
       )}"`;
 
       const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+console.log("body", item.bodyfields)
+console.log("line", item.linefields)
 
-      try {
-        const res = await axios({
-          method: "POST",
-          url: url,
-          headers: {
-            Authorization: oAuth_String,
-            "Content-Type": "application/json",
-          },
-          data: item,
-        });
+      // try {
+      //   const res = await axios({
+      //     method: "POST",
+      //     url: url,
+      //     headers: {
+      //       Authorization: oAuth_String,
+      //       "Content-Type": "application/json",
+      //     },
+      //     data: item,
+      //   });
 
-        // console.log("output => ", res.data);
+      //   console.log("output => ", res.data);
 
-        if (res.data.add_success) {
-          successCount++;
-        } else if (res.data.add_error) {
-          errorCount++;
-          logs.push({
-            userId: userId,
-            scheduleId: id,
-            integrationId: integrationId,
-            mappedRecordId: mappedRecord[0].id,
-            recordType: mappedRecord[0].recordTypeLabel,
-            status: "Error",
-            internalid: item.bodyfields.internalid,
-            message: res.data.add_error.message,
-          });
-        }
-      } catch (error) {
-        console.log("addNetsuiteV1Api error", error);
-        return {
-          success: false,
-          error: "Error while adding data in NetSuite."
-        }
-      }
+      //   if (res.data.add_success) {
+      //     successCount++;
+      //   } else if (res.data.add_error) {
+      //     errorCount++;
+      //     logs.push({
+      //       userId: userId,
+      //       scheduleId: id,
+      //       integrationId: integrationId,
+      //       mappedRecordId: mappedRecord[0].id,
+      //       recordType: mappedRecord[0].recordTypeLabel,
+      //       status: "Error",
+      //       internalid: item.bodyfields.internalid,
+      //       message: res.data.add_error.message,
+      //     });
+      //   }
+      // } catch (error) {
+      //   console.log("addNetsuiteV1Api error", error);
+      //   return {
+      //     success: false,
+      //     error: "Error while adding data in NetSuite."
+      //   }
+      // }
     }
 
     const summaryMessage = `Successfully added ${successCount} records in NetSuite out of ${resultArray.length}`;
@@ -3123,8 +3152,18 @@ const updateGoogleSheetRecord = async (
 
     const columns = []
     mappedFields.map((field) => {
-columns.push(field.sourceFieldValue)
-    })
+      columns.push(field.sourceFieldValue)
+          })
+//     mappedFields.map((field) => {
+// // columns.push(field.sourceFieldValue)
+// const fieldId =  field.sourceFieldValue
+//       if(fieldId.includes("__")){
+//         const [parentId, childId] = fieldId.split("__")
+//         columns.push(childId)
+//       } else {
+//         columns.push(fieldId)
+//       }
+//     })
 
     const sheetsData = await getSheetsDataByRange(
       userId,
@@ -3193,6 +3232,7 @@ const base_url =
       ],
       columns: columns
   };
+  // console.log("updated data", data)
 
   existingRecords.push(row)
 
@@ -3224,7 +3264,7 @@ const base_url =
     return addFieldsResult;
 
   } catch (error) {
-    console.log("updateGoogleSheetRecords error=> ", error);
+    console.log("updateGoogleSheetRecord error=> ", error);
     // return error;
     return {
       success: false,
@@ -3317,7 +3357,7 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
       return response;
 
   } catch (error) {
-    console.log("updateGoogleSheetRecords error", error);
+    console.log("addFields error", error);
     // return error;
     return {
       success: false,

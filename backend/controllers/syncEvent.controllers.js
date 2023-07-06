@@ -1135,11 +1135,13 @@ const addGoogleSheetRecords = async (
       credentials,
       mappedRecord
     );
+    // console.log("result NS", result)
 
     const titles = mappedFields.map((field) => field.destinationFieldValue);
   
     const records = result.list.map((record) => {
       const values = record.values;
+      // console.log("values NS", values)
       const modifiedValues = {};
       for (const key in values) {
        
@@ -1511,6 +1513,16 @@ const updateGoogleSheetRecord = async (
     mappedFields.map((field) => {
 columns.push(field.sourceFieldValue)
     })
+// mappedFields.map((field) => {
+//   // columns.push(field.sourceFieldValue)
+//   const fieldId =  field.sourceFieldValue
+//         if(fieldId.includes("__")){
+//           const [parentId, childId] = fieldId.split("__")
+//           columns.push(childId)
+//         } else {
+//           columns.push(fieldId)
+//         }
+//       })
 
     const sheetsData = await getSheetsDataByRange(
       userId,

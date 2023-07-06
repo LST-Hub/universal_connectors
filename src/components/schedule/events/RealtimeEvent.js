@@ -25,6 +25,19 @@ const schema = Yup.object({
   integrationName: Yup.object().nullable().required("Integration is required."),
   mappedRecords: Yup.object().nullable().required("Mapped record is required."),
   source: Yup.object().nullable().required("Operation is required."),
+  
+  range: Yup.string().test('start-range', 'Please enter a range.', function (value) {
+    if (value && !/^[A-Z]{1}[0-9]+:[A-Z]{1}[0-9]+$/.test(value)) {
+      return this.createError({
+        message: 'Please enter time range like A2:B22',
+        path: 'range'
+      });
+    }
+    return true;
+  }),
+  
+//   range: Yup.string().trim()
+// .matches(/[abcdefghijklmnopqrstuvwxyz]+/ , 'Is not in correct format')
 }).required();
 
 const RealtimeEvent = ({ checkBoxValue, eventId }) => {
@@ -48,7 +61,7 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
   const queryClient = useQueryClient();
 
   const [checkboxValue, setCheckboxValue] = useState(false);
-  const [ids, setIds] = useState(null);
+  const [ids, setIds] = useState();
   const [deleteModal, setDeleteModal] = useState(false);
   const [operationsValue, setOperationsValue] = useState(false);
   const [addValue, setAddValue] = useState(false);
@@ -185,6 +198,11 @@ let temp = null;
     isLoading: filterFieldsLoading,
     error: filterFieldsError
   } = filterData;
+
+  
+  // console.log("ids", ids)
+  console.log("isEventDataLoading", isEventDataLoading)
+  // console.log("isIntegrationsLoading", isIntegrationsLoading)
 
   useEffect(() => {
     userId.current = sessionStorage.getItem("userId");
@@ -642,9 +660,6 @@ if (shouldLogData) {
     setAlertBoxModal(true);
   };
 
-  // console.log("ids", ids)
-  // console.log("isEventDataLoading", isEventDataLoading)
-  // console.log("isIntegrationsLoading", isIntegrationsLoading)
   return (
     <>
     {/* {isEventDataLoading ? (
@@ -768,6 +783,9 @@ if (shouldLogData) {
             labelName="Range"
             placeholder="Range"
           />
+          {errors.range?.message ? (
+            <FormErrorText>{errors.range?.message}</FormErrorText>
+          ) : null}
         </TkCol>
       </TkRow>
 

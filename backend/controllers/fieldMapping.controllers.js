@@ -170,7 +170,7 @@ const getMappedRecordById = async (req, res) => {
 };
 
 const deleteMappedRecordByID = async (req, res) => {
-
+console.log(req.params)
   try {
     await deleteScheduleEvent(req.params.id, req.params.integrationId);
 
@@ -216,6 +216,7 @@ const deleteMappedRecordByID = async (req, res) => {
 
 const deleteScheduleEvent = async (id, integrationId) => {
   try {
+    console.log("delete schedule")
     const deleteCount = await prisma.logs.deleteMany({
       where: {
         // scheduleId: Number(id),

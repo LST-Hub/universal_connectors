@@ -201,6 +201,8 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
     }
   }, [eventId]);
 
+  console.log("eventDataLoading in weekly event", eventDataLoading)
+
   // set existing data
   useEffect(() => {
     if (eventData) {
