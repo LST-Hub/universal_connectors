@@ -27,6 +27,7 @@ model Users {
   NotificationSettings NotificationSettings[]
   Configurations       Configurations[]
   Credentials          Credentials[]
+  // CustomFilterFields   CustomFilterFields[]
   CustomFilterFields   CustomFilterFields[]
 
   @@unique(fields: [email, password], name: "loginUser")
@@ -49,6 +50,7 @@ model Integrations {
   MappedRecords      MappedRecords[]
   Schedule           Schedule[]
   Logs               Logs[]
+  // CustomFilterFields CustomFilterFields[]
   CustomFilterFields CustomFilterFields[]
 }
 
@@ -89,6 +91,7 @@ model MappedRecords {
   Fields             Fields[]
   Schedule           Schedule[]
   Logs               Logs[]
+  // CustomFilterFields CustomFilterFields[]
   CustomFilterFields CustomFilterFields[]
 }
 
@@ -107,30 +110,36 @@ model Fields {
 }
 
 model Schedule {
-  id               Int           @id @default(autoincrement())
-  userId           Int
-  user             Users         @relation(fields: [userId], references: [id])
-  integrationId    Int
-  integration      Integrations  @relation(fields: [integrationId], references: [id])
-  mappedRecordId   Int
-  mappedRecord     MappedRecords @relation(fields: [mappedRecordId], references: [id])
-  eventType        String
-  startDate        DateTime      @default(now())
-  endDate          DateTime?
-  startTimeLabel   String?
-  startTimeValue   String?
-  day              String?
-  noEndDate        Boolean
-  repeatEveryDay   Boolean?
-  performType      String
-  savedSearchLabel String?
-  savedSearchValue String?
-  operationType    String?
-  source           String
-  range            String?
-  creationDate     DateTime      @default(now())
-  modificationDate DateTime      @updatedAt
-  Logs             Logs[]
+  id                 Int                  @id @default(autoincrement())
+  userId             Int
+  user               Users                @relation(fields: [userId], references: [id])
+  integrationId      Int
+  integration        Integrations         @relation(fields: [integrationId], references: [id])
+  mappedRecordId     Int
+  mappedRecord       MappedRecords        @relation(fields: [mappedRecordId], references: [id])
+  eventType          String
+  startDate          DateTime             @default(now())
+  endDate            DateTime?
+  startTimeLabel     String?
+  startTimeValue     String?
+  day                String?
+  noEndDate          Boolean
+  repeatEveryDay     Boolean?
+  performType        String
+  savedSearchLabel   String?
+  savedSearchValue   String?
+  operationType      String?
+  source             String
+  range              String?
+  // sourceFieldValue      String?
+  // sourceFieldLabel      String?
+  // destinationFieldValue String?
+  // destinationFieldLabel String?
+  // operator              String?
+  creationDate       DateTime             @default(now())
+  modificationDate   DateTime             @updatedAt
+  Logs               Logs[]
+  CustomFilterFields CustomFilterFields[]
 }
 
 model CustomFilterFields {
@@ -141,6 +150,8 @@ model CustomFilterFields {
   mappedRecord          MappedRecords @relation(fields: [mappedRecordId], references: [id])
   integrationId         Int
   integration           Integrations  @relation(fields: [integrationId], references: [id])
+  scheduleId            Int
+  schedule              Schedule      @relation(fields: [scheduleId], references: [id])
   sourceFieldValue      String
   sourceFieldLabel      String
   destinationFieldValue String

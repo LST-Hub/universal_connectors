@@ -645,7 +645,8 @@ const addNetsuiteV1Api = async (
         logs,
       },
     };
-    // addLogs(logs);
+    console.log("add records in NS logs", logs)
+    addLogs(logs);
     return response;
 
   } catch (error) {
@@ -820,7 +821,8 @@ const updateNetsuiteV1Api = async (
         logs,
       },
     };
-    // addLogs(logs);
+    console.log("logs", logs)
+    addLogs(logs);
     return response;
 
   } catch (error) {
@@ -1023,7 +1025,8 @@ const deleteNetsuiteV1Api = async (
         logs,
       },
     };
-    // addLogs(logs);
+    console.log("delete records from NS logs", logs)
+    addLogs(logs);
     return response;
 
   } catch (error) {
@@ -1467,7 +1470,8 @@ const appendFields = async (
         success: true,
         data: request.data,
       };
-      // addLogs(logs);
+      console.log("add in GS logs", logs)
+      addLogs(logs);
       return response;
       
     } catch (error) {
@@ -1509,10 +1513,20 @@ const updateGoogleSheetRecord = async (
       },
     });
 
-    const columns = []
-    mappedFields.map((field) => {
-columns.push(field.sourceFieldValue)
-    })
+//     const columns = []
+//     mappedFields.map((field) => {
+// columns.push(field.sourceFieldValue)
+//     })
+const columns = mappedFields.map((field) => {
+  const item = field.sourceFieldValue
+  if (item.includes('__')) {
+    const col = item.split('__');
+return col[1];
+  }
+  return item
+  // columns.push(field.sourceFieldValue)
+      })
+
 // mappedFields.map((field) => {
 //   // columns.push(field.sourceFieldValue)
 //   const fieldId =  field.sourceFieldValue
@@ -1608,7 +1622,7 @@ const base_url =
       return res.data;
 
     } catch (error) {
-      console.log("updateNetsuiteV1Api error", error);
+      console.log("updateNetsuiteV1Api error", error.response.data);
       // throw error;
       return {
         success: false,
@@ -1634,12 +1648,13 @@ const base_url =
 const addFields = async (accessToken, mappedRecord, range, result, userId, id, integrationId, mappedRecordId, existingRecords) => {
   const logs = [];
   let recordCount = 0;
-  const records = []
+  let updatedrecords = 0
   const recordValues = []
 
  result.map((record, index) => {
+   recordCount++
    if(record.list.length > 0) {
-      recordCount++
+      updatedrecords++
       const values = record.list[0].values;
       const modifiedValues = {};
 
@@ -1654,7 +1669,6 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
       recordValues.push(Object.values(modifiedValues));
 
     } else {
-      recordCount++
         const summaryMessage = `Records are not available in Netsuite`;
         logs.push({
         userId: userId,
@@ -1693,8 +1707,8 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
       data: recordList,
     });
 
-    const summaryMessage = `Successfully updated ${request.data.updatedRows} records in Google Sheet out of ${recordCount}`;
-      if (recordCount > 0) {
+    const summaryMessage = `Successfully updated ${updatedrecords} records in Google Sheet out of ${recordCount}`;
+      if (updatedrecords > 0) {
         logs.push({
           userId: userId,
           scheduleId: Number(id),
@@ -1710,7 +1724,8 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
         success: true,
         data: request.data,
       };
-      // addLogs(logs);
+      console.log("sync update GS logs", logs)
+      addLogs(logs);
       return response;
 
   } catch (error) {
@@ -1749,10 +1764,19 @@ const deleteGoogleSheetRecord = async (
 
     const filterCondition = filterData[0].sourceFieldValue
 
-    const columns = []
-    mappedFields.map((field) => {
-columns.push(field.sourceFieldValue)
-    })
+//     const columns = []
+//     mappedFields.map((field) => {
+// columns.push(field.sourceFieldValue)
+//     })
+const columns = mappedFields.map((field) => {
+  const item = field.sourceFieldValue
+  if (item.includes('__')) {
+    const col = item.split('__');
+  return col[1];
+  }
+  return item
+  // columns.push(field.sourceFieldValue)
+      })
 
     const sheetsData = await getSheetsDataByRange(
       userId,
@@ -1961,7 +1985,8 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
       },
     };
   //  const response = [deleteCount, errorCount, logs]
-    // addLogs(logs);
+  console.log("delete records from GS logs", logs)
+    addLogs(logs);
     return response;
 
   } catch (error) {

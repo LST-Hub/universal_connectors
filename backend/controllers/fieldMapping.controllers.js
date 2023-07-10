@@ -170,48 +170,51 @@ const getMappedRecordById = async (req, res) => {
 };
 
 const deleteMappedRecordByID = async (req, res) => {
+  console.log("working")
 console.log(req.params)
+console.log(req.query)
+console.log(req.body)
   try {
-    const deleteResult =  await deleteScheduleEvent(req.params.id, req.params.integrationId, req.params.userId);
-console.log("deleteResult", deleteResult)
-    if(deleteResult.success){
-      console.log("deleteResult status", deleteResult)
-      const [deleteFilterField, deleteRecordMapping] = await prisma.$transaction(
-        [
-          prisma.customFilterFields.deleteMany({
-            where: {
-              mappedRecordId: Number(req.params.id),
-              userId: Number(req.params.userId),
-              integrationId: Number(req.params.integrationId),
-            }
-          }),
-          prisma.mappedRecords.deleteMany({
-            where: {
-              id: Number(req.params.id),
-              userId: Number(req.params.userId),
-              integrationId: Number(req.params.integrationId),
-            },
-          }),
-        ]
-      );
+//     const deleteResult =  await deleteScheduleEvent(req.params.id, req.params.integrationId, req.params.userId);
+// console.log("deleteResult", deleteResult)
+//     if(deleteResult.success){
+//       console.log("deleteResult status", deleteResult)
+//       const [deleteRecordMapping] = await prisma.$transaction(
+//         [
+//           // prisma.customFilterFields.deleteMany({
+//           //   where: {
+//           //     mappedRecordId: Number(req.params.id),
+//           //     userId: Number(req.params.userId),
+//           //     integrationId: Number(req.params.integrationId),
+//           //   }
+//           // }),
+//           prisma.mappedRecords.deleteMany({
+//             where: {
+//               id: Number(req.params.id),
+//               userId: Number(req.params.userId),
+//               integrationId: Number(req.params.integrationId),
+//             },
+//           }),
+//         ]
+//       );
 
-        response({
-          res,
-          success: true,
-          status_code: 200,
-          data: [deleteRecordMapping],
-          message: "Mapped record deleted successfully",
-        });
-        return;
-    } else {
-      response({
-        res,
-        success: false,
-        status_code: 400,
-        message: "Mapped record not deleted",
-      });
-      return;
-    }
+//         response({
+//           res,
+//           success: true,
+//           status_code: 200,
+//           data: [deleteRecordMapping],
+//           message: "Mapped record deleted successfully",
+//         });
+//         return;
+//     } else {
+//       response({
+//         res,
+//         success: false,
+//         status_code: 400,
+//         message: "Mapped record not deleted",
+//       });
+//       return;
+//     }
       
   } catch (error) {
     response({

@@ -81,7 +81,6 @@ const ScheduleTable = () => {
     };
     setDeleteModal(true);
   };
-  console.log("deleteEventId.current", deleteEventId.current)
 
 
   const onClickDelete = () => {
@@ -161,7 +160,7 @@ const ScheduleTable = () => {
       Header: "Action",
       accessor: "action",
       Cell: (props) => {
-        // console.log("props", props)
+        console.log("props", props.row.original)
         return (
           <>
             <i

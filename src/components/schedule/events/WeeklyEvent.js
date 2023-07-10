@@ -7,7 +7,7 @@ import TkRow, { TkCol } from "@/globalComponents/TkRow";
 import TkSelect from "@/globalComponents/TkSelect";
 import { API_BASE_URL, days, timeOptions } from "@/utils/Constants";
 import { useForm, Controller } from "react-hook-form";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import * as Yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import FormErrorText from "@/globalComponents/ErrorText";
@@ -18,6 +18,7 @@ import ConfirmBoxModal from "@/utils/DeleteModal";
 import TkInput from "@/globalComponents/TkInput";
 import TkRadioButton from "@/globalComponents/TkRadioButton";
 import AlertBoxModal from "@/utils/AlertBoxModal";
+import FilterModal from "@/components/schedule/filterModal";
 
 const schema = Yup.object({
   startDate: Yup.date().nullable().required("Start date is required"),
@@ -89,6 +90,8 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
   const [mappedRecordId, setMappedRecordId] = useState(null);
   const [alertBoxModal, setAlertBoxModal] = useState(false);
   const [alertBoxLabel, setAlertBoxLabel] = useState();
+  const [conditionData, setConditionData] = useState(null);
+  const [modal, setModal] = useState(false);
 
   const sourceOptions = [
     {
@@ -116,8 +119,18 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
     mutationFn: tkFetch.post(`${API_BASE_URL}/addWeeklyEvent`),
   });
 
+  const addCustomFilterFields = useMutation({
+    mutationFn: tkFetch.post(`${API_BASE_URL}/addCustomFilterFields`),
+  });
+
   const updateWeeklyEvent = useMutation({
     mutationFn: tkFetch.putWithIdInUrl(`${API_BASE_URL}/updateWeeklyEvent`),
+  });
+
+  const updateFilterFieldsById = useMutation({
+    mutationFn: tkFetch.putWithIdInUrl(
+      `${API_BASE_URL}/updateFilterFieldsById`
+    ),
   });
 
   const apiResults = useQueries({
@@ -155,17 +168,32 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
     }),
     enabled: !!configurationData,
   },
+  // {
+  //   queryKey: ["getFilterDataById", id.current],
+  //   queryFn: tkFetch.get(`${API_BASE_URL}/getFilterDataById`, {
+  //     params: id.current,
+  //   }),
+  //   enabled: !!id.current,
+  // },
   {
-    queryKey: ["getFilterDataById", id.current],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getFilterDataById`, {
-      params: id.current,
+    queryKey: ["getCustomFilterFieldsById"],
+    queryFn: tkFetch.get(`${API_BASE_URL}/getCustomFilterFieldsById`, {
+      // params: filterIds
+      params: {
+        userId: userId.current,
+        scheduleId: eventId,
+        integrationId: integrationId,
+        mappedRecordId: mappedRecordId,
+      },
     }),
-    enabled: !!id.current,
+    // enabled: !!filterIds,
+    enabled:
+      !!userId.current && !!eventId && !!integrationId && !!mappedRecordId,
   },
 ],
   })
 
-  const [scheduleEvent, integrations, getMappedRecordData, config, restletAPI, filterData] = apiResults;
+  const [scheduleEvent, integrations, getMappedRecordData, config, restletAPI, filterFields] = apiResults;
 
   const {
     data: eventData,
@@ -196,11 +224,17 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
     isError: isSavedSearchError,
     error: savedSearchError,
   } = restletAPI;
+  // const {
+  //   data: filterFields,
+  //   isLoading: filterFieldsLoading,
+  //   error: filterFieldsError
+  // } = filterData;
   const {
-    data: filterFields,
+    data: filterFieldsData,
     isLoading: filterFieldsLoading,
-    error: filterFieldsError
-  } = filterData;
+    isError: filterFieldsError,
+    error: filterFieldsErrorData,
+  } = filterFields;
 
   useEffect(() => {
     userId.current = sessionStorage.getItem("userId");
@@ -211,8 +245,6 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
       });
     }
   }, [eventId]);
-
-  console.log("eventDataLoading in weekly event", eventDataLoading)
 
   // set existing data
   useEffect(() => {
@@ -417,11 +449,34 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
     }
   };
 
+  const toggle = useCallback(() => {
+    if (modal) {
+      setModal(false);
+    } else {
+      setModal(true);
+    }
+  }, [modal]);
+
+  // get data from filter modal
+  const filterConditionData = (filterFields) => {
+    if (filterFields) {
+      // console.log("*********filterFields", filterFields);
+      setConditionData(filterFields);
+    }
+  };
+
+  useEffect(() => {
+    if (filterFieldsData) {
+      setConditionData(filterFieldsData);
+    }
+  }, [filterFieldsData]);
+
   // move to filter page 
   const onClickSourceFilter = () => {
-    if(mappedRecordId){
-      router.push(`/schedule/${mappedRecordId}`);
-    }
+    toggle();
+    // if(mappedRecordId){
+    //   router.push(`/schedule/${mappedRecordId}`);
+    // }
   };
 
   // perform dropdown handler
@@ -492,13 +547,22 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
                 toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
                 return
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
                 const alertMsg = "Please add filter to update records."
-                toggleAlertBoxModel(alertMsg)
-                shouldLogData = false;
-                return
+                  toggleAlertBoxModel(alertMsg)
+                  shouldLogData = false;
               }
+              // else if (!filterFields.length > 0) {
+              //   // alert("add filter");
+              //   const alertMsg = "Please add filter to update records."
+              //   toggleAlertBoxModel(alertMsg)
+              //   shouldLogData = false;
+              //   return
+              // }
               break;
       
             case "delete":
@@ -507,12 +571,21 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
                 const alertMsg = "Please select range to delete records."
                 toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
                 const alertMsg = "Please add filter to delete records."
-                toggleAlertBoxModel(alertMsg)
-                shouldLogData = false;
+                  toggleAlertBoxModel(alertMsg)
+                  shouldLogData = false;
               }
+              // else if (!filterFields.length > 0) {
+              //   // alert("add filter");
+              //   const alertMsg = "Please add filter to delete records."
+              //   toggleAlertBoxModel(alertMsg)
+              //   shouldLogData = false;
+              // }
               break;
           }
           break;
@@ -534,12 +607,21 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
                 const alertMsg = "Please select range to update records."
                 toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
                 const alertMsg = "Please add filter to update records."
-                toggleAlertBoxModel(alertMsg)
-                shouldLogData = false;
+                  toggleAlertBoxModel(alertMsg)
+                  shouldLogData = false;
               }
+              // else if (!filterFields.length > 0) {
+              //   // alert("add filter");
+              //   const alertMsg = "Please add filter to update records."
+              //   toggleAlertBoxModel(alertMsg)
+              //   shouldLogData = false;
+              // }
               break;
       
             case "delete":
@@ -548,12 +630,21 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
                 const alertMsg = "Please select range to delete records."
                 toggleAlertBoxModel(alertMsg)
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
                 const alertMsg = "Please add filter to delete records."
-                toggleAlertBoxModel(alertMsg)
-                shouldLogData = false;
+                  toggleAlertBoxModel(alertMsg)
+                  shouldLogData = false;
               }
+              // else if (!filterFields.length > 0) {
+              //   // alert("add filter");
+              //   const alertMsg = "Please add filter to delete records."
+              //   toggleAlertBoxModel(alertMsg)
+              //   shouldLogData = false;
+              // }
               break;
           }
           break;
@@ -563,7 +654,7 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
     if (shouldLogData) {
     if (eventId) {
       console.log("update weekly event*******");
-      const eventData = {
+      const weeklyEventData = {
         id: eventId,
         userId: JSON.parse(userId.current),
         integrationId: data.integrationName.value,
@@ -581,29 +672,97 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
         range: data.range,
         savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
         savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
-  
+
       };
 
-      console.log("eventData", eventData)
+      // if(conditionData){
+      //   weeklyEventData.sourceFieldValue = conditionData.sourceFieldValue,
+      //   weeklyEventData.sourceFieldLabel = conditionData.sourceFieldLabel,
+      //   weeklyEventData.destinationFieldValue = conditionData.destinationFieldValue,
+      //   weeklyEventData.destinationFieldLabel = conditionData.destinationFieldLabel,
+      //   weeklyEventData.operator = conditionData.operator
+      // }
 
-      // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-      // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+      // console.log("weeklyEventData", weeklyEventData)
+
+      // weeklyEventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+      // weeklyEventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
   
       // ***API call to update event
       if (
         data.operationType === "add" &&
         data.source.label === "Google Sheet"
       ) {
-        toggleConfirmBoxModal(eventData);
+        toggleConfirmBoxModal(weeklyEventData);
       } else {
-        updateWeeklyEvent.mutate(eventData, {
+        updateWeeklyEvent.mutate(weeklyEventData, {
           onSuccess: (res) => {
             // console.log("update weekly event res", res)
             // router.push("/schedule");
             console.log("update weekly event res", res)
-          res[0].success ? 
-            router.push("/schedule") : 
-            toggleAlertBoxModel(res[0].error)
+          // res[0].success ? 
+          //   router.push("/schedule") : 
+          //   toggleAlertBoxModel(res[0].error)
+          // if (data[0].success) {
+            if (filterFieldsData?.length === 0) {
+              console.log("***update realtime Event and add filter data");
+              const filterFieldData = {
+                userId: weeklyEventData.userId,
+                mappedRecordId: weeklyEventData.mappedRecordId,
+                integrationId: weeklyEventData.integrationId,
+                scheduleId: eventId,
+                ...conditionData,
+              };
+              addCustomFilterFields.mutate(filterFieldData, {
+                onSuccess: (data) => {
+                  console.log("add custom filter fields res", data);
+                },
+                onError: (error) => {
+                  console.log("filter error", error);
+                },
+              });
+            } else if (filterFieldsData?.length > 0) {
+              console.log(
+                "***update realtime Event and update filter data"
+              );
+              console.log("############ conditionData", conditionData);
+              console.log("######### filterFieldsData", filterFieldsData);
+              const fiterItem = {
+                id: filterFieldsData[0].id,
+                userId: JSON.parse(userId.current),
+                integrationId: data.integrationName.value,
+                mappedRecordId: data.mappedRecords.value,
+                scheduleId: eventId,
+                sourceFieldValue: conditionData
+                  ? conditionData.sourceFieldValue
+                  : filterFieldsData[0].sourceFieldValue,
+                sourceFieldLabel: conditionData
+                  ? conditionData.sourceFieldLabel
+                  : filterFieldsData[0].sourceFieldLabel,
+                destinationFieldValue: conditionData
+                  ? conditionData.destinationFieldValue
+                  : filterFieldsData[0].destinationFieldValue,
+                destinationFieldLabel: conditionData
+                  ? conditionData.destinationFieldLabel
+                  : filterFieldsData[0].destinationFieldLabel,
+                operator: conditionData
+                  ? conditionData.operator
+                  : filterFieldsData[0].operator,
+              };
+
+              updateFilterFieldsById.mutate(fiterItem, {
+                onSuccess: (data) => {
+                  console.log("updated filter fields", data);
+                },
+                onError: (error) => {
+                  console.log(error);
+                },
+              });
+            }
+            router.push("/schedule");
+          // } else {
+            // toggleAlertBoxModel(data[0].error);
+          // }
           },
           onError: (err) => {
             console.log("err", err);
@@ -613,7 +772,7 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
     } else {
       console.log("add weekly event******");
 
-      const eventData = {
+      const weeklyEventData = {
         userId: JSON.parse(userId.current),
         integrationId: data.integrationName.value,
         mappedRecordId: data.mappedRecords.value,
@@ -632,24 +791,57 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
         savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
       };
 
-      // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-      // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+      // if(conditionData){
+      //   weeklyEventData.sourceFieldValue = conditionData.sourceFieldValue,
+      //   weeklyEventData.sourceFieldLabel = conditionData.sourceFieldLabel,
+      //   weeklyEventData.destinationFieldValue = conditionData.destinationFieldValue,
+      //   weeklyEventData.destinationFieldLabel = conditionData.destinationFieldLabel,
+      //   weeklyEventData.operator = conditionData.operator
+      // }
+
+      // weeklyEventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+      // weeklyEventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
       // ***API call to add event
       if (
         data.operationType === "add" &&
         data.source.label === "Google Sheet"
       ) {
-        toggleConfirmBoxModal(eventData);
+        toggleConfirmBoxModal(weeklyEventData);
       } else {
-        addEvent.mutate(eventData, {
+        addEvent.mutate(weeklyEventData, {
           onSuccess: (res) => {
             // console.log("add weekly event res", res)
             // router.push("/schedule");
             console.log("add weekly event res", res)
-          res[0].success ? 
-            router.push("/schedule") : 
-            toggleAlertBoxModel(res[0].error)
+          // res[0].success ? 
+          //   router.push("/schedule") : 
+          //   toggleAlertBoxModel(res[0].error)
+
+          // if (data[0].success) {
+                // add filter fields API
+                console.log("######### add filter Field Event", conditionData);
+                if (conditionData) {
+                  const filterFieldData = {
+                    userId: weeklyEventData.userId,
+                    mappedRecordId: weeklyEventData.mappedRecordId,
+                    integrationId: weeklyEventData.integrationId,
+                    scheduleId: res[0].id,
+                    ...conditionData,
+                  };
+                  addCustomFilterFields.mutate(filterFieldData, {
+                    onSuccess: (data) => {
+                      console.log("add custom filter fields res", data);
+                    },
+                    onError: (error) => {
+                      console.log("filter error", error);
+                    },
+                  });
+                }
+                router.push("/schedule");
+              // } else {
+              //   toggleAlertBoxModel("eee", data[0].error);
+              // }
           },
           onError: (err) => {
             console.log("err", err);
@@ -674,9 +866,10 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
       updateWeeklyEvent.mutate(scheduleEventData.current, {
         onSuccess: (res) => {
           console.log("update weekly event res", res)
-          res[0].success ? 
-            router.push("/schedule") : 
-            toggleAlertBoxModel(res[0].error)
+          // res[0].success ? 
+          //   router.push("/schedule") : 
+          //   toggleAlertBoxModel(res[0].error)
+          router.push("/schedule")
         },
         onError: (err) => {
           console.log("err", err);
@@ -686,9 +879,10 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
       addEvent.mutate(scheduleEventData.current, {
         onSuccess: (res) => {
           console.log("add weekly event res", res)
-          res[0].success ? 
-            router.push("/schedule") : 
-            toggleAlertBoxModel(res[0].error)
+          // res[0].success ? 
+          //   router.push("/schedule") : 
+          //   toggleAlertBoxModel(res[0].error)
+          router.push("/schedule")
         },
         onError: (err) => {
           console.log("err", err);
@@ -1061,6 +1255,15 @@ const WeeklyEvent = ({ checkBoxValue, eventId }) => {
       show={alertBoxModal}
       onCloseClick={() => {setAlertBoxModal(false)}}
       label={alertBoxLabel}
+      />
+
+<FilterModal
+        modal={modal}
+        toggle={toggle}
+        mappedRecordId={mappedRecordId}
+        getFilterDetails={filterConditionData}
+        eventId={eventId}
+        integrationId={integrationId}
       />
     </>
   );

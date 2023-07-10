@@ -7,7 +7,7 @@ import TkRow, { TkCol } from "@/globalComponents/TkRow";
 import TkSelect from "@/globalComponents/TkSelect";
 import { API_BASE_URL, timeOptions } from "@/utils/Constants";
 import { yupResolver } from "@hookform/resolvers/yup";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useCallback, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import * as Yup from "yup";
 import FormErrorText from "@/globalComponents/ErrorText";
@@ -18,6 +18,7 @@ import ConfirmBoxModal from "@/utils/DeleteModal";
 import TkInput from "@/globalComponents/TkInput";
 import TkRadioButton from "@/globalComponents/TkRadioButton";
 import AlertBoxModal from "@/utils/AlertBoxModal";
+import FilterModal from "@/components/schedule/filterModal";
 
 const schema = Yup.object({
   startDate: Yup.date().nullable().required("Start date is required"),
@@ -26,15 +27,19 @@ const schema = Yup.object({
   source: Yup.object().nullable().required("Operation is required."),
   perform: Yup.object().nullable().required("Select way to perform."),
 
-  range: Yup.string().test('start-range', 'Please enter a range.', function (value) {
-    if (value && !/^[A-Z]{1}[0-9]+:[A-Z]{1}[0-9]+$/.test(value)) {
-      return this.createError({
-        message: 'Please enter time range like A2:B22',
-        path: 'range'
-      });
+  range: Yup.string().test(
+    "start-range",
+    "Please enter a range.",
+    function (value) {
+      if (value && !/^[A-Z]{1}[0-9]+:[A-Z]{1}[0-9]+$/.test(value)) {
+        return this.createError({
+          message: "Please enter time range like A2:B22",
+          path: "range",
+        });
+      }
+      return true;
     }
-    return true;
-  }),
+  ),
 
   // startTimeInput: Yup.string().test('time-format', 'Please enter time in 12-hour format.\n(00:00 AM/PM)', function(value) {
   //   // Check if startTimeInput is provided and not empty
@@ -47,19 +52,25 @@ const schema = Yup.object({
   //   return true;
   // })
 
-  startTime: Yup.object().nullable().test('start-time', 'Please enter a start time.', function (value) {
-    const startTimeInput = this.parent.startTimeInput;
-    return value || startTimeInput;
-  }),
-  startTimeInput: Yup.string().test('start-time-input', 'Please enter a start time.', function (value) {
-    if (value && !/^(0?[1-9]|1[0-2]):[0-5][0-9] [APap][mM]$/.test(value)) {
-      return this.createError({
-        message: 'Please enter time in 12-hour format.\n(00:00 AM/PM)',
-        path: 'startTimeInput'
-      });
+  startTime: Yup.object()
+    .nullable()
+    .test("start-time", "Please enter a start time.", function (value) {
+      const startTimeInput = this.parent.startTimeInput;
+      return value || startTimeInput;
+    }),
+  startTimeInput: Yup.string().test(
+    "start-time-input",
+    "Please enter a start time.",
+    function (value) {
+      if (value && !/^(0?[1-9]|1[0-2]):[0-5][0-9] [APap][mM]$/.test(value)) {
+        return this.createError({
+          message: "Please enter time in 12-hour format.\n(00:00 AM/PM)",
+          path: "startTimeInput",
+        });
+      }
+      return true;
     }
-    return true;
-  }),
+  ),
 }).required();
 
 const SingleEvent = ({ checkBoxValue, eventId }) => {
@@ -99,6 +110,8 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   const [configurationData, setConfigurationData] = useState(null);
   const [alertBoxModal, setAlertBoxModal] = useState(false);
   const [alertBoxLabel, setAlertBoxLabel] = useState();
+  const [modal, setModal] = useState(false);
+  const [conditionData, setConditionData] = useState(null);
 
   const sourceOptions = [
     {
@@ -109,8 +122,8 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
       label: "Google Sheet",
       value: "Google Sheet",
     },
-  ]
-  
+  ];
+
   let options = [
     {
       label: "Export",
@@ -126,62 +139,96 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     mutationFn: tkFetch.post(`${API_BASE_URL}/addSingleEvent`),
   });
 
+  const addCustomFilterFields = useMutation({
+    mutationFn: tkFetch.post(`${API_BASE_URL}/addCustomFilterFields`),
+  });
+
   const updateSingleEvent = useMutation({
     mutationFn: tkFetch.putWithIdInUrl(`${API_BASE_URL}/updateSingleEvent`),
+  });
+
+  const updateFilterFieldsById = useMutation({
+    mutationFn: tkFetch.putWithIdInUrl(
+      `${API_BASE_URL}/updateFilterFieldsById`
+    ),
   });
 
   const apiResults = useQueries({
     queries: [
       {
-    queryKey: ["eventData", ids],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getScheduleEventById`, {
-      params: ids,
-    }),
-    enabled: !!ids,
-  },
-  {
-    queryKey: ["integrationData", userId.current],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getIntegrations/${userId.current}`),
-    enabled: !!userId.current,
-  },
-  {
-    queryKey: ["mappedRecordData", integrationRecordId],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getMappedRecordByIntegrationId`, {
-      params: integrationRecordId,
-    }),
-    enabled: !!integrationRecordId,
-  },
-  {
-    queryKey: ["integrations", integrationId],
-    queryFn: tkFetch.get(
-      `${API_BASE_URL}/getConfigurationByIntegrationId/${integrationId}`
-    ),
-    enabled: !!integrationId,
-  },
-  {
-    queryKey: ["configData", configurationData],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getRecordTypes`, {
-      params: configurationData,
-    }),
-    enabled: !!configurationData,
-  },
-  {
-    queryKey: ["getFilterDataById", id.current],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getFilterDataById`, {
-      params: id.current,
-    }),
-    enabled: !!id.current,
-  },
-],
-  })
+        queryKey: ["eventData", ids],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getScheduleEventById`, {
+          params: ids,
+        }),
+        enabled: !!ids,
+      },
+      {
+        queryKey: ["integrationData", userId.current],
+        queryFn: tkFetch.get(
+          `${API_BASE_URL}/getIntegrations/${userId.current}`
+        ),
+        enabled: !!userId.current,
+      },
+      {
+        queryKey: ["mappedRecordData", integrationRecordId],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getMappedRecordByIntegrationId`, {
+          params: integrationRecordId,
+        }),
+        enabled: !!integrationRecordId,
+      },
+      {
+        queryKey: ["integrations", integrationId],
+        queryFn: tkFetch.get(
+          `${API_BASE_URL}/getConfigurationByIntegrationId/${integrationId}`
+        ),
+        enabled: !!integrationId,
+      },
+      {
+        queryKey: ["configData", configurationData],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getRecordTypes`, {
+          params: configurationData,
+        }),
+        enabled: !!configurationData,
+      },
+      // {
+      //   queryKey: ["getFilterDataById", id.current],
+      //   queryFn: tkFetch.get(`${API_BASE_URL}/getFilterDataById`, {
+      //     params: id.current,
+      //   }),
+      //   enabled: !!id.current,
+      // },
+      {
+        queryKey: ["getCustomFilterFieldsById"],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getCustomFilterFieldsById`, {
+          // params: filterIds
+          params: {
+            userId: userId.current,
+            scheduleId: eventId,
+            integrationId: integrationId,
+            mappedRecordId: mappedRecordId,
+          },
+        }),
+        // enabled: !!filterIds,
+        enabled:
+          !!userId.current && !!eventId && !!integrationId && !!mappedRecordId,
+      },
+    ],
+  });
 
-  const [scheduleEvent, integrations, getMappedRecordData, config, restletAPI, filterData] = apiResults;
+  const [
+    scheduleEvent,
+    integrations,
+    getMappedRecordData,
+    config,
+    restletAPI,
+    filterFields,
+  ] = apiResults;
 
   const {
     data: eventData,
     isLoading: eventDataLoading,
     error: eventDataError,
-  } = scheduleEvent
+  } = scheduleEvent;
   const {
     isLoading: isIntegrationsLoading,
     isError: isIntegrationsError,
@@ -207,10 +254,16 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     error: savedSearchError,
   } = restletAPI;
   const {
-    data: filterFields,
+    data: filterFieldsData,
     isLoading: filterFieldsLoading,
-    error: filterFieldsError
-  } = filterData;
+    isError: filterFieldsError,
+    error: filterFieldsErrorData,
+  } = filterFields;
+  // const {
+  //   data: filterFields,
+  //   isLoading: filterFieldsLoading,
+  //   error: filterFieldsError
+  // } = filterData;
 
   useEffect(() => {
     userId.current = sessionStorage.getItem("userId");
@@ -226,11 +279,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   useEffect(() => {
     if (eventData) {
       if (eventData[0]?.eventType === "Single") {
-        id.current={
+        id.current = {
           id: userId.current,
           mappedRecordId: eventData[0].mappedRecordId,
           integrationId: eventData[0].integrationId,
-        }
+        };
 
         setValue("integrationName", {
           label: eventData[0].integration.integrationName,
@@ -247,23 +300,20 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         setValue("source", {
           label: eventData[0].source,
           value: eventData[0].source,
-        })
-        setValue("range", eventData[0].range)
+        });
+        setValue("range", eventData[0].range);
         setMappedRecordId(eventData[0].mappedRecordId);
 
-        eventData[0].savedSearchValue ?
-        setValue("savedSearches", {
-          label: eventData[0].savedSearchLabel,
-          value: eventData[0].savedSearchValue,
-        }) : setValue("savedSearches", null);
+        eventData[0].savedSearchValue
+          ? setValue("savedSearches", {
+              label: eventData[0].savedSearchLabel,
+              value: eventData[0].savedSearchValue,
+            })
+          : setValue("savedSearches", null);
 
         setAddValue(eventData[0].operationType === "add" ? true : false);
-      setUpdateValue(
-        eventData[0].operationType === "update" ? true : false
-      );
-      setDeleteValue(
-        eventData[0].operationType === "delete" ? true : false
-      );
+        setUpdateValue(eventData[0].operationType === "update" ? true : false);
+        setDeleteValue(eventData[0].operationType === "delete" ? true : false);
 
         setValue("startDate", eventData[0]?.startDate);
         setValue("endDate", eventData[0]?.endDate);
@@ -284,9 +334,9 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   // get Integretion data and check length
   useEffect(() => {
     if (userId.current) {
-  queryClient.invalidateQueries({
-    queryKey: ["integrationData"]
-  })
+      queryClient.invalidateQueries({
+        queryKey: ["integrationData"],
+      });
       if (integrationsData) {
         source.current = integrationsData[0].sourceName;
         destination.current = integrationsData[0].destinationName;
@@ -312,11 +362,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     }
   }, [integrationsData, queryClient, setValue]);
 
-   // Mapped record options and check length
-   useEffect(() => {
+  // Mapped record options and check length
+  useEffect(() => {
     queryClient.invalidateQueries({
-      queryKey: ["mappedRecordData"]
-    })
+      queryKey: ["mappedRecordData"],
+    });
     if (mappedRecordData) {
       if (mappedRecordData.length === 1) {
         setValue("mappedRecords", {
@@ -411,8 +461,8 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     }
   };
 
-   // mapped record dropdown handler
-   const onChangeMappedRecord = (e) => {
+  // mapped record dropdown handler
+  const onChangeMappedRecord = (e) => {
     if (e) {
       setMappedRecordId(e.value);
       id.current = {
@@ -423,11 +473,34 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     }
   };
 
+  const toggle = useCallback(() => {
+    if (modal) {
+      setModal(false);
+    } else {
+      setModal(true);
+    }
+  }, [modal]);
+
+  // get data from filter modal
+  const filterConditionData = (filterFields) => {
+    if (filterFields) {
+      // console.log("*********filterFields", filterFields);
+      setConditionData(filterFields);
+    }
+  };
+
+  useEffect(() => {
+    if (filterFieldsData) {
+      setConditionData(filterFieldsData);
+    }
+  }, [filterFieldsData]);
+
   // move to filter page
   const onClickSourceFilter = () => {
-    if(mappedRecordId){
-      router.push(`/schedule/${mappedRecordId}`);
-    }
+    toggle();
+    // if(mappedRecordId){
+    //   router.push(`/schedule/${mappedRecordId}`);
+    // }
   };
 
   // perform dropdown handler
@@ -435,7 +508,7 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     if (e) {
       setOperationsValue(e.value === "export" ? true : false);
 
-      if(e.value === "export"){
+      if (e.value === "export") {
         setAddValue(false);
         setUpdateValue(false);
         setDeleteValue(false);
@@ -449,7 +522,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     setUpdateValue(value === "update" ? true : false);
     setDeleteValue(value === "delete" ? true : false);
   };
-
+  // console.log(
+  //   "###############",
+  //   conditionData === null,
+  //   conditionData?.length === 0
+  // );
   const onSubmit = (data) => {
     if (data.endDate) {
       data.noEndDate = false;
@@ -461,12 +538,13 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
 
     let shouldLogData = true;
 
-    if(data.startTimeInput){
+    if (data.startTimeInput) {
       data.startTime = {
         label: data.startTimeInput,
         value: data.startTimeInput,
-      }
-    } 
+      };
+    }
+    // console.log("data==>", data)
     // else if(data.startTime === null) {
     //   const alertMsg = `Please enter time in 12 hour format. \n (00:00 AM/PM)`
     //       toggleAlertBoxModel(alertMsg)
@@ -498,183 +576,327 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     //   shouldLogData = false;
     // }
 
-    addValue ? (data.operationType = "add") : updateValue ? (data.operationType = "update") : deleteValue ? (data.operationType = "delete") : data.operationType = null;
+    addValue
+      ? (data.operationType = "add")
+      : updateValue
+      ? (data.operationType = "update")
+      : deleteValue
+      ? (data.operationType = "delete")
+      : (data.operationType = null);
 
-    if(data.perform.label === "Import"){
+    if (data.perform.label === "Import") {
       switch (data.source.label) {
         case "Google Sheet":
           switch (data.operationType) {
             case "update":
               if (data.range === "" || data.range === null) {
                 // alert("add range");
-                const alertMsg = "Please select range to update records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to update records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
-                const alertMsg = "Please add filter to update records."
-                toggleAlertBoxModel(alertMsg)
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
+                const alertMsg = "Please add filter to update records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
+              // else if (!filterFields.length > 0) {
+              //   // alert("add filter");
+              //   const alertMsg = "Please add filter to update records."
+              //   toggleAlertBoxModel(alertMsg)
+              //   shouldLogData = false;
+              // }
               break;
-      
+
             case "delete":
               if (data.range === "" || data.range === null) {
                 // alert("add range");
-                const alertMsg = "Please select range to delete records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to delete records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
-                const alertMsg = "Please add filter to delete records."
-                toggleAlertBoxModel(alertMsg)
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
+                const alertMsg = "Please add filter to delete records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
+              // else if (!filterFields.length > 0) {
+              //   // alert("add filter");
+              //   const alertMsg = "Please add filter to delete records."
+              //   toggleAlertBoxModel(alertMsg)
+              //   shouldLogData = false;
+              // }
               break;
           }
           break;
-      
+
         case "NetSuite":
           switch (data.operationType) {
             case "add":
               if (data.range === "" || data.range === null) {
                 // alert("add range");
-                const alertMsg = "Please select range to add records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to add records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
               break;
-      
+
             case "update":
               if (data.range === "" || data.range === null) {
                 // alert("add range");
-                const alertMsg = "Please select range to update records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to update records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
-                const alertMsg = "Please add filter to update records."
-                toggleAlertBoxModel(alertMsg)
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
+                const alertMsg = "Please add filter to update records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
-              break;
-      
+            // else if (!filterFields.length > 0) {
+            //   // alert("add filter");
+            //   const alertMsg = "Please add filter to update records."
+            //   toggleAlertBoxModel(alertMsg)
+            //   shouldLogData = false;
+            // }
+            // break;
+
             case "delete":
               if (data.range === "" || data.range === null) {
                 // alert("add range");
-                const alertMsg = "Please select range to delete records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to delete records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
-                const alertMsg = "Please add filter to delete records."
-                toggleAlertBoxModel(alertMsg)
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
+                const alertMsg = "Please add filter to delete records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
+              // else if (!filterFields.length > 0) {
+              //   // alert("add filter");
+              //   const alertMsg = "Please add filter to delete records."
+              //   toggleAlertBoxModel(alertMsg)
+              //   shouldLogData = false;
+              // }
               break;
           }
           break;
-        }
+      }
     }
 
     if (shouldLogData) {
-    if (eventId) {
-      console.log("update single event********");
-      const eventData = {
-        id: eventId,
-        userId: JSON.parse(userId.current),
-        integrationId: data.integrationName.value,
-        mappedRecordId: data.mappedRecords.value,
-        eventType: "Single",
-        startDate: data.startDate,
-        startTimeLabel: data.startTime.label,
-        startTimeValue: data.startTime.value,
-        repeatEveryDay: data.repeatEveryDay,
-        endDate: data.endDate,
-        noEndDate: data.noEndDate,
-        performType: data.perform.label,
-        operationType: data.operationType,
-        source: data.source.label,
-        range: data.range,
-        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label ,
-        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
+      if (eventId) {
+        console.log("update single event********");
+        const singleEventData = {
+          id: eventId,
+          userId: JSON.parse(userId.current),
+          integrationId: data.integrationName.value,
+          mappedRecordId: data.mappedRecords.value,
+          eventType: "Single",
+          startDate: data.startDate,
+          startTimeLabel: data.startTime.label,
+          startTimeValue: data.startTime.value,
+          repeatEveryDay: data.repeatEveryDay,
+          endDate: data.endDate,
+          noEndDate: data.noEndDate,
+          performType: data.perform.label,
+          operationType: data.operationType,
+          source: data.source.label,
+          range: data.range,
+          savedSearchLabel:
+            data?.savedSearches === null ? null : data?.savedSearches?.label,
+          savedSearchValue:
+            data?.savedSearches === null ? null : data?.savedSearches?.value,
+        };
 
-      };
+        // if(conditionData){
+        //   singleEventData.sourceFieldValue = conditionData.sourceFieldValue,
+        //   singleEventData.sourceFieldLabel = conditionData.sourceFieldLabel,
+        //   singleEventData.destinationFieldValue = conditionData.destinationFieldValue,
+        //   singleEventData.destinationFieldLabel = conditionData.destinationFieldLabel,
+        //   singleEventData.operator = conditionData.operator
+        // }
 
-      // console.log("eventData", eventData)
+        // console.log("singleEventData", singleEventData)
 
-      // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-      // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+        // singleEventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+        // singleEventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
-      // ***API call
-      if (
-        data.operationType === "add" &&
-        data.source.label === "Google Sheet"
-      ) {
-        toggleConfirmBoxModal(eventData);
+        // ***API call
+        if (
+          data.operationType === "add" &&
+          data.source.label === "Google Sheet"
+        ) {
+          toggleConfirmBoxModal(singleEventData);
+        } else {
+          updateSingleEvent.mutate(singleEventData, {
+            onSuccess: (res) => {
+              console.log("update single event res", data);
+              // if (data[0].success) {
+                if (filterFieldsData?.length === 0) {
+                  console.log("***update realtime Event and add filter data");
+                  const filterFieldData = {
+                    userId: singleEventData.userId,
+                    mappedRecordId: singleEventData.mappedRecordId,
+                    integrationId: singleEventData.integrationId,
+                    scheduleId: eventId,
+                    ...conditionData,
+                  };
+                  addCustomFilterFields.mutate(filterFieldData, {
+                    onSuccess: (data) => {
+                      console.log("add custom filter fields res", data);
+                    },
+                    onError: (error) => {
+                      console.log("filter error", error);
+                    },
+                  });
+                } else if (filterFieldsData?.length > 0) {
+                  console.log(
+                    "***update realtime Event and update filter data"
+                  );
+                  console.log("############ conditionData", conditionData);
+                  console.log("######### filterFieldsData", filterFieldsData);
+                  const fiterItem = {
+                    id: filterFieldsData[0].id,
+                    userId: JSON.parse(userId.current),
+                    integrationId: data.integrationName.value,
+                    mappedRecordId: data.mappedRecords.value,
+                    scheduleId: eventId,
+                    sourceFieldValue: conditionData
+                      ? conditionData.sourceFieldValue
+                      : filterFieldsData[0].sourceFieldValue,
+                    sourceFieldLabel: conditionData
+                      ? conditionData.sourceFieldLabel
+                      : filterFieldsData[0].sourceFieldLabel,
+                    destinationFieldValue: conditionData
+                      ? conditionData.destinationFieldValue
+                      : filterFieldsData[0].destinationFieldValue,
+                    destinationFieldLabel: conditionData
+                      ? conditionData.destinationFieldLabel
+                      : filterFieldsData[0].destinationFieldLabel,
+                    operator: conditionData
+                      ? conditionData.operator
+                      : filterFieldsData[0].operator,
+                  };
+
+                  updateFilterFieldsById.mutate(fiterItem, {
+                    onSuccess: (data) => {
+                      console.log("updated filter fields", data);
+                    },
+                    onError: (error) => {
+                      console.log(error);
+                    },
+                  });
+                }
+                router.push("/schedule");
+              // } else {
+              //   toggleAlertBoxModel(data[0].error);
+              // }
+              // data[0].success ?
+              //   router.push("/schedule") :
+              //   toggleAlertBoxModel(data[0].error)
+            },
+            onError: (error) => {
+              console.log(error);
+            },
+          });
+          // router.push("/schedule");
+        }
       } else {
-        updateSingleEvent.mutate(eventData, {
-          onSuccess: (data) => {
-            console.log("update single event res", data)
-          data[0].success ? 
-            router.push("/schedule") : 
-            toggleAlertBoxModel(data[0].error) 
-          },
-          onError: (error) => {
-            console.log(error);
-          },
-        });
-        // router.push("/schedule");
-      }
-    } else {
-      console.log("add single event*********");
+        console.log("add single event*********");
 
-      const eventData = {
-        userId: JSON.parse(userId.current),
-        integrationId: data.integrationName.value,
-        mappedRecordId: data.mappedRecords.value,
-        eventType: "Single",
-        startDate: data.startDate,
-        startTimeLabel: data.startTime.label,
-        startTimeValue: data.startTime.value,
-        repeatEveryDay: data.repeatEveryDay,
-        endDate: data.endDate,
-        noEndDate: data.noEndDate,
-        performType: data.perform.label,
-        operationType: data.operationType,
-        source: data.source.label,
-        range: data.range,
-        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
-        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
+        const singleEventData = {
+          userId: JSON.parse(userId.current),
+          integrationId: data.integrationName.value,
+          mappedRecordId: data.mappedRecords.value,
+          eventType: "Single",
+          startDate: data.startDate,
+          startTimeLabel: data.startTime.label,
+          startTimeValue: data.startTime.value,
+          repeatEveryDay: data.repeatEveryDay,
+          endDate: data.endDate,
+          noEndDate: data.noEndDate,
+          performType: data.perform.label,
+          operationType: data.operationType,
+          source: data.source.label,
+          range: data.range,
+          savedSearchLabel:
+            data?.savedSearches === null ? null : data?.savedSearches?.label,
+          savedSearchValue:
+            data?.savedSearches === null ? null : data?.savedSearches?.value,
+        };
 
-      };
+        // if(conditionData){
+        //   singleEventData.sourceFieldValue = conditionData.sourceFieldValue,
+        //   singleEventData.sourceFieldLabel = conditionData.sourceFieldLabel,
+        //   singleEventData.destinationFieldValue = conditionData.destinationFieldValue,
+        //   singleEventData.destinationFieldLabel = conditionData.destinationFieldLabel,
+        //   singleEventData.operator = conditionData.operator
+        // }
+        // console.log("singleEventData", singleEventData)
 
-      // eventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-      // eventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
+        // singleEventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
+        // singleEventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
 
-      // ***API call
-      if (
-        data.operationType === "add" &&
-        data.source.label === "Google Sheet"
-      ) {
-        toggleConfirmBoxModal(eventData);
-      } else {
-        addEvent.mutate(eventData, {
-          onSuccess: (data) => {
-            console.log("add single event res", data)
-          data[0].success ? 
-            router.push("/schedule") : 
-            toggleAlertBoxModel(data[0].error) 
-          },
-          onError: (error) => {
-            console.log(error);
-          },
-        });
-        // router.push("/schedule");
+        // ***API call
+        if (
+          data.operationType === "add" &&
+          data.source.label === "Google Sheet"
+        ) {
+          toggleConfirmBoxModal(singleEventData);
+        } else {
+          addEvent.mutate(singleEventData, {
+            onSuccess: (data) => {
+              console.log("add single event res", data);
+              // if (data[0].success) {
+                // add filter fields API
+                console.log("######### add filter Field Event", conditionData);
+                if (conditionData) {
+                  const filterFieldData = {
+                    userId: singleEventData.userId,
+                    mappedRecordId: singleEventData.mappedRecordId,
+                    integrationId: singleEventData.integrationId,
+                    scheduleId: data[0].id,
+                    ...conditionData,
+                  };
+                  addCustomFilterFields.mutate(filterFieldData, {
+                    onSuccess: (data) => {
+                      console.log("add custom filter fields res", data);
+                    },
+                    onError: (error) => {
+                      console.log("filter error", error);
+                    },
+                  });
+                }
+                router.push("/schedule");
+              // } else {
+              //   toggleAlertBoxModel("eee", data[0].error);
+              // }
+              // data[0].success ?
+              //   router.push("/schedule") :
+              //   toggleAlertBoxModel(data[0].error)
+            },
+            onError: (error) => {
+              console.log(error);
+            },
+          });
+          // router.push("/schedule");
+        }
       }
     }
-
-  }
   };
 
   const onCancel = () => {
@@ -687,10 +909,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     if (scheduleEventData.current.id) {
       updateSingleEvent.mutate(scheduleEventData.current, {
         onSuccess: (data) => {
-          console.log("update single event res", data)
-          data[0].success ? 
-            router.push("/schedule") : 
-            toggleAlertBoxModel(data[0].error) 
+          console.log("update single event res", data);
+          // data[0].success
+          //   ?
+             router.push("/schedule")
+            // : toggleAlertBoxModel(data[0].error);
         },
         onError: (error) => {
           console.log(error);
@@ -699,10 +922,11 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     } else {
       addEvent.mutate(scheduleEventData.current, {
         onSuccess: (data) => {
-          console.log("add single event res", data)
-          data[0].success ? 
-            router.push("/schedule") : 
-            toggleAlertBoxModel(data[0].error) 
+          console.log("add single event res", data);
+          // data[0].success
+          //   ?
+             router.push("/schedule")
+            // : toggleAlertBoxModel(data[0].error);
         },
         onError: (error) => {
           console.log(error);
@@ -719,208 +943,205 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   };
 
   const toggleAlertBoxModel = (alertMsg) => {
-    setAlertBoxLabel(alertMsg)
+    setAlertBoxLabel(alertMsg);
     setAlertBoxModal(true);
   };
 
   return (
     <>
       <TkForm onSubmit={handleSubmit(onSubmit)}>
-
-      <TkRow className="my-1">
-        <TkCol lg={4}>
-          <Controller
-            name="integrationName"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Integration"
-                id="integrationName"
-                options={integrationOptions}
-                maxMenuHeight="120px"
-                requiredStarOnLabel={true}
-                onChange={(e) => {
-                  field.onChange(e);
-                  onChangeIntegration(e);
-                }}
-              />
-            )}
-          />
-          {errors.integrationName?.message ? (
-            <FormErrorText>{errors.integrationName?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
-
-        <TkCol lg={4}>
-          <Controller
-            name="mappedRecords"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Mapped Records"
-                id="mappedRecords"
-                options={mappedRecordOptions}
-                maxMenuHeight="120px"
-                requiredStarOnLabel={true}
-                onChange={(e) => {
-                  field.onChange(e);
-                  onChangeMappedRecord(e);
-                }}
-              />
-            )}
-          />
-          {errors.mappedRecords?.message ? (
-            <FormErrorText>{errors.mappedRecords?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
-
-        <TkCol lg={4}>
-          <TkLabel htmlFor="sourceFilter">
-            How can we find existing records
-          </TkLabel>
-
-          <div className="d-flex">
-            <TkInput
-              {...register("sourceFilter")}
-              id="sourceFilter"
-              type="text"
-              disabled={true}
+        <TkRow className="my-1">
+          <TkCol lg={4}>
+            <Controller
+              name="integrationName"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Integration"
+                  id="integrationName"
+                  options={integrationOptions}
+                  maxMenuHeight="120px"
+                  requiredStarOnLabel={true}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onChangeIntegration(e);
+                  }}
+                />
+              )}
             />
-            <TkButton
-              className="btn btn-light"
-              type="button"
-              onClick={handleSubmit(onClickSourceFilter)}
+            {errors.integrationName?.message ? (
+              <FormErrorText>{errors.integrationName?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={4}>
+            <Controller
+              name="mappedRecords"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Mapped Records"
+                  id="mappedRecords"
+                  options={mappedRecordOptions}
+                  maxMenuHeight="120px"
+                  requiredStarOnLabel={true}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onChangeMappedRecord(e);
+                  }}
+                />
+              )}
+            />
+            {errors.mappedRecords?.message ? (
+              <FormErrorText>{errors.mappedRecords?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={4}>
+            <TkLabel htmlFor="sourceFilter">
+              How can we find existing records
+            </TkLabel>
+
+            <div className="d-flex">
+              <TkInput
+                {...register("sourceFilter")}
+                id="sourceFilter"
+                type="text"
+                disabled={true}
+              />
+              <TkButton
+                className="btn btn-light"
+                type="button"
+                onClick={handleSubmit(onClickSourceFilter)}
+              >
+                <i className="ri-filter-2-fill" />
+              </TkButton>
+            </div>
+          </TkCol>
+        </TkRow>
+
+        <TkRow className="mt-4">
+          <TkCol lg={4}>
+            <Controller
+              name="perform"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Perform"
+                  options={options}
+                  id="perform"
+                  maxMenuHeight="120px"
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onClickPerform(e);
+                  }}
+                />
+              )}
+            />
+            {errors.perform?.message ? (
+              <FormErrorText>{errors.perform?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={4}>
+            <Controller
+              name="savedSearches"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Saved Searches"
+                  id="savedSearches"
+                  maxMenuHeight="120px"
+                  options={savedSearchOptions}
+                />
+              )}
+            />
+          </TkCol>
+
+          <TkCol lg={4}>
+            <TkInput
+              {...register("range")}
+              id="range"
+              type="text"
+              labelName="Range"
+              placeholder="Range"
+            />
+            {errors.range?.message ? (
+              <FormErrorText>{errors.range?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+        </TkRow>
+
+        <TkRow className="mt-3">
+          <TkCol lg={4}>
+            <Controller
+              name="source"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Operations"
+                  id="source"
+                  maxMenuHeight="120px"
+                  options={sourceOptions}
+                  requiredStarOnLabel={true}
+                />
+              )}
+            />
+
+            {errors.source?.message ? (
+              <FormErrorText>{errors.source?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={6} className="d-flex align-self-center">
+            <TkRadioButton
+              type="radio"
+              name="operations"
+              label="Add Operation"
+              value="addOperation"
+              className="me-2"
+              disabled={operationsValue}
+              checked={addValue}
+              onChange={() => toggleComponet("add")}
             >
-              <i className="ri-filter-2-fill" />
-            </TkButton>
-          </div>
-        </TkCol>
-      </TkRow>
+              Add
+            </TkRadioButton>
 
-      <TkRow className="mt-4">
-        <TkCol lg={4}>
-          <Controller
-            name="perform"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Perform"
-                options={options}
-                id="perform"
-                maxMenuHeight="120px"
-                onChange={(e) => {
-                  field.onChange(e);
-                  onClickPerform(e);
-                }}
-              />
-            )}
-          />
-          {errors.perform?.message ? (
-            <FormErrorText>{errors.perform?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
+            <TkRadioButton
+              type="radio"
+              name="operations"
+              label="Update Operation"
+              value="updateOperation"
+              className="mx-1"
+              disabled={operationsValue}
+              checked={updateValue}
+              onChange={() => toggleComponet("update")}
+            >
+              Update
+            </TkRadioButton>
 
-        <TkCol lg={4}>
-          <Controller
-            name="savedSearches"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Saved Searches"
-                id="savedSearches"
-                maxMenuHeight="120px"
-                options={savedSearchOptions}
-              />
-            )}
-          />
-        </TkCol>
+            <TkRadioButton
+              type="radio"
+              name="operations"
+              label="Delete Operation"
+              value="deleteOperation"
+              className="mx-1"
+              disabled={operationsValue}
+              checked={deleteValue}
+              onChange={() => toggleComponet("delete")}
+            >
+              Delete
+            </TkRadioButton>
+          </TkCol>
+        </TkRow>
+        <hr />
 
-        <TkCol lg={4}>
-          <TkInput
-            {...register("range")}
-            id="range"
-            type="text"
-            labelName="Range"
-            placeholder="Range"
-          />
-          {errors.range?.message ? (
-            <FormErrorText>{errors.range?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
-        
-      </TkRow>
-
-      <TkRow className="mt-3">
-        <TkCol lg={4}>
-          <Controller
-            name="source"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Operations"
-                id="source"
-                maxMenuHeight="120px"
-                options={sourceOptions}
-                requiredStarOnLabel={true}
-              />
-            )}
-          />
-
-{errors.source?.message ? (
-            <FormErrorText>{errors.source?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
-
-        <TkCol lg={6} className="d-flex align-self-center">
-          <TkRadioButton
-            type="radio"
-            name="operations"
-            label="Add Operation"
-            value="addOperation"
-            className="me-2"
-            disabled={operationsValue}
-            checked={addValue}
-            onChange={() => toggleComponet("add")}
-          >
-            Add
-          </TkRadioButton>
-
-          <TkRadioButton
-            type="radio"
-            name="operations"
-            label="Update Operation"
-            value="updateOperation"
-            className="mx-1"
-            disabled={operationsValue}
-            checked={updateValue}
-            onChange={() => toggleComponet("update")}
-          >
-            Update
-          </TkRadioButton>
-
-          <TkRadioButton
-            type="radio"
-            name="operations"
-            label="Delete Operation"
-            value="deleteOperation"
-            className="mx-1"
-            disabled={operationsValue}
-            checked={deleteValue}
-            onChange={() => toggleComponet("delete")}
-          >
-            Delete
-          </TkRadioButton>
-        </TkCol>
-
-      </TkRow>
-      <hr/>
-
-      <h4 className="text-center mb-4 fw-bold">Single Event</h4>
+        <h4 className="text-center mb-4 fw-bold">Single Event</h4>
 
         <TkRow>
           <TkCol lg={4} sm={4}>
@@ -967,13 +1188,13 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
           </TkCol>
 
           <TkCol lg={4} sm={4}>
-            <TkInput 
-            {...register("startTimeInput")}
-            labelName="Start Time"
-            id="startTimeInput"
-            className="mb-3"
-            placeholder="Enter Start Time"
-          />
+            <TkInput
+              {...register("startTimeInput")}
+              labelName="Start Time"
+              id="startTimeInput"
+              className="mb-3"
+              placeholder="Enter Start Time"
+            />
             {errors.startTimeInput?.message ? (
               <FormErrorText>{errors.startTimeInput?.message}</FormErrorText>
             ) : null}
@@ -1058,9 +1279,20 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
         image={false}
       />
       <AlertBoxModal
-      show={alertBoxModal}
-      onCloseClick={() => {setAlertBoxModal(false)}}
-      label={alertBoxLabel}
+        show={alertBoxModal}
+        onCloseClick={() => {
+          setAlertBoxModal(false);
+        }}
+        label={alertBoxLabel}
+      />
+
+      <FilterModal
+        modal={modal}
+        toggle={toggle}
+        mappedRecordId={mappedRecordId}
+        getFilterDetails={filterConditionData}
+        eventId={eventId}
+        integrationId={integrationId}
       />
     </>
   );

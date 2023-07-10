@@ -14,11 +14,12 @@ import tkFetch from "@/utils/fetch";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import * as Yup from "yup";
 import AlertBoxModal from "@/utils/AlertBoxModal";
 import TkLoader from "@/globalComponents/TkLoader";
+import FilterModal from "@/components/schedule/filterModal";
 
 const schema = Yup.object({
   startDate: Yup.date().nullable().required("Start date is required"),
@@ -26,19 +27,23 @@ const schema = Yup.object({
   mappedRecords: Yup.object().nullable().required("Mapped record is required."),
   source: Yup.object().nullable().required("Operation is required."),
   perform: Yup.object().nullable().required("Select way to perform."),
-  
-  range: Yup.string().test('start-range', 'Please enter a range.', function (value) {
-    if (value && !/^[A-Z]{1}[0-9]+:[A-Z]{1}[0-9]+$/.test(value)) {
-      return this.createError({
-        message: 'Please enter time range like A2:B22',
-        path: 'range'
-      });
+
+  range: Yup.string().test(
+    "start-range",
+    "Please enter a range.",
+    function (value) {
+      if (value && !/^[A-Z]{1}[0-9]+:[A-Z]{1}[0-9]+$/.test(value)) {
+        return this.createError({
+          message: "Please enter time range like A2:B22",
+          path: "range",
+        });
+      }
+      return true;
     }
-    return true;
-  }),
-  
-//   range: Yup.string().trim()
-// .matches(/[abcdefghijklmnopqrstuvwxyz]+/ , 'Is not in correct format')
+  ),
+
+  //   range: Yup.string().trim()
+  // .matches(/[abcdefghijklmnopqrstuvwxyz]+/ , 'Is not in correct format')
 }).required();
 
 const RealtimeEvent = ({ checkBoxValue, eventId }) => {
@@ -77,6 +82,8 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
   const [configurationData, setConfigurationData] = useState(null);
   const [alertBoxModal, setAlertBoxModal] = useState(false);
   const [alertBoxLabel, setAlertBoxLabel] = useState();
+  const [conditionData, setConditionData] = useState(null);
+  const [modal, setModal] = useState(false);
 
   const sourceOptions = [
     {
@@ -86,9 +93,9 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
     {
       label: "Google Sheet",
       value: "Google Sheet",
-    }, 
-  ]
-  
+    },
+  ];
+
   let options = [
     {
       label: "Export",
@@ -104,6 +111,10 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
     mutationFn: tkFetch.post(`${API_BASE_URL}/addRealTimeEvent`),
   });
 
+  const addCustomFilterFields = useMutation({
+    mutationFn: tkFetch.post(`${API_BASE_URL}/addCustomFilterFields`),
+  });
+
   const syncDataMutation = useMutation({
     mutationFn: tkFetch.post(`${API_BASE_URL}/syncData`),
   });
@@ -116,54 +127,82 @@ const RealtimeEvent = ({ checkBoxValue, eventId }) => {
     mutationFn: tkFetch.post(`${API_BASE_URL}/addNetsuiteFields`),
   });
 
-let temp = null;
+  const updateFilterFieldsById = useMutation({
+    mutationFn: tkFetch.putWithIdInUrl(
+      `${API_BASE_URL}/updateFilterFieldsById`
+    ),
+  });
 
   const apiResults = useQueries({
     queries: [
-  {
-    queryKey: ["eventData", ids],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getScheduleEventById`, {
-      params: ids,
-    }),
-    enabled: !!ids,
-  },
-  {
-    queryKey: ["integrationData", userId.current],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getIntegrations/${userId.current}`),
-    enabled: !!userId.current,
-  },
-  {
-    queryKey: ["mappedRecordData", integrationRecordId],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getMappedRecordByIntegrationId`, {
-      params: integrationRecordId,
-    }),
-    enabled: !!integrationRecordId,
-  },
-  {
-    queryKey: ["integrations", integrationId],
-    queryFn: tkFetch.get(
-      `${API_BASE_URL}/getConfigurationByIntegrationId/${integrationId}`
-    ),
-    enabled: !!integrationId,
-  },
-  {
-    queryKey: ["configData", configurationData],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getRecordTypes`, {
-      params: configurationData,
-    }),
-    enabled: !!configurationData,
-  },
-  {
-    queryKey: ["getFilterDataById", id.current],
-    queryFn: tkFetch.get(`${API_BASE_URL}/getFilterDataById`, {
-      params: id.current,
-    }),
-    enabled: !!id.current,
-  },
-],
+      {
+        queryKey: ["eventData", ids],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getScheduleEventById`, {
+          params: ids,
+        }),
+        enabled: !!ids,
+      },
+      {
+        queryKey: ["integrationData", userId.current],
+        queryFn: tkFetch.get(
+          `${API_BASE_URL}/getIntegrations/${userId.current}`
+        ),
+        enabled: !!userId.current,
+      },
+      {
+        queryKey: ["mappedRecordData", integrationRecordId],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getMappedRecordByIntegrationId`, {
+          params: integrationRecordId,
+        }),
+        enabled: !!integrationRecordId,
+      },
+      {
+        queryKey: ["integrations", integrationId],
+        queryFn: tkFetch.get(
+          `${API_BASE_URL}/getConfigurationByIntegrationId/${integrationId}`
+        ),
+        enabled: !!integrationId,
+      },
+      {
+        queryKey: ["configData", configurationData],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getRecordTypes`, {
+          params: configurationData,
+        }),
+        enabled: !!configurationData,
+      },
+      // {
+      //   queryKey: ["getFilterDataById", id.current],
+      //   queryFn: tkFetch.get(`${API_BASE_URL}/getFilterDataById`, {
+      //     params: id.current,
+      //   }),
+      //   enabled: !!id.current,
+      // },
+      {
+        queryKey: ["getCustomFilterFieldsById"],
+        queryFn: tkFetch.get(`${API_BASE_URL}/getCustomFilterFieldsById`, {
+          // params: filterIds
+          params: {
+            userId: userId.current,
+            scheduleId: eventId,
+            integrationId: integrationId,
+            mappedRecordId: mappedRecordId,
+          },
+        }),
+        // enabled: !!filterIds,
+        enabled:
+          !!userId.current && !!eventId && !!integrationId && !!mappedRecordId,
+      },
+    ],
   });
 
-  const [scheduleEvent, integrations, getMappedRecordData, config, restletAPI, filterData] = apiResults;
+  const [
+    scheduleEvent,
+    integrations,
+    getMappedRecordData,
+    config,
+    restletAPI,
+    filterFields,
+  ] = apiResults;
 
   const {
     data: eventData,
@@ -194,15 +233,20 @@ let temp = null;
     isError: isSavedSearchError,
     error: savedSearchError,
   } = restletAPI;
+  // const {
+  //   data: filterFields,
+  //   isLoading: filterFieldsLoading,
+  //   error: filterFieldsError,
+  // } = filterData;
   const {
-    data: filterFields,
+    data: filterFieldsData,
     isLoading: filterFieldsLoading,
-    error: filterFieldsError
-  } = filterData;
+    isError: filterFieldsError,
+    error: filterFieldsErrorData,
+  } = filterFields;
 
-  
   // console.log("ids", ids)
-  console.log("isEventDataLoading", isEventDataLoading)
+  // console.log("isEventDataLoading", isEventDataLoading);
   // console.log("isIntegrationsLoading", isIntegrationsLoading)
 
   useEffect(() => {
@@ -215,15 +259,15 @@ let temp = null;
     }
   }, [eventId]);
 
-   // set existing data
+  // set existing data
   useEffect(() => {
     if (eventData) {
       if (eventData[0]?.eventType === "Realtime") {
-        id.current={
+        id.current = {
           id: userId.current,
           mappedRecordId: eventData[0].mappedRecordId,
           integrationId: eventData[0].integrationId,
-        }
+        };
 
         setValue("integrationName", {
           label: eventData[0].integration.integrationName,
@@ -240,23 +284,20 @@ let temp = null;
         setValue("source", {
           label: eventData[0].source,
           value: eventData[0].source,
-        })
-        setValue("range", eventData[0].range)
+        });
+        setValue("range", eventData[0].range);
         setMappedRecordId(eventData[0].mappedRecordId);
 
-          eventData[0].savedSearchValue ?
-          setValue("savedSearches", {
-            label: eventData[0].savedSearchLabel,
-            value: eventData[0].savedSearchValue,
-          }) : setValue("savedSearches", null);
+        eventData[0].savedSearchValue
+          ? setValue("savedSearches", {
+              label: eventData[0].savedSearchLabel,
+              value: eventData[0].savedSearchValue,
+            })
+          : setValue("savedSearches", null);
 
         setAddValue(eventData[0].operationType === "add" ? true : false);
-      setUpdateValue(
-        eventData[0].operationType === "update" ? true : false
-      );
-      setDeleteValue(
-        eventData[0].operationType === "delete" ? true : false
-      );
+        setUpdateValue(eventData[0].operationType === "update" ? true : false);
+        setDeleteValue(eventData[0].operationType === "delete" ? true : false);
 
         setValue("startDate", eventData[0].startDate);
         setValue("endDate", eventData[0].endDate);
@@ -272,8 +313,8 @@ let temp = null;
   useEffect(() => {
     if (userId.current) {
       queryClient.invalidateQueries({
-        queryKey: ["integrationData"]
-      })
+        queryKey: ["integrationData"],
+      });
       if (integrationsData) {
         source.current = integrationsData[0].sourceName;
         destination.current = integrationsData[0].destinationName;
@@ -299,11 +340,11 @@ let temp = null;
     }
   }, [integrationsData, queryClient, setValue]);
 
-   // Mapped record options and check length
-   useEffect(() => {
+  // Mapped record options and check length
+  useEffect(() => {
     queryClient.invalidateQueries({
-      queryKey: ["mappedRecordData"]
-    })
+      queryKey: ["mappedRecordData"],
+    });
     if (mappedRecordData) {
       if (mappedRecordData.length === 1) {
         setValue("mappedRecords", {
@@ -347,8 +388,8 @@ let temp = null;
     }
   }, [configData]);
 
-   // saved search list options
-   useEffect(() => {
+  // saved search list options
+  useEffect(() => {
     if (savedSearchData) {
       setSavedSearchOptions(
         savedSearchData[0].list.map((item) => ({
@@ -387,7 +428,7 @@ let temp = null;
     setValue("mappedRecords", null);
     if (e) {
       // setIds({
-        //   id: userId.current,
+      //   id: userId.current,
       //   integrationId: e.value,
       // });
       setIntegrationRecordId({
@@ -398,8 +439,8 @@ let temp = null;
     }
   };
 
-    // mapped record dropdown handler
-   const onChangeMappedRecord = (e) => {
+  // mapped record dropdown handler
+  const onChangeMappedRecord = (e) => {
     if (e) {
       setMappedRecordId(e.value);
       id.current = {
@@ -410,19 +451,47 @@ let temp = null;
     }
   };
 
- // move to filter page
-  const onClickSourceFilter = () => {
-    if(mappedRecordId){
-      router.push(`/schedule/${mappedRecordId}`);
+  const toggle = useCallback(() => {
+    if (modal) {
+      setModal(false);
+    } else {
+      setModal(true);
+    }
+  }, [modal]);
+
+  // get data from filter modal
+  const filterConditionData = (filterFields) => {
+    console.log("*********filterFields", filterFields);
+    if (filterFields) {
+      setConditionData(filterFields);
     }
   };
+
+  useEffect(() => {
+    if (filterFieldsData) {
+      setConditionData(filterFieldsData);
+    }
+  }, [filterFieldsData]);
+
+  // console.log("modal", modal);
+  // console.log("mappedRecordId", mappedRecordId);
+
+  // move to filter page
+  const onClickSourceFilter = () => {
+    toggle();
+    // if(mappedRecordId){
+    //   router.push(`/schedule/${mappedRecordId}`);
+    // }
+  };
+
+  // onClick={() => onClickOpenModal(props.row.original?.id)}
 
   // perform dropdown handler
   const onClickPerform = (e) => {
     if (e) {
       setOperationsValue(e.value === "export" ? true : false);
 
-      if(e.value === "export"){
+      if (e.value === "export") {
         setAddValue(false);
         setUpdateValue(false);
         setDeleteValue(false);
@@ -436,8 +505,12 @@ let temp = null;
     setUpdateValue(value === "update" ? true : false);
     setDeleteValue(value === "delete" ? true : false);
   };
+  console.log("filterFieldsData", filterFieldsData);
 
+  // console.log("###############", filterFieldsData?.length === 0,conditionData === null,
+  // conditionData?.length === 0)
   const onSubmit = (data) => {
+    // noEndDate check box
     if (data.endDate) {
       data.noEndDate = false;
       setCheckboxValue(false);
@@ -445,192 +518,569 @@ let temp = null;
       data.noEndDate = true;
       setCheckboxValue(true);
     }
-    addValue ? (data.operationType = "add") : updateValue ? (data.operationType = "update") : deleteValue ? (data.operationType = "delete") : data.operationType = null;
 
+    // get operation type
+    addValue
+      ? (data.operationType = "add")
+      : updateValue
+      ? (data.operationType = "update")
+      : deleteValue
+      ? (data.operationType = "delete")
+      : (data.operationType = null);
+
+    // call API
     let shouldLogData = true;
 
-    if(data.perform.label === "Import"){
+    // required filter and range
+    if (data.perform.label === "Import") {
       switch (data.source.label) {
         case "Google Sheet":
           switch (data.operationType) {
             case "update":
               if (data.range === "" || data.range === null) {
-                // alert("add range");
-                const alertMsg = "Please select range to update records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to update records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
-                const alertMsg = "Please add filter to update records."
-                toggleAlertBoxModel(alertMsg)
+                // } else if (conditionData === null || conditionData.length === 0) {
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
+                const alertMsg = "Please add filter to update records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
               break;
-      
+
             case "delete":
               if (data.range === "" || data.range === null) {
-                // alert("add range");
-                const alertMsg = "Please select range to delete records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to delete records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
-                const alertMsg = "Please add filter to delete records."
-                toggleAlertBoxModel(alertMsg)
+                // } else if (conditionData === null || conditionData.length === 0) {
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
+                const alertMsg = "Please add filter to delete records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
               break;
           }
           break;
-      
+
         case "NetSuite":
           switch (data.operationType) {
             case "add":
               if (data.range === "" || data.range === null) {
-                // alert("add range");
-                const alertMsg = "Please select range to add records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to add records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
               break;
-      
+
             case "update":
               if (data.range === "" || data.range === null) {
-                // alert("add range");
-                const alertMsg = "Please select range to update records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to update records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
-                const alertMsg = "Please add filter to update records."
-                toggleAlertBoxModel(alertMsg)
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
+                const alertMsg = "Please add filter to update records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
               break;
-      
+
             case "delete":
               if (data.range === "" || data.range === null) {
-                // alert("add range");
-                const alertMsg = "Please select range to delete records."
-                toggleAlertBoxModel(alertMsg)
+                const alertMsg = "Please select range to delete records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (!filterFields.length > 0) {
-                // alert("add filter");
-                const alertMsg = "Please add filter to delete records."
-                toggleAlertBoxModel(alertMsg)
+              } else if (
+                conditionData === null ||
+                // filterFieldsData?.length === 0 ||
+                conditionData?.length === 0
+              ) {
+                const alertMsg = "Please add filter to delete records.";
+                toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
               break;
           }
           break;
+      }
+    }
+
+    // API call
+    if (shouldLogData) {
+      if (eventId) {
+        console.log("update realtime Event**********");
+        const realtimeEventData = {
+          id: eventId,
+          userId: JSON.parse(userId.current),
+          integrationId: data.integrationName.value,
+          mappedRecordId: data.mappedRecords.value,
+          eventType: "Realtime",
+          startDate: data.startDate,
+          endDate: data.endDate,
+          noEndDate: data.noEndDate,
+          performType: data.perform.label,
+          operationType: data.operationType,
+          source: data.source.label,
+          range: data.range,
+          savedSearchLabel:
+            data?.savedSearches === null ? null : data?.savedSearches?.label,
+          savedSearchValue:
+            data?.savedSearches === null ? null : data?.savedSearches?.value,
+        };
+
+        // ***API call to update event
+        if (
+          data.operationType === "add" &&
+          data.source.label === "Google Sheet"
+        ) {
+          toggleDeleteModel(realtimeEventData);
+        } else {
+          // console.log("conditionData", conditionData)
+          updateRealTimeEvent.mutate(realtimeEventData, {
+            onSuccess: (res) => {
+              console.log("update realTime event res", res);
+
+              if (filterFieldsData?.length === 0) {
+                console.log("***update realtime Event and add filter data");
+                const filterFieldData = {
+                  userId: realtimeEventData.userId,
+                  mappedRecordId: realtimeEventData.mappedRecordId,
+                  integrationId: realtimeEventData.integrationId,
+                  scheduleId: eventId,
+                  ...conditionData,
+                };
+                addCustomFilterFields.mutate(filterFieldData, {
+                  onSuccess: (data) => {
+                    console.log("add custom filter fields res", data);
+                  },
+                  onError: (error) => {
+                    console.log("filter error", error);
+                  },
+                });
+              } else if (filterFieldsData?.length > 0) {
+                console.log("***update realtime Event and update filter data");
+                console.log("############ conditionData", conditionData);
+                console.log("######### filterFieldsData", filterFieldsData);
+                const fiterItem = {
+                  id: filterFieldsData[0].id,
+                  userId: JSON.parse(userId.current),
+                  integrationId: data.integrationName.value,
+                  mappedRecordId: data.mappedRecords.value,
+                  scheduleId: eventId,
+                  sourceFieldValue: conditionData
+                    ? conditionData.sourceFieldValue
+                    : filterFieldsData[0].sourceFieldValue,
+                  sourceFieldLabel: conditionData
+                    ? conditionData.sourceFieldLabel
+                    : filterFieldsData[0].sourceFieldLabel,
+                  destinationFieldValue: conditionData
+                    ? conditionData.destinationFieldValue
+                    : filterFieldsData[0].destinationFieldValue,
+                  destinationFieldLabel: conditionData
+                    ? conditionData.destinationFieldLabel
+                    : filterFieldsData[0].destinationFieldLabel,
+                  operator: conditionData
+                    ? conditionData.operator
+                    : filterFieldsData[0].operator,
+                };
+
+                updateFilterFieldsById.mutate(fiterItem, {
+                  onSuccess: (data) => {
+                    console.log("updated filter fields", data);
+                  },
+                  onError: (error) => {
+                    console.log(error);
+                  },
+                });
+              }
+              router.push("/schedule");
+            },
+            onError: (err) => {
+              console.log("err", err);
+            },
+          });
         }
-    }
-
-if (shouldLogData) {
-  if (eventId) {
-      console.log("update realtime Event**********");
-      const realtimeEventData = {
-        id: eventId,
-        userId: JSON.parse(userId.current),
-        integrationId: data.integrationName.value,
-        mappedRecordId: data.mappedRecords.value,
-        eventType: "Realtime",
-        startDate: data.startDate,
-        endDate: data.endDate,
-        noEndDate: data.noEndDate,
-        performType: data.perform.label,
-        operationType: data.operationType,
-        source: data.source.label,
-        range: data.range,
-        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
-        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
-
-      };
-
-        // realtimeEventData.savedSearchLabel = data?.savedSearches === null  ? null : data?.savedSearches?.label ;
-        // realtimeEventData.savedSearchValue = data?.savedSearches === null ? null : data?.savedSearches?.value;
-
-      // ***API call to update event
-
-      console.log("realtimeEventData", realtimeEventData)
-      if (
-        data.operationType === "add" &&
-        data.source.label === "Google Sheet"
-      ) {
-        toggleDeleteModel(realtimeEventData);
       } else {
-        updateRealTimeEvent.mutate(realtimeEventData, {
-          onSuccess: (res) => {
-            console.log("update realTime event res", res);
-            router.push("/schedule");
-          },
-          onError: (err) => {
-            console.log("err", err);
-          },
-        });
-      }
-    } else {
-      console.log("add realtime Event**********");
-      const eventData = {
-        userId: JSON.parse(userId.current),
-        integrationId: data.integrationName.value,
-        mappedRecordId: data.mappedRecords.value,
-        eventType: "Realtime",
-        startDate: data.startDate,
-        endDate: data.endDate,
-        noEndDate: data.noEndDate,
-        performType: data.perform.label,
-        operationType: data.operationType,
-        source: data.source.label,
-        range: data.range,
-        savedSearchLabel: data?.savedSearches === null  ? null : data?.savedSearches?.label,
-        savedSearchValue: data?.savedSearches === null ? null : data?.savedSearches?.value
+        console.log("add realtime Event**********");
+        const realtimeEventData = {
+          userId: JSON.parse(userId.current),
+          integrationId: data.integrationName.value,
+          mappedRecordId: data.mappedRecords.value,
+          eventType: "Realtime",
+          startDate: data.startDate,
+          endDate: data.endDate,
+          noEndDate: data.noEndDate,
+          performType: data.perform.label,
+          operationType: data.operationType,
+          source: data.source.label,
+          range: data.range,
+          savedSearchLabel:
+            data?.savedSearches === null ? null : data?.savedSearches?.label,
+          savedSearchValue:
+            data?.savedSearches === null ? null : data?.savedSearches?.value,
+        };
 
-      };
+        // ***API call to add event
+        if (
+          data.operationType === "add" &&
+          data.source.label === "Google Sheet"
+        ) {
+          toggleDeleteModel(realtimeEventData);
+        } else {
+          addEvent.mutate(realtimeEventData, {
+            onSuccess: (res) => {
+              console.log("add realtime event res", res);
 
-      // if (data.savedSearches) {
-      //   eventData.savedSearchLabel = data.savedSearches.label;
-      //   eventData.savedSearchValue = data.savedSearches.value;
-      // } else {
-      //   eventData.savedSearchLabel = null;
-      //   eventData.savedSearchValue = null;
-      // }
-
-      console.log("eventData", eventData);
-
-      // ***API call to add event
-      if (
-        data.operationType === "add" &&
-        data.source.label === "Google Sheet"
-      ) {
-        toggleDeleteModel(eventData);
-      } else {
-        addEvent.mutate(eventData, {
-          onSuccess: (res) => {
-            console.log("add realtime event res", res);
-            router.push("/schedule");
-          },
-          onError: (err) => {
-            console.log("err", err);
-          },
-        });
+              // add filter fields API
+              console.log("######### add filter Field Event", conditionData);
+              if (conditionData) {
+                const filterFieldData = {
+                  userId: realtimeEventData.userId,
+                  mappedRecordId: realtimeEventData.mappedRecordId,
+                  integrationId: realtimeEventData.integrationId,
+                  scheduleId: res[0].id,
+                  ...conditionData,
+                };
+                addCustomFilterFields.mutate(filterFieldData, {
+                  onSuccess: (data) => {
+                    console.log("add custom filter fields res", data);
+                  },
+                  onError: (error) => {
+                    console.log("filter error", error);
+                  },
+                });
+              }
+              router.push("/schedule");
+            },
+            onError: (error) => {
+              console.log("add realtime event error", error);
+            },
+          });
+        }
       }
     }
-}
   };
+
+  // const onSubmit = (data) => {
+  //   // noEndDate check box
+  //   if (data.endDate) {
+  //     data.noEndDate = false;
+  //     setCheckboxValue(false);
+  //   } else {
+  //     data.noEndDate = true;
+  //     setCheckboxValue(true);
+  //   }
+
+  //   // get operation type
+  //   addValue
+  //     ? (data.operationType = "add")
+  //     : updateValue
+  //     ? (data.operationType = "update")
+  //     : deleteValue
+  //     ? (data.operationType = "delete")
+  //     : (data.operationType = null);
+
+  //   // call API
+  //   let shouldLogData = true;
+
+  //   // required filter and range
+  //   if (data.perform.label === "Import") {
+  //     switch (data.source.label) {
+  //       case "Google Sheet":
+  //         switch (data.operationType) {
+  //           case "update":
+  //             if (data.range === "" || data.range === null) {
+  //               const alertMsg = "Please select range to update records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             } else if (conditionData === null || conditionData.length === 0) {
+  //               const alertMsg = "Please add filter to update records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             }
+  //             break;
+
+  //           case "delete":
+  //             if (data.range === "" || data.range === null) {
+  //               const alertMsg = "Please select range to delete records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             } else if (conditionData === null) {
+  //               const alertMsg = "Please add filter to delete records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             }
+  //             break;
+  //         }
+  //         break;
+
+  //       case "NetSuite":
+  //         switch (data.operationType) {
+  //           case "add":
+  //             if (data.range === "" || data.range === null) {
+  //               const alertMsg = "Please select range to add records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             }
+  //             break;
+
+  //           case "update":
+  //             if (data.range === "" || data.range === null) {
+  //               const alertMsg = "Please select range to update records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             } else if (conditionData === null) {
+  //               const alertMsg = "Please add filter to update records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             }
+  //             break;
+
+  //           case "delete":
+  //             if (data.range === "" || data.range === null) {
+  //               const alertMsg = "Please select range to delete records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             } else if (conditionData === null) {
+  //               const alertMsg = "Please add filter to delete records.";
+  //               toggleAlertBoxModel(alertMsg);
+  //               shouldLogData = false;
+  //             }
+  //             break;
+  //         }
+  //         break;
+  //     }
+  //   }
+
+  //   // API call
+  //   if (shouldLogData) {
+  //     if (eventId) {
+  //       console.log("update realtime Event**********");
+  //       const realtimeEventData = {
+  //         id: eventId,
+  //         userId: JSON.parse(userId.current),
+  //         integrationId: data.integrationName.value,
+  //         mappedRecordId: data.mappedRecords.value,
+  //         eventType: "Realtime",
+  //         startDate: data.startDate,
+  //         endDate: data.endDate,
+  //         noEndDate: data.noEndDate,
+  //         performType: data.perform.label,
+  //         operationType: data.operationType,
+  //         source: data.source.label,
+  //         range: data.range,
+  //         savedSearchLabel:
+  //           data?.savedSearches === null ? null : data?.savedSearches?.label,
+  //         savedSearchValue:
+  //           data?.savedSearches === null ? null : data?.savedSearches?.value,
+  //       };
+
+  //       // ***API call to update event
+
+  //       console.log("realtimeEventData", realtimeEventData);
+  //       if (
+  //         data.operationType === "add" &&
+  //         data.source.label === "Google Sheet"
+  //       ) {
+  //         toggleDeleteModel(realtimeEventData);
+  //       } else {
+  //         // console.log("conditionData", conditionData)
+  //         updateRealTimeEvent.mutate(realtimeEventData, {
+  //           onSuccess: (res) => {
+  //             console.log("update realTime event res", res);
+  //             // if(conditionData){
+  //             //   addCustomFilterFields.mutate({...conditionData, scheduleId: res[0].id}, {
+  //             //     onSuccess: (data) => {
+  //             //       console.log("add custom filter fields res", data);
+
+  //             //       // filter API
+  //             //       const filterFieldData = {
+  //             //         userId: realtimeEventData.userId,
+  //             //         mappedRecordId: realtimeEventData.mappedRecordId,
+  //             //         integrationId: realtimeEventData.integrationId,
+  //             //         scheduleId: res[0].id,
+  //             //         ...conditionData,
+  //             //       }
+  //             //       updateFilterFieldsById.mutate(filterFieldData, {
+  //             //         onSuccess: (res) => {
+  //             //           console.log("updated filter field", res)
+  //             //         }, onError: (error) => {
+  //             //           console.log("error for updation", error)
+  //             //         }
+  //             //       })
+  //             //   })
+  //             // }
+  //             if (filterFieldsData?.length > 0) {
+  //               console.log("*** update filter data");
+  //               const fiterItem = {
+  //                 id: filterFieldsData[0].id,
+  //                 userId: JSON.parse(userId.current),
+  //                 integrationId: data.integrationName.value,
+  //                 mappedRecordId: data.mappedRecords.value,
+  //                 scheduleId: eventId,
+  //                 sourceFieldValue: data.netsuiteFields[0].value,
+  //                 sourceFieldLabel: data.netsuiteFields[0].label,
+  //                 destinationFieldValue: data.googleSheetFields[0].value,
+  //                 destinationFieldLabel: data.googleSheetFields[0].label,
+  //                 operator: data.operator[0].label,
+  //               };
+
+  //               updateFilterFieldsById.mutate(fiterItem, {
+  //                 onSuccess: (data) => {
+  //                   console.log("updated filter fields", data);
+  //                 },
+  //                 onError: (error) => {
+  //                   console.log(error);
+  //                 },
+  //               });
+  //             }
+  //             router.push("/schedule");
+  //           },
+  //           onError: (err) => {
+  //             console.log("err", err);
+  //           },
+  //         });
+  //       }
+  //     } else {
+  //       console.log("add realtime Event**********");
+  //       const realtimeEventData = {
+  //         userId: JSON.parse(userId.current),
+  //         integrationId: data.integrationName.value,
+  //         mappedRecordId: data.mappedRecords.value,
+  //         eventType: "Realtime",
+  //         startDate: data.startDate,
+  //         endDate: data.endDate,
+  //         noEndDate: data.noEndDate,
+  //         performType: data.perform.label,
+  //         operationType: data.operationType,
+  //         source: data.source.label,
+  //         range: data.range,
+  //         savedSearchLabel:
+  //           data?.savedSearches === null ? null : data?.savedSearches?.label,
+  //         savedSearchValue:
+  //           data?.savedSearches === null ? null : data?.savedSearches?.value,
+  //       };
+
+  //       // ***API call to add event
+  //       if (
+  //         data.operationType === "add" &&
+  //         data.source.label === "Google Sheet"
+  //       ) {
+  //         toggleDeleteModel(realtimeEventData);
+  //       } else {
+  //         addEvent.mutate(realtimeEventData, {
+  //           onSuccess: (res) => {
+  //             console.log("add realtime event res", res);
+
+  //             // add filter fields API
+  //             if (conditionData) {
+  //               const filterFieldData = {
+  //                 userId: realtimeEventData.userId,
+  //                 mappedRecordId: realtimeEventData.mappedRecordId,
+  //                 integrationId: realtimeEventData.integrationId,
+  //                 scheduleId: res[0].id,
+  //                 ...conditionData,
+  //               };
+  //               addCustomFilterFields.mutate(filterFieldData, {
+  //                 onSuccess: (data) => {
+  //                   console.log("add custom filter fields res", data);
+  //                 },
+  //                 onError: (error) => {
+  //                   console.log("filter error", error);
+  //                 },
+  //               });
+  //             }
+  //             router.push("/schedule");
+  //           },
+  //           onError: (err) => {
+  //             console.log("err", err);
+  //           },
+  //         });
+  //       }
+  //     }
+  //   }
+  // };
 
   const onCancel = () => {
     history.back();
   };
 
-   // alert modal
+  // alert modal
   const onClickDelete = () => {
-    console.log("scheduleEventData", scheduleEventData.current);
+    // console.log("scheduleEventData", scheduleEventData.current);
 
     if (scheduleEventData.current.id) {
       updateRealTimeEvent.mutate(scheduleEventData.current, {
         onSuccess: (res) => {
           console.log("update realTime event res", res);
+
+          // // filter API
+          // if (filterFieldsData?.length === 0) {
+          //   console.log("***update realtime Event and add filter data");
+          //   const filterFieldData = {
+          //     userId: realtimeEventData.userId,
+          //     mappedRecordId: realtimeEventData.mappedRecordId,
+          //     integrationId: realtimeEventData.integrationId,
+          //     scheduleId: res[0].id,
+          //     ...conditionData,
+          //   };
+          //   addCustomFilterFields.mutate(filterFieldData, {
+          //     onSuccess: (data) => {
+          //       console.log("add custom filter fields res", data);
+          //     },
+          //     onError: (error) => {
+          //       console.log("filter error", error);
+          //     },
+          //   });
+          // } else if (filterFieldsData?.length > 0) {
+          //   console.log("***update realtime Event and update filter data");
+          //   console.log("############ conditionData", conditionData);
+          //   console.log("######### filterFieldsData", filterFieldsData);
+          //   const fiterItem = {
+          //     id: filterFieldsData[0].id,
+          //     userId: JSON.parse(userId.current),
+          //     integrationId: data.integrationName.value,
+          //     mappedRecordId: data.mappedRecords.value,
+          //     scheduleId: eventId,
+          //     sourceFieldValue: conditionData
+          //       ? conditionData.sourceFieldValue
+          //       : filterFieldsData[0].sourceFieldValue,
+          //     sourceFieldLabel: conditionData
+          //       ? conditionData.sourceFieldLabel
+          //       : filterFieldsData[0].sourceFieldLabel,
+          //     destinationFieldValue: conditionData
+          //       ? conditionData.destinationFieldValue
+          //       : filterFieldsData[0].destinationFieldValue,
+          //     destinationFieldLabel: conditionData
+          //       ? conditionData.destinationFieldLabel
+          //       : filterFieldsData[0].destinationFieldLabel,
+          //     operator: conditionData
+          //       ? conditionData.operator
+          //       : filterFieldsData[0].operator,
+          //   };
+
+          //   updateFilterFieldsById.mutate(fiterItem, {
+          //     onSuccess: (data) => {
+          //       console.log("updated filter fields", data);
+          //     },
+          //     onError: (error) => {
+          //       console.log(error);
+          //     },
+          //   });
+          // }
         },
         onError: (err) => {
           console.log("err", err);
@@ -640,6 +1090,26 @@ if (shouldLogData) {
       addEvent.mutate(scheduleEventData.current, {
         onSuccess: (res) => {
           console.log("add realtime event res", res);
+
+          // add filter fields API
+          console.log("######### add filter Field Event", conditionData);
+          if (conditionData) {
+            const filterFieldData = {
+              userId: realtimeEventData.userId,
+              mappedRecordId: realtimeEventData.mappedRecordId,
+              integrationId: realtimeEventData.integrationId,
+              scheduleId: res[0].id,
+              ...conditionData,
+            };
+            addCustomFilterFields.mutate(filterFieldData, {
+              onSuccess: (data) => {
+                console.log("add custom filter fields res", data);
+              },
+              onError: (error) => {
+                console.log("filter error", error);
+              },
+            });
+          }
         },
         onError: (err) => {
           console.log("err", err);
@@ -657,209 +1127,208 @@ if (shouldLogData) {
   };
 
   const toggleAlertBoxModel = (alertMsg) => {
-    setAlertBoxLabel(alertMsg)
+    setAlertBoxLabel(alertMsg);
     setAlertBoxModal(true);
   };
 
   return (
     <>
-    {/* {isEventDataLoading ? (
+      {/* {isEventDataLoading ? (
       <TkLoader />
     ) : ( */}
       <TkForm className="mb-4" onSubmit={handleSubmit(onSubmit)}>
-      <TkRow className="my-1">
-        <TkCol lg={4}>
-          <Controller
-            name="integrationName"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Integration"
-                id="integrationName"
-                options={integrationOptions}
-                maxMenuHeight="120px"
-                requiredStarOnLabel={true}
-                onChange={(e) => {
-                  field.onChange(e);
-                  onChangeIntegration(e);
-                }}
-              />
-            )}
-          />
-          {errors.integrationName?.message ? (
-            <FormErrorText>{errors.integrationName?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
-
-        <TkCol lg={4}>
-          <Controller
-            name="mappedRecords"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Mapped Records"
-                id="mappedRecords"
-                options={mappedRecordOptions}
-                maxMenuHeight="120px"
-                requiredStarOnLabel={true}
-                onChange={(e) => {
-                  field.onChange(e);
-                  onChangeMappedRecord(e);
-                }}
-              />
-            )}
-          />
-          {errors.mappedRecords?.message ? (
-            <FormErrorText>{errors.mappedRecords?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
-
-        <TkCol lg={4}>
-          <TkLabel htmlFor="sourceFilter">
-            How can we find existing records
-          </TkLabel>
-
-          <div className="d-flex">
-            <TkInput
-              {...register("sourceFilter")}
-              id="sourceFilter"
-              type="text"
-              disabled={true}
+        <TkRow className="my-1">
+          <TkCol lg={4}>
+            <Controller
+              name="integrationName"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Integration"
+                  id="integrationName"
+                  options={integrationOptions}
+                  maxMenuHeight="120px"
+                  requiredStarOnLabel={true}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onChangeIntegration(e);
+                  }}
+                />
+              )}
             />
-            <TkButton
-              className="btn btn-light"
-              type="button"
-              onClick={handleSubmit(onClickSourceFilter)}
+            {errors.integrationName?.message ? (
+              <FormErrorText>{errors.integrationName?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={4}>
+            <Controller
+              name="mappedRecords"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Mapped Records"
+                  id="mappedRecords"
+                  options={mappedRecordOptions}
+                  maxMenuHeight="120px"
+                  requiredStarOnLabel={true}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onChangeMappedRecord(e);
+                  }}
+                />
+              )}
+            />
+            {errors.mappedRecords?.message ? (
+              <FormErrorText>{errors.mappedRecords?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={4}>
+            <TkLabel htmlFor="sourceFilter">
+              How can we find existing records
+            </TkLabel>
+
+            <div className="d-flex">
+              <TkInput
+                {...register("sourceFilter")}
+                id="sourceFilter"
+                type="text"
+                disabled={true}
+              />
+              <TkButton
+                className="btn btn-light"
+                type="button"
+                onClick={handleSubmit(onClickSourceFilter)}
+              >
+                <i className="ri-filter-2-fill" />
+              </TkButton>
+            </div>
+          </TkCol>
+        </TkRow>
+
+        <TkRow className="mt-4">
+          <TkCol lg={4}>
+            <Controller
+              name="perform"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Perform"
+                  options={options}
+                  id="perform"
+                  maxMenuHeight="120px"
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onClickPerform(e);
+                  }}
+                />
+              )}
+            />
+            {errors.perform?.message ? (
+              <FormErrorText>{errors.perform?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={4}>
+            <Controller
+              name="savedSearches"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Saved Searches"
+                  id="savedSearches"
+                  maxMenuHeight="120px"
+                  options={savedSearchOptions}
+                />
+              )}
+            />
+          </TkCol>
+
+          <TkCol lg={4}>
+            <TkInput
+              {...register("range")}
+              id="range"
+              type="text"
+              labelName="Range"
+              placeholder="Range"
+            />
+            {errors.range?.message ? (
+              <FormErrorText>{errors.range?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+        </TkRow>
+
+        <TkRow className="mt-3">
+          <TkCol lg={4}>
+            <Controller
+              name="source"
+              control={control}
+              render={({ field }) => (
+                <TkSelect
+                  {...field}
+                  labelName="Operations"
+                  id="source"
+                  maxMenuHeight="120px"
+                  options={sourceOptions}
+                  requiredStarOnLabel={true}
+                />
+              )}
+            />
+
+            {errors.source?.message ? (
+              <FormErrorText>{errors.source?.message}</FormErrorText>
+            ) : null}
+          </TkCol>
+
+          <TkCol lg={6} className="d-flex align-self-center">
+            <TkRadioButton
+              type="radio"
+              name="operations"
+              label="Add Operation"
+              value="addOperation"
+              className="me-2"
+              disabled={operationsValue}
+              checked={addValue}
+              onChange={() => toggleComponet("add")}
             >
-              <i className="ri-filter-2-fill" />
-            </TkButton>
-          </div>
-        </TkCol>
-      </TkRow>
+              Add
+            </TkRadioButton>
 
-      <TkRow className="mt-4">
-        <TkCol lg={4}>
-          <Controller
-            name="perform"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Perform"
-                options={options}
-                id="perform"
-                maxMenuHeight="120px"
-                onChange={(e) => {
-                  field.onChange(e);
-                  onClickPerform(e);
-                }}
-              />
-            )}
-          />
-          {errors.perform?.message ? (
-            <FormErrorText>{errors.perform?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
+            <TkRadioButton
+              type="radio"
+              name="operations"
+              label="Update Operation"
+              value="updateOperation"
+              className="mx-1"
+              disabled={operationsValue}
+              checked={updateValue}
+              onChange={() => toggleComponet("update")}
+            >
+              Update
+            </TkRadioButton>
 
-        <TkCol lg={4}>
-          <Controller
-            name="savedSearches"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Saved Searches"
-                id="savedSearches"
-                maxMenuHeight="120px"
-                options={savedSearchOptions}
-              />
-            )}
-          />
-        </TkCol>
+            <TkRadioButton
+              type="radio"
+              name="operations"
+              label="Delete Operation"
+              value="deleteOperation"
+              className="mx-1"
+              disabled={operationsValue}
+              checked={deleteValue}
+              onChange={() => toggleComponet("delete")}
+            >
+              Delete
+            </TkRadioButton>
+          </TkCol>
+        </TkRow>
+        <hr />
 
-        <TkCol lg={4}>
-          <TkInput
-            {...register("range")}
-            id="range"
-            type="text"
-            labelName="Range"
-            placeholder="Range"
-          />
-          {errors.range?.message ? (
-            <FormErrorText>{errors.range?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
-      </TkRow>
-
-      <TkRow className="mt-3">
-        <TkCol lg={4}>
-          <Controller
-            name="source"
-            control={control}
-            render={({ field }) => (
-              <TkSelect
-                {...field}
-                labelName="Operations"
-                id="source"
-                maxMenuHeight="120px"
-                options={sourceOptions}
-                requiredStarOnLabel={true}
-              />
-            )}
-          />
-
-{errors.source?.message ? (
-            <FormErrorText>{errors.source?.message}</FormErrorText>
-          ) : null}
-        </TkCol>
-
-        <TkCol lg={6} className="d-flex align-self-center">
-          <TkRadioButton
-            type="radio"
-            name="operations"
-            label="Add Operation"
-            value="addOperation"
-            className="me-2"
-            disabled={operationsValue}
-            checked={addValue}
-            onChange={() => toggleComponet("add")}
-          >
-            Add
-          </TkRadioButton>
-
-          <TkRadioButton
-            type="radio"
-            name="operations"
-            label="Update Operation"
-            value="updateOperation"
-            className="mx-1"
-            disabled={operationsValue}
-            checked={updateValue}
-            onChange={() => toggleComponet("update")}
-          >
-            Update
-          </TkRadioButton>
-
-          <TkRadioButton
-            type="radio"
-            name="operations"
-            label="Delete Operation"
-            value="deleteOperation"
-            className="mx-1"
-            disabled={operationsValue}
-            checked={deleteValue}
-            onChange={() => toggleComponet("delete")}
-          >
-            Delete
-          </TkRadioButton>
-        </TkCol>
-
-      </TkRow>
-      <hr />
-
-      <h4 className="text-center mb-4 fw-bold"> Realtime Event </h4>
+        <h4 className="text-center mb-4 fw-bold"> Realtime Event </h4>
 
         <TkRow className="justify-content-center">
           <TkCol lg={6} sm={6}>
@@ -941,7 +1410,7 @@ if (shouldLogData) {
           </TkCol>
         </TkRow>
       </TkForm>
-        {/* )} */}
+      {/* )} */}
 
       <DeleteModal
         show={deleteModal}
@@ -951,10 +1420,21 @@ if (shouldLogData) {
         image={false}
       />
 
-<AlertBoxModal
-      show={alertBoxModal}
-      onCloseClick={() => {setAlertBoxModal(false)}}
-      label={alertBoxLabel}
+      <AlertBoxModal
+        show={alertBoxModal}
+        onCloseClick={() => {
+          setAlertBoxModal(false);
+        }}
+        label={alertBoxLabel}
+      />
+
+      <FilterModal
+        modal={modal}
+        toggle={toggle}
+        mappedRecordId={mappedRecordId}
+        getFilterDetails={filterConditionData}
+        eventId={eventId}
+        integrationId={integrationId}
       />
     </>
   );

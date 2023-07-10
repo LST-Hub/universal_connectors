@@ -5,8 +5,8 @@ import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/utils/Constants";
 import { Tooltip } from "@nextui-org/react";
 import { formatDate, formatTime } from "@/utils/date";
-
-
+import TkNoData from "@/globalComponents/TkNoData";
+import TkLoader from "@/globalComponents/TkLoader";
 
 const LogTable = () => {
   const [userId, setUserId] = useState(null);
@@ -152,11 +152,19 @@ const LogTable = () => {
 
   return (
     <>
-      {data.length ? (
-        <TkTableContainer columns={logsHead} data={rows} showPagination={true} />
-      ) : (
-        "No data found"
-      )}
+    {isLoading ? (
+      <TkLoader />
+    ) : logsData?.length > 0 ? (
+<TkTableContainer columns={logsHead} data={rows} showPagination={true} />
+    ) : (
+      <TkNoData />
+    )
+    }
+       {/* {data.length ? (
+         <TkTableContainer columns={logsHead} data={rows} showPagination={true} />
+       ) : (
+         "No data found"
+       )} */}
     </>
   );
 };

@@ -123,15 +123,20 @@ v1Router.delete(
 v1Router.post(
   "/addCustomFilterFields",
   scheduleController.addCustomFilterFields
-);
+  );
+  v1Router.put(
+    "/updateFilterFieldsById/:id",
+    scheduleController.updateFilterFieldsById
+  );
 v1Router.get(
-  "/getCustomFilterFields",
-  scheduleController.getCustomFilterFields
+  "/getCustomFilterFieldsById",
+  scheduleController.getCustomFilterFieldsById
 );
-v1Router.put(
-  "/updateFilterFieldsById/:id",
-  scheduleController.updateFilterFieldsById
-);
+
+// v1Router.get(
+//   "/getCustomFilterFields",
+//   scheduleController.getCustomFilterFields
+// );
 v1Router.get(
   "/getNetsuiteFiledsByRecordId",
   scheduleController.getNetsuiteFiledsByRecordId
@@ -146,7 +151,7 @@ v1Router.get(
   "/getLogs/:id",
   scheduleController.getLogs
 );
-v1Router.get("/getFilterDataById", scheduleController.getFilterDataById)
+// v1Router.get("/getFilterDataById", scheduleController.getFilterDataById)
 
 // *** routes to sync event
 v1Router.post("/syncEvent", syncControllers.syncEvent);

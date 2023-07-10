@@ -1,6 +1,6 @@
 import TkTableContainer from "@/globalComponents/TkTableContainer";
 import Link from "next/link";
-import React, { useEffect, useReducer, useState } from "react";
+import React, { useEffect, useReducer, useState, useRef } from "react";
 import { Tooltip } from "@nextui-org/react";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import tkFetch from "@/utils/fetch";
@@ -18,8 +18,9 @@ import {
   searchDebounce,
 } from "@/utils/utilsFunctions";
 
-let deleteFieldId = null;
 const FieldMappingTable = () => {
+  let deleteFieldId = useRef(null);
+  
   const [mappedRecordData, setMappedRecordData] = useState([]);
   const [userId, setUserId] = useState();
   const [deleteModal, setDeleteModal] = useState(false);
@@ -192,9 +193,9 @@ const FieldMappingTable = () => {
     },
   ];
 
-  const toggleDeleteModel = (fieldId, integrationId, userId) => {
-    deleteFieldId = {
-      id: fieldId,
+  const toggleDeleteModel = (mappedRecordId, integrationId, userId) => {
+    deleteFieldId.current = {
+      id: mappedRecordId,
       integrationId: integrationId,
       userId: userId
     };
@@ -202,7 +203,7 @@ const FieldMappingTable = () => {
   };
 
   const onClickDelete = () => {
-    deleteMappedRecord.mutate(deleteFieldId, {
+    deleteMappedRecord.mutate(deleteFieldId.current, {
       onSuccess: (data) => {
         queryClient.invalidateQueries({
           queryKey: ["mappedFieldsDetails"],

@@ -96,12 +96,15 @@ const GoogleSheetComponent = ({
   } = credentialDetailsResult;
 
   useEffect(() => {
+    // queryClient.invalidateQueries({
+    //   queryKey: ["getCustomFilterFieldsById", eventId],
+    // });
     const Id = sessionStorage.getItem("userId");
     if (Id) {
       // TODO: use let
       setUserID(Id);
     }
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     if (configurationsData?.length) {
