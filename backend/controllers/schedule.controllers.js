@@ -1065,7 +1065,7 @@ const getFilterData = async (userId, scheduleId, integrationId, mappedRecordId) 
   }
 
 const getCustomFilterFieldsById = async (req, res) => {
-  console.log("query", req.query)
+  // console.log("query", req.query)
 const { userId, scheduleId, integrationId, mappedRecordId} = req.query
 
   try {
@@ -2084,8 +2084,8 @@ const netsuiteOperations = async (
         destinationFieldValue: true,
       },
     });
-    console.log("mappedFields", mappedFields)
-    console.log("values", values)
+    // console.log("mappedFields", mappedFields)
+    // console.log("values", values)
 
     if (mappedFields.length > 0 && values.length > 1) {
       switch (operationType) {
@@ -2451,7 +2451,7 @@ const addNetsuiteV1Api = async (
             mappedRecordId: mappedRecord[0].id,
             recordType: mappedRecord[0].recordTypeLabel,
             status: "Error",
-            internalid: item.bodyfields.internalid,
+            // internalid: item.bodyfields.internalid,
             message: res.data.add_error.message,
           });
         }
@@ -2626,7 +2626,7 @@ const updateNetsuiteV1Api = async (
             data: result,
           });
 
-          console.log("output => ", res.data);
+          // console.log("output => ", res.data);
 
           if (res.data[0].update_success) {
             updatedCount++;
@@ -3623,8 +3623,8 @@ const base_url =
         data: data,
       });
 
-      return res.data;
       console.log("res.data ==>", res.data)
+      return res.data;
 
     } catch (error) {
       console.log("updateNetsuiteV1Api error", error.response.data);
@@ -3972,7 +3972,7 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
                   data: data,
                 });
 
-                // console.log("output => ", res.data);
+                console.log("output => ", res.data);
                 deleteCount++;
                 // console.log("start", i, "end", i+1)
               } catch (error) {
@@ -3996,6 +3996,16 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
         recordType: mappedRecord[0].recordTypeLabel,
         status: "Success",
         message: summaryMessage,
+      });
+    } else {
+      logs.push({
+        userId: userId,
+        scheduleId: Number(id),
+        integrationId: integrationId,
+        mappedRecordId: mappedRecordId,
+        recordType: mappedRecord[0].recordTypeLabel,
+        status: "Success",
+        message: "Record not available."
       });
     }
 

@@ -160,7 +160,7 @@ const ScheduleTable = () => {
       Header: "Action",
       accessor: "action",
       Cell: (props) => {
-        console.log("props", props.row.original)
+        // console.log("props", props.row.original)
         return (
           <>
             <i
@@ -181,6 +181,19 @@ const ScheduleTable = () => {
             {/* <Link href="/schedule/event">
               <i className="ri-eye-fill" />
             </Link> */}
+          </>
+        );
+      },
+    },
+    {
+      Header: "Logs",
+      accessor: "logs",
+      Cell: (props) => {
+        return (
+          <>
+            <Link href="/logs">
+              <i className="ri-eye-fill" />
+            </Link>
           </>
         );
       },

@@ -182,7 +182,7 @@ const syncData = async (
       console.log("****status false", mappedRecord[0].sheetLabel);
       return {
         success: false,
-        error: "Error: mapped record status is false."
+        error: `${mappedRecord[0].sheetLabel} sheet mapped record status is false.`
       }
     }
   } catch (error) {
@@ -611,7 +611,7 @@ const addNetsuiteV1Api = async (
             mappedRecordId: mappedRecord[0].id,
             recordType: mappedRecord[0].recordTypeLabel,
             status: "Error",
-            internalid: item.bodyfields.internalid,
+            // internalid: item.bodyfields.internalid,
             message: res.data.add_error.message,
           });
         }
