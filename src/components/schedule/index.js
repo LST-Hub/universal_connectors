@@ -120,6 +120,15 @@ const ScheduleTable = () => {
       accessor: "eventType",
     },
     {
+      Header: "Operatuion",
+      accessor: "operation",
+      Cell: (props) => {
+        return <>{
+          props.row.original.operationType
+        }</>;
+      },
+    },
+    {
       Header: "Creation Date",
       accessor: "creationDate",
       Cell: (props) => {

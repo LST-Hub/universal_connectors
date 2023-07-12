@@ -527,6 +527,7 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
   //   conditionData === null,
   //   conditionData?.length === 0
   // );
+  console.log("conditionData=======", conditionData)
   const onSubmit = (data) => {
     if (data.endDate) {
       data.noEndDate = false;
@@ -575,7 +576,7 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
     //   toggleAlertBoxModel(alertMsg)
     //   shouldLogData = false;
     // }
-
+console.log("addValue------------------", addValue)
     addValue
       ? (data.operationType = "add")
       : updateValue
@@ -583,6 +584,8 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
       : deleteValue
       ? (data.operationType = "delete")
       : (data.operationType = null);
+      //  toggleAlertBoxModel("Please select operation.");
+      
 
     if (data.perform.label === "Import") {
       switch (data.source.label) {
@@ -603,12 +606,6 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
                 toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
-              // else if (!filterFields.length > 0) {
-              //   // alert("add filter");
-              //   const alertMsg = "Please add filter to update records."
-              //   toggleAlertBoxModel(alertMsg)
-              //   shouldLogData = false;
-              // }
               break;
 
             case "delete":
@@ -617,15 +614,16 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
                 const alertMsg = "Please select range to delete records.";
                 toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
-              } else if (
-                conditionData === null ||
-                // filterFieldsData?.length === 0 ||
-                conditionData?.length === 0
-              ) {
-                const alertMsg = "Please add filter to delete records.";
-                toggleAlertBoxModel(alertMsg);
-                shouldLogData = false;
               }
+              // else if (
+              //   conditionData === null ||
+              //   // filterFieldsData?.length === 0 ||
+              //   conditionData?.length === 0
+              // ) {
+              //   const alertMsg = "Please add filter to delete records.";
+              //   toggleAlertBoxModel(alertMsg);
+              //   shouldLogData = false;
+              // }
               // else if (!filterFields.length > 0) {
               //   // alert("add filter");
               //   const alertMsg = "Please add filter to delete records."
@@ -662,13 +660,7 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
                 toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
-            // else if (!filterFields.length > 0) {
-            //   // alert("add filter");
-            //   const alertMsg = "Please add filter to update records."
-            //   toggleAlertBoxModel(alertMsg)
-            //   shouldLogData = false;
-            // }
-            // break;
+            break;
 
             case "delete":
               if (data.range === "" || data.range === null) {
@@ -685,12 +677,6 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
                 toggleAlertBoxModel(alertMsg);
                 shouldLogData = false;
               }
-              // else if (!filterFields.length > 0) {
-              //   // alert("add filter");
-              //   const alertMsg = "Please add filter to delete records."
-              //   toggleAlertBoxModel(alertMsg)
-              //   shouldLogData = false;
-              // }
               break;
           }
           break;
@@ -745,63 +731,75 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
           updateSingleEvent.mutate(singleEventData, {
             onSuccess: (res) => {
               console.log("update single event res", data);
-              // if (data[0].success) {
-                if (filterFieldsData?.length === 0) {
-                  console.log("***update realtime Event and add filter data");
-                  const filterFieldData = {
-                    userId: singleEventData.userId,
-                    mappedRecordId: singleEventData.mappedRecordId,
-                    integrationId: singleEventData.integrationId,
-                    scheduleId: eventId,
-                    ...conditionData,
-                  };
-                  addCustomFilterFields.mutate(filterFieldData, {
-                    onSuccess: (data) => {
-                      console.log("add custom filter fields res", data);
-                    },
-                    onError: (error) => {
-                      console.log("filter error", error);
-                    },
-                  });
-                } else if (filterFieldsData?.length > 0) {
-                  console.log(
-                    "***update realtime Event and update filter data"
-                  );
-                  console.log("############ conditionData", conditionData);
-                  console.log("######### filterFieldsData", filterFieldsData);
-                  const fiterItem = {
-                    id: filterFieldsData[0].id,
-                    userId: JSON.parse(userId.current),
-                    integrationId: data.integrationName.value,
-                    mappedRecordId: data.mappedRecords.value,
-                    scheduleId: eventId,
-                    sourceFieldValue: conditionData
-                      ? conditionData.sourceFieldValue
-                      : filterFieldsData[0].sourceFieldValue,
-                    sourceFieldLabel: conditionData
-                      ? conditionData.sourceFieldLabel
-                      : filterFieldsData[0].sourceFieldLabel,
-                    destinationFieldValue: conditionData
-                      ? conditionData.destinationFieldValue
-                      : filterFieldsData[0].destinationFieldValue,
-                    destinationFieldLabel: conditionData
-                      ? conditionData.destinationFieldLabel
-                      : filterFieldsData[0].destinationFieldLabel,
-                    operator: conditionData
-                      ? conditionData.operator
-                      : filterFieldsData[0].operator,
-                  };
+              console.log("######### update filter Field Event", conditionData);
 
-                  updateFilterFieldsById.mutate(fiterItem, {
-                    onSuccess: (data) => {
-                      console.log("updated filter fields", data);
-                    },
-                    onError: (error) => {
-                      console.log(error);
-                    },
-                  });
-                }
-                router.push("/schedule");
+              // if (data[0].success) {
+              if (filterFieldsData.length === 0 && (
+                (data.source.label === "Google Sheet" && data.operationType === "update") ||
+                (data.source.label === "NetSuite" && data.operationType === "update") ||
+                (data.source.label === "NetSuite" && data.operationType === "delete")
+              )) {
+                console.log("***update realtime Event and add filter data");
+                console.log("############ conditionData", conditionData);
+                console.log("######### filterFieldsData", filterFieldsData);
+
+                const filterFieldData = {
+                  userId: singleEventData.userId,
+                  mappedRecordId: singleEventData.mappedRecordId,
+                  integrationId: singleEventData.integrationId,
+                  scheduleId: eventId,
+                  ...conditionData,
+                };
+                addCustomFilterFields.mutate(filterFieldData, {
+                  onSuccess: (data) => {
+                    console.log("add custom filter fields res", data);
+                  },
+                  onError: (error) => {
+                    console.log("filter error", error);
+                  },
+                });
+              } else if (filterFieldsData?.length > 0 && (
+                (data.source.label === "Google Sheet" && data.operationType === "update") ||
+                (data.source.label === "NetSuite" && data.operationType === "update") ||
+                (data.source.label === "NetSuite" && data.operationType === "delete")
+              )) {
+                console.log("***update realtime Event and update filter data");
+                console.log("############ conditionData", conditionData);
+                console.log("######### filterFieldsData", filterFieldsData);
+                
+                const fiterItem = {
+                  id: filterFieldsData[0].id,
+                  userId: JSON.parse(userId.current),
+                  integrationId: data.integrationName.value,
+                  mappedRecordId: data.mappedRecords.value,
+                  scheduleId: eventId,
+                  sourceFieldValue: conditionData
+                    ? conditionData.sourceFieldValue
+                    : filterFieldsData[0].sourceFieldValue,
+                  sourceFieldLabel: conditionData
+                    ? conditionData.sourceFieldLabel
+                    : filterFieldsData[0].sourceFieldLabel,
+                  destinationFieldValue: conditionData
+                    ? conditionData.destinationFieldValue
+                    : filterFieldsData[0].destinationFieldValue,
+                  destinationFieldLabel: conditionData
+                    ? conditionData.destinationFieldLabel
+                    : filterFieldsData[0].destinationFieldLabel,
+                  operator: conditionData
+                    ? conditionData.operator
+                    : filterFieldsData[0].operator,
+                };
+
+                updateFilterFieldsById.mutate(fiterItem, {
+                  onSuccess: (data) => {
+                    console.log("updated filter fields", data);
+                  },
+                  onError: (error) => {
+                    console.log(error);
+                  },
+                });
+              }
+              router.push("/schedule");
               // } else {
               //   toggleAlertBoxModel(data[0].error);
               // }
@@ -859,29 +857,36 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
           toggleConfirmBoxModal(singleEventData);
         } else {
           addEvent.mutate(singleEventData, {
-            onSuccess: (data) => {
-              console.log("add single event res", data);
+            onSuccess: (res) => {
+              console.log("add single event res", res);
               // if (data[0].success) {
-                // add filter fields API
-                console.log("######### add filter Field Event", conditionData);
-                if (conditionData) {
-                  const filterFieldData = {
-                    userId: singleEventData.userId,
-                    mappedRecordId: singleEventData.mappedRecordId,
-                    integrationId: singleEventData.integrationId,
-                    scheduleId: data[0].id,
-                    ...conditionData,
-                  };
-                  addCustomFilterFields.mutate(filterFieldData, {
-                    onSuccess: (data) => {
-                      console.log("add custom filter fields res", data);
-                    },
-                    onError: (error) => {
-                      console.log("filter error", error);
-                    },
-                  });
-                }
-                router.push("/schedule");
+              // add filter fields API
+              console.log("######### add filter Field Event", conditionData);
+              if (conditionData 
+                && (
+                (data.source.label === "Google Sheet" && data.operationType === "update") ||
+                (data.source.label === "NetSuite" && data.operationType === "update") ||
+                (data.source.label === "NetSuite" && data.operationType === "delete")
+              )
+              ) {
+                console.log("******^^^^^*********^^^^^^^^^^&&&&&&&&")
+                const filterFieldData = {
+                  userId: singleEventData.userId,
+                  mappedRecordId: singleEventData.mappedRecordId,
+                  integrationId: singleEventData.integrationId,
+                  scheduleId: res[0].id,
+                  ...conditionData,
+                };
+                addCustomFilterFields.mutate(filterFieldData, {
+                  onSuccess: (data) => {
+                    console.log("add custom filter fields res", data);
+                  },
+                  onError: (error) => {
+                    console.log("filter error", error);
+                  },
+                });
+              }
+              router.push("/schedule");
               // } else {
               //   toggleAlertBoxModel("eee", data[0].error);
               // }
@@ -912,8 +917,8 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
           console.log("update single event res", data);
           // data[0].success
           //   ?
-             router.push("/schedule")
-            // : toggleAlertBoxModel(data[0].error);
+          router.push("/schedule");
+          // : toggleAlertBoxModel(data[0].error);
         },
         onError: (error) => {
           console.log(error);
@@ -925,8 +930,8 @@ const SingleEvent = ({ checkBoxValue, eventId }) => {
           console.log("add single event res", data);
           // data[0].success
           //   ?
-             router.push("/schedule")
-            // : toggleAlertBoxModel(data[0].error);
+          router.push("/schedule");
+          // : toggleAlertBoxModel(data[0].error);
         },
         onError: (error) => {
           console.log(error);

@@ -105,7 +105,7 @@ const syncData = async (
   operationType,
   source,
   range,
-  id,
+  eventId,
   accessToken
 ) => {
   try {
@@ -154,7 +154,7 @@ const syncData = async (
             integrationId,
             operationType,
             range,
-            id,
+            eventId,
             mappedRecord,
             credentials,
             accessToken
@@ -170,7 +170,7 @@ const syncData = async (
             mappedRecord,
             credentials,
             accessToken,
-            id,
+            eventId,
             range
           );
           return gsResult;
@@ -253,7 +253,7 @@ const netsuiteOperations = async (
   integrationId,
   operationType,
   range,
-  id,
+  eventId,
   mappedRecord,
   credentials,
   accessToken
@@ -297,7 +297,7 @@ const netsuiteOperations = async (
                   mappedFields,
                   userId,
                   integrationId,
-                  id,
+                  eventId,
                   range,
                   accessToken,
                 );
@@ -313,7 +313,7 @@ const netsuiteOperations = async (
                   integrationId,
                   range,
                   accessToken,
-                  id
+                  eventId
                 );
                 return updateResult;
       
@@ -327,7 +327,7 @@ const netsuiteOperations = async (
                   integrationId,
                   range,
                   accessToken,
-                  id
+                  eventId
                 );
                 return deleteResult;
       
@@ -482,7 +482,7 @@ const addNetsuiteV1Api = async (
   mappedFields,
   userId,
   integrationId,
-  id,
+  eventId,
   range,
   accessToken,
 ) => {
@@ -606,7 +606,7 @@ const addNetsuiteV1Api = async (
           errorCount++;
           logs.push({
             userId: userId,
-            scheduleId: id,
+            scheduleId: eventId,
             integrationId: integrationId,
             mappedRecordId: mappedRecord[0].id,
             recordType: mappedRecord[0].recordTypeLabel,
@@ -628,7 +628,7 @@ const addNetsuiteV1Api = async (
     if(successCount > 0){
       logs.unshift({
         userId: userId,
-        scheduleId: Number(id),
+        scheduleId: Number(eventId),
         integrationId: integrationId,
         mappedRecordId: mappedRecord[0].id,
         recordType: mappedRecord[0].recordTypeLabel,
@@ -667,7 +667,7 @@ const updateNetsuiteV1Api = async (
   integrationId,
   range,
   accessToken,
-  id
+  eventId
 ) => {
   console.log("update record in ns");
   const logs = [];
@@ -680,8 +680,10 @@ const updateNetsuiteV1Api = async (
         userId: Number(userId),
         integrationId: Number(integrationId),
         mappedRecordId: Number(mappedRecord[0].id),
+        scheduleId: Number(eventId)
       },
     });
+    console.log("^^^^^^^^^^^^^^^^^^^^^", filterData)
 
     const sheetsData = await getSheetsDataByRange(
       userId,
@@ -780,7 +782,7 @@ const updateNetsuiteV1Api = async (
             errorCount++;
             logs.push({
               userId: userId,
-              scheduleId: id,
+              scheduleId: eventId,
               integrationId: integrationId,
               mappedRecordId: mappedRecord[0].id,
               recordType: mappedRecord[0].recordTypeLabel,
@@ -804,7 +806,7 @@ const updateNetsuiteV1Api = async (
     if (updatedCount > 0) {
       logs.unshift({
         userId: userId,
-        scheduleId: Number(id),
+        scheduleId: Number(eventId),
         integrationId: integrationId,
         mappedRecordId: mappedRecord[0].id,
         recordType: mappedRecord[0].recordTypeLabel,
@@ -884,7 +886,7 @@ const deleteNetsuiteV1Api = async (
   integrationId,
   range,
   accessToken,
-  id
+  eventId
 ) => {
   console.log("delete record from ns");
   const logs = [];
@@ -896,8 +898,10 @@ const deleteNetsuiteV1Api = async (
         userId: Number(userId),
         integrationId: Number(integrationId),
         mappedRecordId: Number(mappedRecord[0].id),
+        scheduleId: Number(eventId)
       },
     });
+    console.log("^^^^^^^^^^^^^^^^^^^^^", filterData)
 
     const sheetsData = await getSheetsDataByRange(
       userId,
@@ -984,7 +988,7 @@ const deleteNetsuiteV1Api = async (
             errorCount++;
             logs.push({
               userId: userId,
-              scheduleId: id,
+              scheduleId: eventId,
               integrationId: integrationId,
               mappedRecordId: mappedRecord[0].id,
               recordType: mappedRecord[0].recordTypeLabel,
@@ -1008,7 +1012,7 @@ const deleteNetsuiteV1Api = async (
     if (deleteCount > 0) {
       logs.unshift({
         userId: userId,
-        scheduleId: Number(id),
+        scheduleId: Number(eventId),
         integrationId: integrationId,
         mappedRecordId: mappedRecord[0].id,
         recordType: mappedRecord[0].recordTypeLabel,
@@ -1047,7 +1051,7 @@ const googleSheetsOperations = async (
   mappedRecord,
   credentials,
   accessToken,
-  id,
+  eventId,
   range
 ) => {
   try {
@@ -1073,7 +1077,7 @@ const googleSheetsOperations = async (
             userId,
             mappedRecordId,
             integrationId,
-            id,
+            eventId,
             mappedFields
           );
           return addRecordResult;
@@ -1086,7 +1090,7 @@ const googleSheetsOperations = async (
             userId,
             mappedRecordId,
             integrationId,
-            id,
+            eventId,
             range,
             mappedFields
           );
@@ -1100,7 +1104,7 @@ const googleSheetsOperations = async (
             userId,
             mappedRecordId,
             integrationId,
-            id,
+            eventId,
             range,
             mappedFields
           );
@@ -1126,7 +1130,7 @@ const addGoogleSheetRecords = async (
   userId,
   mappedRecordId,
   integrationId,
-  id,
+  eventId,
   mappedFields
 ) => {
   try {
@@ -1192,7 +1196,7 @@ const addGoogleSheetRecords = async (
             accessToken,
             recordList,
             recordValues.length,
-            id
+            eventId
           );
 
           return appendFieldsResult;
@@ -1407,7 +1411,7 @@ const getNetsuiteDataForAllFields = async(
         return res.data;
       })
       .catch((error) => {
-        console.log("getNetsuiteDataForAllFields error", error);
+        console.log("getNetsuiteDataForAllFields error", error.response.data);
         // throw error;
         return {
           success: false,
@@ -1432,7 +1436,7 @@ const appendFields = async (
   accessToken,
   recordList,
   count,
-  id
+  eventId
 ) => {
   const logs = [];
   try {
@@ -1457,7 +1461,7 @@ const appendFields = async (
       if (count > 0) {
         logs.push({
           userId: userId,
-          scheduleId: Number(id),
+          scheduleId: Number(eventId),
           integrationId: integrationId,
           mappedRecordId: mappedRecordId,
           recordType: mappedRecord[0].recordTypeLabel,
@@ -1498,7 +1502,7 @@ const updateGoogleSheetRecord = async (
   userId,
   mappedRecordId,
   integrationId,
-  id,
+  eventId,
   range,
   mappedFields
 ) => {
@@ -1510,8 +1514,10 @@ const updateGoogleSheetRecord = async (
         userId: Number(userId),
         integrationId: Number(integrationId),
         mappedRecordId: Number(mappedRecordId),
+        scheduleId: Number(eventId)
       },
     });
+    console.log("^^^^^^^^^^^^^^^^^^^^^", filterData)
 
 //     const columns = []
 //     mappedFields.map((field) => {
@@ -1632,7 +1638,7 @@ const base_url =
   })
     );
 
-    const addFieldsResult = await addFields(accessToken, mappedRecord, range, results, userId, id, integrationId, mappedRecordId, existingRecords);
+    const addFieldsResult = await addFields(accessToken, mappedRecord, range, results, userId, eventId, integrationId, mappedRecordId, existingRecords);
     return addFieldsResult;
 
   } catch (error) {
@@ -1645,7 +1651,7 @@ const base_url =
   }
 };
 
-const addFields = async (accessToken, mappedRecord, range, result, userId, id, integrationId, mappedRecordId, existingRecords) => {
+const addFields = async (accessToken, mappedRecord, range, result, userId, eventId, integrationId, mappedRecordId, existingRecords) => {
   const logs = [];
   let recordCount = 0;
   let updatedrecords = 0
@@ -1672,7 +1678,7 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
         const summaryMessage = `Records are not available in Netsuite`;
         logs.push({
         userId: userId,
-        scheduleId: Number(id),
+        scheduleId: Number(eventId),
         integrationId: integrationId,
         mappedRecordId: mappedRecordId,
         recordType: mappedRecord[0].recordTypeLabel,
@@ -1711,7 +1717,7 @@ const addFields = async (accessToken, mappedRecord, range, result, userId, id, i
       if (updatedrecords > 0) {
         logs.push({
           userId: userId,
-          scheduleId: Number(id),
+          scheduleId: Number(eventId),
           integrationId: integrationId,
           mappedRecordId: mappedRecordId,
           recordType: mappedRecord[0].recordTypeLabel,
@@ -1745,164 +1751,240 @@ const deleteGoogleSheetRecord = async (
   userId,
   mappedRecordId,
   integrationId,
-  id,
+  eventId,
   range,
   mappedFields
 ) => {  
-  let deleteCount = 0;
-
   try {
-    console.log("delete record from google sheet");
+    const logs = [];
+    let deleteCount = 0;
+    let count = 0;
+    let errorCount = 0;
 
-    const filterData = await prisma.customFilterFields.findMany({
-      where: {
-        userId: Number(userId),
-        integrationId: Number(integrationId),
-        mappedRecordId: Number(mappedRecordId),
-      },
-    });
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${mappedRecord[0].workBookValue}:batchUpdate`;
 
-    const filterCondition = filterData[0].sourceFieldValue
-
-//     const columns = []
-//     mappedFields.map((field) => {
-// columns.push(field.sourceFieldValue)
-//     })
-const columns = mappedFields.map((field) => {
-  const item = field.sourceFieldValue
-  if (item.includes('__')) {
-    const col = item.split('__');
-  return col[1];
-  }
-  return item
-  // columns.push(field.sourceFieldValue)
-      })
-
-    const sheetsData = await getSheetsDataByRange(
-      userId,
-      range,
-      mappedRecord,
-      accessToken
-    );
-    // console.log("sheetsData by range", sheetsData)
-
-    const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
-    const fieldIndex = sheetsValue.data.values[0].indexOf(
-      filterData[0].destinationFieldLabel
-    );
-    // console.log("fieldIndex", fieldIndex)
-
-    const deleteFields = []
-    const results = await Promise.all(
-      sheetsData.values.map(async(row) => {
-
-const authentication = {
-  account: credentials[0].accountId,
-  consumerKey: credentials[0].consumerKey,
-  consumerSecret: credentials[0].consumerSecretKey,
-  tokenId: credentials[0].accessToken,
-  tokenSecret: credentials[0].accessSecretToken,
-  timestamp: Math.floor(Date.now() / 1000).toString(),
-  nonce: getNonce(10),
-  http_method: "POST",
-  version: "1.0",
-  scriptDeploymentId: "1",
-  scriptId: "1529",
-  signatureMethod: "HMAC-SHA256",
-};
-
-const base_url =
-      "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
-    const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
-    const baseString = `${authentication.http_method}&${encodeURIComponent(
-      base_url
-    )}&${encodeURIComponent(concatenatedString)}`;
-    const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
-    const signature = crypto
-      .createHmac("sha256", keys)
-      .update(baseString)
-      .digest("base64");
-    const oAuth_String = `OAuth realm="${
-      authentication.account
-    }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
-      authentication.tokenId
-    }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
-      authentication.timestamp
-    }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
-      signature
-    )}"`;
-
-    const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
-
-    const data = {
-      resttype: "Search",
-      recordtype: mappedRecord[0].recordTypeValue,
-      filters: [
-          [
-            filterData[0].sourceFieldValue,
-              "is",
-              row[fieldIndex]
-          ]
-      ],
-      columns: columns
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
   };
 
-    try {
-      const res = await axios({
-        method: "POST",
-        url: url,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: oAuth_String,
+  const [startIndex, endIndex] = range.split(":").map((item) => parseInt(item.replace(/\D/g, "")));
+  console.log("startIndex", startIndex - 1, "endIndex", endIndex)
+
+  const data = {
+    requests: [
+      {
+        deleteDimension: {
+          range: {
+            sheetId: mappedRecord[0].sheetValue,
+            dimension: "ROWS",
+            startIndex: startIndex - 1,
+            endIndex: endIndex,
+          },
         },
-        data: data,
-      });
+      },
+    ],
+  };
 
-      if(res.data.total === 0){
-      //   Object.entries(res.data.list[0].values).map(([key, value]) => {
-      //     if(key === filterCondition) {
-      //       deleteFields.push(value)  
-      //     }
-      //  })
-      deleteFields.push(row[fieldIndex])
-      }   
-    } catch (error) {
-      console.log("deleteGoogleSheetRecord error", error.response.data);
-      // throw error;
-      return {
-        success: false,
-        error: "Error for delete records from Google sheet."
-      }
-    }
-  })
-  );
-  // console.log("deleteFields", deleteFields)
-  const deleteRecordResponse = await deleterecord(userId, id, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition);
-  // console.log("deleteRecordResponse", deleteRecordResponse)
-  return deleteRecordResponse;
-
+  try {
+    const res = await axios({
+      method: "POST",
+      url: url,
+      headers: headers,
+      data: data,
+    });
   } catch (error) {
-    console.log("deleteGoogleSheetRecord error=> ", error.response.data);
-    deleteCount++;
-    // return error;
-    return {
-      success: false,
-      error: "Error for delete records from Google sheet."
-    }
+    console.log("deleteGoogleSheetRecord error", error);
   }
+} catch (error) {
+  console.log("deleteGoogleSheetRecord error = ", error)
+}
 
-  // const response = {
+  //   const summaryMessage = `Successfully deleted ${deleteCount} records from Google Sheet out of ${count}`;
+  //   if (deleteCount > 0) {
+  //     logs.push({
+  //       userId: userId,
+  //       scheduleId: Number(eventId),
+  //       integrationId: integrationId,
+  //       mappedRecordId: mappedRecordId,
+  //       recordType: mappedRecord[0].recordTypeLabel,
+  //       status: "Success",
+  //       message: summaryMessage,
+  //     });
+  //   }
+
+  //   const response = {
   //     success: true,
   //     data: {
-  //       deleteRecordResponse[0],
-  //       deleteRecordResponse[1] + deleteCount,
-  //       deleteRecordResponse[2],
+  //       deleteCount,
+  //       errorCount,
+  //       logs,
   //     },
   //   };
+  // //  const response = [deleteCount, errorCount, logs]
+  // console.log("delete records from GS logs", logs)
+  //   addLogs(logs);
   //   return response;
+// }
+
+
+
+
+
+//   let deleteCount = 0;
+
+//   try {
+//     console.log("delete record from google sheet");
+
+//     const filterData = await prisma.customFilterFields.findMany({
+//       where: {
+//         userId: Number(userId),
+//         integrationId: Number(integrationId),
+//         mappedRecordId: Number(mappedRecordId),
+//       },
+//     });
+
+//     const filterCondition = filterData[0].sourceFieldValue
+
+// //     const columns = []
+// //     mappedFields.map((field) => {
+// // columns.push(field.sourceFieldValue)
+// //     })
+// const columns = mappedFields.map((field) => {
+//   const item = field.sourceFieldValue
+//   if (item.includes('__')) {
+//     const col = item.split('__');
+//   return col[1];
+//   }
+//   return item
+//   // columns.push(field.sourceFieldValue)
+//       })
+
+//     const sheetsData = await getSheetsDataByRange(
+//       userId,
+//       range,
+//       mappedRecord,
+//       accessToken
+//     );
+//     // console.log("sheetsData by range", sheetsData)
+
+//     const sheetsValue = await getSheetsData(mappedRecord, userId, accessToken);
+//     const fieldIndex = sheetsValue.data.values[0].indexOf(
+//       filterData[0].destinationFieldLabel
+//     );
+//     // console.log("fieldIndex", fieldIndex)
+
+//     const deleteFields = []
+//     const results = await Promise.all(
+//       sheetsData.values.map(async(row) => {
+
+// const authentication = {
+//   account: credentials[0].accountId,
+//   consumerKey: credentials[0].consumerKey,
+//   consumerSecret: credentials[0].consumerSecretKey,
+//   tokenId: credentials[0].accessToken,
+//   tokenSecret: credentials[0].accessSecretToken,
+//   timestamp: Math.floor(Date.now() / 1000).toString(),
+//   nonce: getNonce(10),
+//   http_method: "POST",
+//   version: "1.0",
+//   scriptDeploymentId: "1",
+//   scriptId: "1529",
+//   signatureMethod: "HMAC-SHA256",
+// };
+
+// const base_url =
+//       "https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl";
+//     const concatenatedString = `deploy=${authentication.scriptDeploymentId}&oauth_consumer_key=${authentication.consumerKey}&oauth_nonce=${authentication.nonce}&oauth_signature_method=${authentication.signatureMethod}&oauth_timestamp=${authentication.timestamp}&oauth_token=${authentication.tokenId}&oauth_version=${authentication.version}&script=${authentication.scriptId}`;
+//     const baseString = `${authentication.http_method}&${encodeURIComponent(
+//       base_url
+//     )}&${encodeURIComponent(concatenatedString)}`;
+//     const keys = `${authentication.consumerSecret}&${authentication.tokenSecret}`;
+//     const signature = crypto
+//       .createHmac("sha256", keys)
+//       .update(baseString)
+//       .digest("base64");
+//     const oAuth_String = `OAuth realm="${
+//       authentication.account
+//     }", oauth_consumer_key="${authentication.consumerKey}", oauth_token="${
+//       authentication.tokenId
+//     }", oauth_nonce="${authentication.nonce}", oauth_timestamp="${
+//       authentication.timestamp
+//     }", oauth_signature_method="HMAC-SHA256", oauth_version="1.0", oauth_signature="${encodeURIComponent(
+//       signature
+//     )}"`;
+
+//     const url = `https://tstdrv1423092.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=${authentication.scriptId}&deploy=${authentication.scriptDeploymentId}`;
+
+//     const data = {
+//       resttype: "Search",
+//       recordtype: mappedRecord[0].recordTypeValue,
+//       filters: [
+//           [
+//             filterData[0].sourceFieldValue,
+//               "is",
+//               row[fieldIndex]
+//           ]
+//       ],
+//       columns: columns
+//   };
+
+//     try {
+//       const res = await axios({
+//         method: "POST",
+//         url: url,
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: oAuth_String,
+//         },
+//         data: data,
+//       });
+
+//       if(res.data.total === 0){
+//       //   Object.entries(res.data.list[0].values).map(([key, value]) => {
+//       //     if(key === filterCondition) {
+//       //       deleteFields.push(value)  
+//       //     }
+//       //  })
+//       deleteFields.push(row[fieldIndex])
+//       }   
+//     } catch (error) {
+//       console.log("deleteGoogleSheetRecord error", error.response.data);
+//       // throw error;
+//       return {
+//         success: false,
+//         error: "Error for delete records from Google sheet."
+//       }
+//     }
+//   })
+//   );
+//   // console.log("deleteFields", deleteFields)
+//   const deleteRecordResponse = await deleterecord(userId, eventId, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition);
+//   // console.log("deleteRecordResponse", deleteRecordResponse)
+//   return deleteRecordResponse;
+
+//   } catch (error) {
+//     console.log("deleteGoogleSheetRecord error=> ", error.response.data);
+//     deleteCount++;
+//     // return error;
+//     return {
+//       success: false,
+//       error: "Error for delete records from Google sheet."
+//     }
+//   }
+
+//   // const response = {
+//   //     success: true,
+//   //     data: {
+//   //       deleteRecordResponse[0],
+//   //       deleteRecordResponse[1] + deleteCount,
+//   //       deleteRecordResponse[2],
+//   //     },
+//   //   };
+//   //   return response;
 };
 
-const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition) => {
+const deleterecord = async (userId, eventId, integrationId, mappedRecordId, mappedRecord, accessToken, deleteFields, fieldIndex, filterCondition) => {
   try {
     const logs = [];
     let deleteCount = 0;
@@ -1967,7 +2049,7 @@ const deleterecord = async (userId, id, integrationId, mappedRecordId, mappedRec
     if (deleteCount > 0) {
       logs.push({
         userId: userId,
-        scheduleId: Number(id),
+        scheduleId: Number(eventId),
         integrationId: integrationId,
         mappedRecordId: mappedRecordId,
         recordType: mappedRecord[0].recordTypeLabel,

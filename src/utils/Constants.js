@@ -257,11 +257,11 @@ const netsuiteRecordTypes = [
 
 const timeOptions = [
   {
-    value: "00:00 AM",
+    value: "12:00 AM",
     label: "12:00 AM",
   },
   {
-    value: "00:30 AM",
+    value: "12:30 AM",
     label: "12:30 AM",
   },
   {
@@ -361,91 +361,91 @@ const timeOptions = [
     label: "12:30 PM",
   },
   {
-    value: "13:00 PM",
+    value: "1:00 PM",
     label: "1:00 PM",
   },
   {
-    value: "13:30 PM",
+    value: "1:30 PM",
     label: "1:30 PM",
   },
   {
-    value: "14:00 PM",
+    value: "2:00 PM",
     label: "2:00 PM",
   },
   {
-    value: "14:30 PM",
+    value: "2:30 PM",
     label: "2:30 PM",
   },
   {
-    value: "15:00 PM",
+    value: "3:00 PM",
     label: "3:00 PM",
   },
   {
-    value: "15:30 PM",
+    value: "3:30 PM",
     label: "3:30 PM",
   },
   {
-    value: "16:00 PM",
+    value: "4:00 PM",
     label: "4:00 PM",
   },
   {
-    value: "16:30 PM",
+    value: "4:30 PM",
     label: "4:30 PM",
   },
   {
-    value: "17:00 PM",
+    value: "5:00 PM",
     label: "5:00 PM",
   },
   {
-    value: "17:30 PM",
+    value: "5:30 PM",
     label: "5:30 PM",
   },
   {
-    value: "18:00 PM",
+    value: "6:00 PM",
     label: "6:00 PM",
   },
   {
-    value: "18:30 PM",
+    value: "6:30 PM",
     label: "6:30 PM",
   },
   {
-    value: "19:00 PM",
+    value: "7:00 PM",
     label: "7:00 PM",
   },
   {
-    value: "19:30 PM",
+    value: "7:30 PM",
     label: "7:30 PM",
   },
   {
-    value: "20:00 PM",
+    value: "8:00 PM",
     label: "8:00 PM",
   },
   {
-    value: "20:30 PM",
+    value: "8:30 PM",
     label: "8:30 PM",
   },
   {
-    value: "21:00 PM",
+    value: "9:00 PM",
     label: "9:00 PM",
   },
   {
-    value: "21:30 PM",
+    value: "9:30 PM",
     label: "9:30 PM",
   },
   {
-    value: "22:00 PM",
+    value: "10:00 PM",
     label: "10:00 PM",
   },
   {
-    value: "22:30 PM",
+    value: "10:30 PM",
     label: "10:30 PM",
   },
   {
-    value: "23:00 PM",
+    value: "11:00 PM",
     label: "11:00 PM",
   },
   {
-    value: "23:30 PM",
+    value: "11:30 PM",
     label: "11:30 PM",
   },
 ];
